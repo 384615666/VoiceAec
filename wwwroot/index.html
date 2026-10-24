@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>VoiceAec · 回声消除麦克风</title>
+<style>
+  :root {
+    --cream: #FFF9F2;
+    --paper: #FFFFFF;
+    --mint: #D6F7E8;
+    --sky: #D9EFFB;
+    --pink: #FCD9EC;
+    --lemon: #FFF6D9;
+    --lilac: #F0E8FF;
+    --green: #2EC489;
+    --green-deep: #11805A;
+    --berry: #F27BA9;
+    --berry-deep: #B94F86;
+    --blue: #4FA8E8;
+    --blue-deep: #247FBE;
+    --violet: #A78BFA;
+    --violet-deep: #6E56C9;
+    --ink: #464257;
+    --ink-soft: #5A5566;
+    --muted: #8A6D9C;
+    --line: rgba(223, 182, 218, .28);
+    --shadow-soft: 0 12px 30px rgba(242, 123, 169, .09), 0 3px 10px rgba(79, 168, 232, .05);
+    --shadow-hover: 0 20px 44px rgba(242, 123, 169, .16), 0 8px 18px rgba(79, 168, 232, .08);
+    --mode-glow: rgba(242, 123, 169, .14);
+    --radius: 20px;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 8% 0%, rgba(252, 217, 236, .82), transparent 34%),
+      radial-gradient(circle at 96% 8%, rgba(217, 239, 251, .92), transparent 32%),
+      radial-gradient(circle at 82% 98%, rgba(240, 232, 255, .88), transparent 34%),
+      linear-gradient(135deg, #FFFDF8 0%, #FFF7F6 48%, #F7FCFF 100%);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scrollbar-color: var(--pink) var(--cream);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  ::selection {
+    background: var(--pink);
+    color: var(--ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--cream);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--pink);
+    border: 2px solid var(--cream);
+    border-radius: 999px;
+  }
+
+  svg.icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: 0 0 auto;
+  }
+
+  .svg-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  button:focus-visible {
+    outline: 3px solid rgba(79, 168, 232, .35);
+    outline-offset: 2px;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: min(1248px, calc(100vw - 32px));
+    height: 100vh;
+    height: min(100vh, 860px);
+    height: min(100dvh, 860px);
+    padding: 12px 0 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .topbar,
+  .levels,
+  .modes-section,
+  .stats,
+  .hint-bar {
+    flex: 0 0 auto;
+    font-size: 11px;
+  }
+
+  /* ── 顶部状态条 ───────────────────────────────────────────── */
+
+  .topbar {
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 14px 11px 16px;
+    border-radius: 22px;
+    background: linear-gradient(120deg, rgba(255, 255, 255, .86), rgba(255, 253, 250, .74));
+    border: 1px solid rgba(255, 255, 255, .94);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px) saturate(1.08);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 255px;
+    min-width: 0;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #2EC489 0%, #6FDDB7 55%, #4FA8E8 100%);
+    box-shadow: 0 8px 20px rgba(46, 196, 137, .23);
+    flex: 0 0 auto;
+  }
+
+  .brand-mark .icon {
+    width: 23px;
+    height: 23px;
+    stroke-width: 2.1;
+  }
+
+  .brand-copy {
+    min-width: 0;
+  }
+
+  .brand-copy h1 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.22;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .brand-copy h1 span {
+    margin-left: 3px;
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+
+  .brand-copy p {
+    margin: 2px 0 0;
+    font-size: 9.5px;
+    line-height: 1.2;
+    letter-spacing: .05em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .top-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .run-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--mint), #F0FCF7);
+    color: var(--green-deep);
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: .01em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  .run-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(46, 196, 137, .28);
+    animation: breathe 1.9s ease-in-out infinite;
+    flex: 0 0 auto;
+  }
+
+  @keyframes breathe {
+    0%, 100% {
+      transform: scale(.86);
+      box-shadow: 0 0 0 0 rgba(46, 196, 137, .3);
+    }
+    50% {
+      transform: scale(1.04);
+      box-shadow: 0 0 0 5px rgba(46, 196, 137, 0);
+    }
+  }
+
+  .run-state.is-connecting .run-dot {
+    background: #E0AE3E;
+    animation-name: breathe-amber;
+  }
+
+  @keyframes breathe-amber {
+    0%, 100% {
+      transform: scale(.86);
+      box-shadow: 0 0 0 0 rgba(224, 174, 62, .28);
+    }
+    50% {
+      transform: scale(1.04);
+      box-shadow: 0 0 0 5px rgba(224, 174, 62, 0);
+    }
+  }
+
+  .run-state.is-offline {
+    background: var(--pink);
+    color: var(--berry-deep);
+  }
+
+  .run-state.is-offline .run-dot {
+    background: var(--berry);
+    animation: none;
+    box-shadow: none;
+  }
+
+  .cpu-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 9px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #F4FBFF, var(--sky));
+    color: var(--blue-deep);
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .cpu-chip .icon {
+    width: 13px;
+    height: 13px;
+    stroke-width: 1.9;
+  }
+
+  .cpu-chip strong {
+    font-size: 12.5px;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cpu-chip .cpu-unit {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: var(--blue-deep);
+  }
+
+  .autostart {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    flex: 0 0 auto;
+    padding: 6px 9px;
+    border-radius: 13px;
+    border: 1px solid rgba(255, 255, 255, .95);
+    background: linear-gradient(135deg, rgba(255, 255, 255, .88), rgba(240, 232, 255, .78));
+    box-shadow: 0 5px 14px rgba(142, 124, 224, .08);
+    transition: background .2s ease, box-shadow .2s ease, opacity .2s ease;
+  }
+
+  .autostart.is-pending {
+    opacity: .76;
+  }
+
+  .autostart-copy {
+    min-width: 0;
+  }
+
+  .autostart-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--ink);
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .autostart-state {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--lilac);
+    color: var(--violet-deep);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    transition: background .2s ease, color .2s ease;
+  }
+
+  .autostart[data-enabled="true"] .autostart-state {
+    background: var(--mint);
+    color: var(--green-deep);
+  }
+
+  .autostart.is-pending .autostart-state {
+    background: var(--sky);
+    color: var(--blue-deep);
+  }
+
+  .autostart-hint {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink-soft);
+    font-size: 9.5px;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .toggle {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid rgba(142, 124, 224, .18);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #EAE4F3, #F7F3FA);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, opacity .2s ease, transform .12s ease;
+  }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(105, 88, 120, .18);
+    transition: transform .2s cubic-bezier(.22, .8, .3, 1), background .2s ease;
+  }
+
+  .toggle[aria-checked="true"] {
+    background: linear-gradient(135deg, var(--green), #6FDDB7);
+    border-color: rgba(17, 128, 90, .24);
+    box-shadow: 0 3px 9px rgba(46, 196, 137, .28);
+  }
+
+  .toggle[aria-checked="true"] .toggle-thumb {
+    transform: translateX(16px);
+  }
+
+  .toggle:hover:not(:disabled) {
+    border-color: rgba(46, 196, 137, .34);
+    box-shadow: 0 3px 9px rgba(46, 196, 137, .16);
+  }
+
+  .toggle:active:not(:disabled) {
+    transform: scale(.94);
+  }
+
+  .toggle:focus-visible {
+    outline: 3px solid rgba(46, 196, 137, .26);
+    outline-offset: 2px;
+  }
+
+  .toggle:disabled {
+    opacity: .56;
+    cursor: wait;
+    box-shadow: none;
+  }
+
+  .mode-badge {
+    position: relative;
+    min-width: 180px;
+    max-width: 218px;
+    min-height: 46px;
+    padding: 8px 29px 8px 15px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, .4);
+    box-shadow: 0 8px 18px rgba(46, 196, 137, .15);
+    overflow: hidden;
+    transition: background .25s ease, color .25s ease, box-shadow .25s ease;
+  }
+
+  .mode-badge[data-mode="off"] {
+    background: linear-gradient(135deg, var(--mint), var(--lemon));
+    color: var(--green-deep);
+    box-shadow: 0 8px 18px rgba(46, 196, 137, .10);
+  }
+
+  .mode-badge[data-mode="v1.2"] {
+    background: linear-gradient(135deg, #11805A, #2EC489);
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px rgba(46, 196, 137, .20);
+  }
+
+  .mode-badge[data-mode="v1.3"] {
+    background: linear-gradient(135deg, #B94F86, #F27BA9);
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px rgba(242, 123, 169, .22);
+  }
+
+  .mode-badge[data-mode="v1.4"] {
+    background: linear-gradient(135deg, #247FBE, #4FA8E8);
+    color: #FFFFFF;
+    box-shadow: 0 8px 18px rgba(79, 168, 232, .20);
+  }
+
+  .mode-badge-caption {
+    display: block;
+    font-size: 9px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: .12em;
+    opacity: .8;
+  }
+
+  .mode-badge strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mode-badge.is-busy::after {
+    content: "";
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: -6px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    opacity: .85;
+    animation: spin .8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .panel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(142, 124, 224, .16);
+    background: linear-gradient(135deg, #F8F4FF 0%, #EDF8FF 100%);
+    color: var(--violet-deep);
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 750;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 5px 14px rgba(142, 124, 224, .08);
+    transition: background .2s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+
+  .panel-btn .icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .panel-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #F1EAFF 0%, #E1F4FF 100%);
+    border-color: rgba(142, 124, 224, .24);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(142, 124, 224, .13);
+  }
+
+  .panel-btn:active:not(:disabled) {
+    transform: translateY(0) scale(.985);
+    box-shadow: 0 4px 10px rgba(142, 124, 224, .10);
+  }
+
+  /* ── 三路电平 ─────────────────────────────────────────────── */
+
+  .levels {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .level-card {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    padding: 14px 15px 11px;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, .86);
+    border: 1px solid rgba(255, 255, 255, .95);
+    backdrop-filter: blur(10px);
+  }
+
+  .level-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 19%;
+    bottom: 19%;
+    width: 3px;
+    border-radius: 0 99px 99px 0;
+    background: var(--level-accent, var(--green));
+    opacity: .9;
+  }
+
+  .level-card[data-level="mic"] {
+    --level-accent: var(--green);
+    --level-soft: var(--mint);
+    box-shadow: 0 10px 28px rgba(46, 196, 137, .10);
+  }
+
+  .level-card[data-level="ref"] {
+    --level-accent: var(--berry);
+    --level-soft: var(--pink);
+    box-shadow: 0 10px 28px rgba(242, 123, 169, .11);
+  }
+
+  .level-card[data-level="out"] {
+    --level-accent: var(--blue);
+    --level-soft: var(--sky);
+    box-shadow: 0 10px 28px rgba(79, 168, 232, .10);
+  }
+
+  .level-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .level-identity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .level-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--level-soft, var(--mint));
+    color: var(--level-accent, var(--green-deep));
+    flex: 0 0 auto;
+  }
+
+  .level-icon .icon {
+    width: 17px;
+    height: 17px;
+    stroke-width: 1.9;
+  }
+
+  .level-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .level-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .level-heading h2 {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.3;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .role-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--level-soft, var(--mint));
+    color: var(--level-accent, var(--green-deep));
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .02em;
+    flex: 0 0 auto;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5);
+  }
+
+  .role-chip::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .85;
+    flex: 0 0 auto;
+  }
+
+  .role-chip[data-tone="out"] {
+    background: linear-gradient(135deg, #CDEDFD, #A7DCF8);
+    color: #0F628F;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55), 0 3px 8px rgba(79, 168, 232, .15);
+  }
+
+  .role-chip[data-tone="mic"] {
+    background: linear-gradient(135deg, #BAF4DD, #8FE8C6);
+    color: #086546;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55), 0 3px 8px rgba(46, 196, 137, .14);
+  }
+
+  .device-name {
+    margin: 2px 0 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+  }
+
+  .status-pill::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .85;
+  }
+
+  .status-pill[data-active="true"] {
+    background: linear-gradient(135deg, #C94F80, #A94473);
+    color: #FFFFFF;
+    box-shadow: 0 4px 10px rgba(169, 68, 115, .24);
+  }
+
+  .status-pill[data-active="false"] {
+    background: linear-gradient(135deg, #F1EAFB, #E3D6F7);
+    color: #5F428F;
+    border: 1px solid rgba(110, 86, 201, .14);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .4);
+  }
+
+  .level-reading {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    padding-top: 3px;
+    flex: 0 0 auto;
+  }
+
+  .db-value {
+    font-size: 25px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -.05em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    transition: color .2s ease;
+  }
+
+  .db-value.is-silent {
+    color: var(--muted);
+    font-size: 21px;
+    letter-spacing: 0;
+  }
+
+  .db-unit {
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .meter {
+    position: relative;
+    height: 14px;
+    margin-top: 12px;
+  }
+
+  .meter-track {
+    position: absolute;
+    inset: 2px 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(214, 247, 232, .72), rgba(252, 217, 236, .48));
+    box-shadow: inset 0 1px 2px rgba(90, 85, 102, .08);
+  }
+
+  .meter-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    transition: width .28s cubic-bezier(.22, .8, .3, 1);
+  }
+
+  .fill-mic {
+    background: linear-gradient(90deg, #2EC489 0%, #63DDB0 62%, #F5D96A 100%);
+  }
+
+  .fill-ref {
+    background: linear-gradient(90deg, #F27BA9 0%, #FF9FC4 70%, #FFD3E4 100%);
+  }
+
+  .fill-out {
+    background: linear-gradient(90deg, #4FA8E8 0%, #7EC6F5 68%, #B9E5FF 100%);
+  }
+
+  .peak-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--level-accent, var(--green));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .94);
+    opacity: 0;
+    transform: translateX(-50%);
+    transition: left .25s linear, opacity .15s ease;
+    pointer-events: none;
+  }
+
+  .peak-mark.is-visible {
+    opacity: .82;
+  }
+
+  .level-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 5px;
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+
+  .buffer-text {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .meter-scale {
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+
+  /* ── 处理模式 ─────────────────────────────────────────────── */
+
+  .modes-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 4px;
+  }
+
+  .section-heading h2 {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: var(--ink);
+  }
+
+  .section-heading p {
+    margin: 2px 0 0;
+    font-size: 10px;
+    line-height: 1.25;
+    color: var(--muted);
+  }
+
+  .switch-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .64);
+    border: 1px solid rgba(255, 255, 255, .92);
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 650;
+    white-space: nowrap;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+  }
+
+  .switch-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #A9DCC8;
+    flex: 0 0 auto;
+  }
+
+  .switch-state.is-waiting {
+    color: var(--muted);
+  }
+
+  .switch-state.is-waiting .switch-dot {
+    background: #E0AE3E;
+    animation: pulse-soft 1.2s ease-in-out infinite;
+  }
+
+  .switch-state.is-busy {
+    background: var(--pink);
+    color: var(--berry-deep);
+    border-color: #FBC9E1;
+  }
+
+  .switch-state.is-busy .switch-dot {
+    background: var(--berry);
+    animation: pulse-soft .85s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: .42;
+      transform: scale(.78);
+    }
+  }
+
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .mode-card {
+    position: relative;
+    min-width: 0;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 15px 15px 14px;
+    border: 1.5px solid rgba(232, 191, 235, .55);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, .87);
+    box-shadow: var(--shadow-soft);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    -webkit-appearance: none;
+    appearance: none;
+    user-select: none;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, opacity .2s ease;
+  }
+
+  .mode-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--mode-accent, var(--green)), transparent 82%);
+    opacity: .9;
+  }
+
+  .mode-card[data-mode="off"] {
+    --mode-accent: #E8B84B;
+    --mode-deep: #9A7B24;
+    --mode-soft: #FFF6D9;
+    --mode-glow: rgba(46, 196, 137, .13);
+  }
+
+  .mode-card[data-mode="v1.2"] {
+    --mode-accent: #2EC489;
+    --mode-deep: #11805A;
+    --mode-soft: #E7FAF1;
+    --mode-glow: rgba(46, 196, 137, .17);
+  }
+
+  .mode-card[data-mode="v1.3"] {
+    --mode-accent: #F27BA9;
+    --mode-deep: #B94F86;
+    --mode-soft: #FFF0F7;
+    --mode-glow: rgba(242, 123, 169, .18);
+  }
+
+  .mode-card[data-mode="v1.4"] {
+    --mode-accent: #4FA8E8;
+    --mode-deep: #247FBE;
+    --mode-soft: #EDF7FE;
+    --mode-glow: rgba(79, 168, 232, .18);
+  }
+
+  .mode-card:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .mode-card:active:not(:disabled) {
+    transform: translateY(-1px) scale(.997);
+  }
+
+  .mode-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(79, 168, 232, .18), var(--shadow-hover);
+  }
+
+  .mode-card.is-current {
+    background: linear-gradient(165deg, #FFFFFF 18%, var(--mode-soft) 100%);
+    border-color: var(--mode-accent);
+    box-shadow: 0 16px 38px var(--mode-glow);
+  }
+
+  .mode-card:disabled {
+    cursor: not-allowed;
+  }
+
+  .mode-grid.is-locked:not(.is-busy) .mode-card {
+    opacity: .7;
+  }
+
+  .mode-grid.is-busy .mode-card {
+    opacity: .58;
+  }
+
+  .mode-grid.is-busy .mode-card.is-pending {
+    opacity: 1;
+    border-color: var(--mode-accent);
+    box-shadow: 0 16px 38px var(--mode-glow);
+  }
+
+  .mode-card.is-unavailable {
+    background: #FFFDF9;
+    border-color: rgba(242, 123, 169, .22);
+    border-style: dashed;
+  }
+
+  .mode-card.is-unavailable .mode-title-wrap,
+  .mode-card.is-unavailable .metrics,
+  .mode-card.is-unavailable .why {
+    opacity: .42;
+  }
+
+  .mode-card.is-unavailable .badge-recommend,
+  .mode-card.is-unavailable .badge-current {
+    opacity: .45;
+  }
+
+  .mode-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .mode-title-wrap {
+    display: block;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .mode-key {
+    display: block;
+    font-size: 8.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .16em;
+    color: var(--mode-deep, var(--green-deep));
+    text-transform: uppercase;
+  }
+
+  .mode-name {
+    display: block;
+    margin-top: 2px;
+    font-size: 14.5px;
+    line-height: 1.25;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mode-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 4px;
+    max-width: 128px;
+    flex: 0 0 auto;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 8.5px;
+    line-height: 1;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .badge-current {
+    background: var(--mode-deep, var(--green-deep));
+    color: #FFFFFF;
+  }
+
+  .badge-current::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    margin-right: 4px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .badge-recommend {
+    background: var(--lemon);
+    color: #8A5E00;
+  }
+
+  .badge-missing {
+    background: var(--pink);
+    color: var(--berry-deep);
+  }
+
+  .badge-switching {
+    background: var(--lilac);
+    color: var(--violet-deep);
+  }
+
+  .metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(223, 182, 218, .38);
+  }
+
+  .metric {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .metric-label {
+    display: block;
+    font-size: 10px;
+    line-height: 1.2;
+    color: var(--muted);
+    font-weight: 650;
+    white-space: nowrap;
+  }
+
+  .metric-cells {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .metric-cell {
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--mode-soft, var(--mint));
+  }
+
+  .metric-cell.on {
+    background: var(--mode-accent, var(--green));
+    box-shadow: 0 2px 5px var(--mode-glow);
+  }
+
+  .metric-score {
+    display: block;
+    font-family: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 8px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--mode-deep, var(--green-deep));
+    text-align: right;
+    opacity: .7;
+  }
+
+  .why {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+    padding-top: 14px;
+    align-self: stretch;
+  }
+
+  .why-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 8.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--mode-deep, var(--green-deep));
+  }
+
+  .why-label::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--mode-accent, var(--green));
+  }
+
+  .why-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: calc(1.62em * 3);
+    margin-top: 4px;
+    font-size: 11.3px;
+    line-height: 1.62;
+    color: var(--ink-soft);
+  }
+
+  /* ── 底部统计 ─────────────────────────────────────────────── */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-width: 0;
+    min-height: 74px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 12px 9px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .8);
+    border: 1px solid rgba(255, 255, 255, .92);
+    box-shadow: 0 8px 20px rgba(242, 123, 169, .06);
+    overflow: hidden;
+    transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .stat-card:nth-child(1) {
+    --stat-dot: var(--green);
+  }
+
+  .stat-card:nth-child(2) {
+    --stat-dot: var(--blue);
+  }
+
+  .stat-card:nth-child(3) {
+    --stat-dot: var(--berry);
+  }
+
+  .stat-card:nth-child(4) {
+    --stat-dot: var(--violet);
+  }
+
+  .stat-card:nth-child(5) {
+    --stat-dot: #E0AE3E;
+  }
+
+  .stat-card:nth-child(6) {
+    --stat-dot: #64CDA8;
+  }
+
+  .stat-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 650;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .stat-label::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--stat-dot, var(--mint));
+    flex: 0 0 auto;
+  }
+
+  .stat-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    margin-top: 2px;
+  }
+
+  .stat-value {
+    font-size: 19px;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .stat-unit {
+    font-size: 8.5px;
+    line-height: 1.1;
+    font-weight: 650;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .stat-note {
+    display: block;
+    margin-top: 1px;
+    font-size: 9.5px;
+    line-height: 1.2;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .stat-card.is-warn {
+    background: linear-gradient(135deg, #FFF8FB, var(--pink));
+    border-color: #FBC9E1;
+    box-shadow: 0 10px 24px rgba(242, 123, 169, .17);
+  }
+
+  .stat-card.is-warn .stat-value,
+  .stat-card.is-warn .stat-label,
+  .stat-card.is-warn .stat-note {
+    color: var(--berry-deep);
+  }
+
+  .stat-card.is-warn .stat-label::before {
+    background: var(--berry);
+    box-shadow: 0 0 0 3px rgba(242, 123, 169, .12);
+  }
+
+  .stat-card.is-warn .stat-note {
+    font-weight: 800;
+  }
+
+  .hint-bar {
+    min-height: 22px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .hint-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--lemon);
+    color: #8A5E00;
+    font-size: 8.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .hint-pill .icon {
+    width: 10px;
+    height: 10px;
+    stroke-width: 2;
+  }
+
+  .hint-bar p {
+    margin: 0;
+    min-width: 0;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Toast ───────────────────────────────────────────────── */
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 64px;
+    bottom: max(64px, calc(50vh - 366px));
+    z-index: 120;
+    max-width: min(580px, calc(100vw - 32px));
+    padding: 11px 16px;
+    border-radius: 14px;
+    background: var(--ink);
+    color: #FFFFFF;
+    font-size: 11.5px;
+    line-height: 1.5;
+    font-weight: 650;
+    box-shadow: 0 16px 36px rgba(70, 66, 87, .18);
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 14px);
+    pointer-events: none;
+    word-break: break-word;
+    transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
+  }
+
+  .toast.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+  }
+
+  .toast.is-error {
+    background: linear-gradient(135deg, #A94379, var(--berry-deep));
+    box-shadow: 0 16px 36px rgba(185, 79, 134, .24);
+  }
+
+  .toast.is-success {
+    background: linear-gradient(135deg, #11805A, #2EC489);
+    box-shadow: 0 16px 36px rgba(46, 196, 137, .20);
+  }
+
+  /* ── 离线浮层 ─────────────────────────────────────────────── */
+
+  .offline-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+      radial-gradient(circle at 24% 18%, rgba(252, 217, 236, .78), transparent 45%),
+      radial-gradient(circle at 78% 82%, rgba(217, 239, 251, .82), transparent 48%),
+      linear-gradient(135deg, rgba(255, 249, 242, .94), rgba(255, 246, 249, .92));
+    backdrop-filter: blur(9px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .25s ease, visibility .25s ease;
+    overscroll-behavior: contain;
+  }
+
+  .offline-overlay.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .offline-panel {
+    width: min(430px, 100%);
+    padding: 30px 32px 28px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, .86);
+    border: 1px solid rgba(255, 255, 255, .96);
+    box-shadow: 0 28px 70px rgba(242, 123, 169, .18), 0 12px 32px rgba(79, 168, 232, .08);
+    text-align: center;
+    backdrop-filter: blur(18px);
+    transform: translateY(10px) scale(.985);
+    transition: transform .25s ease;
+  }
+
+  .offline-overlay.is-visible .offline-panel {
+    transform: translateY(0) scale(1);
+  }
+
+  .offline-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto;
+    border-radius: 25px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--pink), var(--lemon));
+    color: var(--berry-deep);
+    box-shadow: 0 14px 30px rgba(242, 123, 169, .16);
+    animation: floaty 3.2s ease-in-out infinite;
+  }
+
+  .offline-icon .icon {
+    width: 34px;
+    height: 34px;
+    stroke-width: 1.7;
+  }
+
+  @keyframes floaty {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  .offline-kicker {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--pink);
+    color: var(--berry-deep);
+    font-size: 9px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+
+  .offline-panel h2 {
+    margin: 9px 0 0;
+    font-size: 22px;
+    line-height: 1.3;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    color: var(--ink);
+  }
+
+  .offline-panel p {
+    margin: 8px auto 0;
+    max-width: 320px;
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+
+  .offline-retry {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 17px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: var(--mint);
+    color: var(--green-deep);
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .retry-spinner {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 2px solid rgba(17, 128, 90, .2);
+    border-top-color: var(--green-deep);
+    animation: spin .8s linear infinite;
+    flex: 0 0 auto;
+  }
+
+  /* ── 二次确认 ─────────────────────────────────────────────── */
+
+  .confirm-dialog {
+    width: min(390px, calc(100vw - 36px));
+    max-width: 390px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .confirm-dialog::backdrop {
+    background: rgba(70, 66, 87, .24);
+    backdrop-filter: blur(5px);
+  }
+
+  .dialog-card {
+    padding: 24px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, #FFFDFC, #F8F6FF);
+    border: 1px solid rgba(255, 255, 255, .96);
+    box-shadow: 0 30px 70px rgba(142, 124, 224, .16), 0 10px 24px rgba(79, 168, 232, .08);
+  }
+
+  .confirm-dialog[open] .dialog-card {
+    animation: dialog-in .2s ease-out;
+  }
+
+  @keyframes dialog-in {
+    from {
+      opacity: .7;
+      transform: translateY(8px) scale(.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .dialog-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--lilac), var(--sky));
+    color: var(--violet-deep);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+  }
+
+  .dialog-icon .icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .dialog-card h2 {
+    margin: 12px 0 0;
+    font-size: 19px;
+    line-height: 1.35;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ink);
+  }
+
+  .dialog-card p {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .button {
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 12px;
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: 750;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+  }
+
+  .button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .button:disabled {
+    opacity: .55;
+    cursor: wait;
+    transform: none;
+  }
+
+  .button-soft {
+    background: var(--mint);
+    color: var(--green-deep);
+  }
+
+  .button-soft:hover:not(:disabled) {
+    background: #C4F2DF;
+  }
+
+  .button-neutral {
+    background: linear-gradient(135deg, #EDE7FF, #D9EFFB);
+    color: var(--violet-deep);
+    box-shadow: inset 0 0 0 1px rgba(142, 124, 224, .12), 0 6px 14px rgba(142, 124, 224, .10);
+  }
+
+  .button-neutral:hover:not(:disabled) {
+    background: linear-gradient(135deg, #E5DCFF, #CDE9FB);
+    box-shadow: inset 0 0 0 1px rgba(142, 124, 224, .16), 0 10px 20px rgba(142, 124, 224, .14);
+  }
+
+  /* ── 响应式高度兜底 ──────────────────────────────────────── */
+
+  @media (max-height: 760px) {
+    .app {
+      gap: 8px;
+      padding: 8px 0 6px;
+    }
+
+    .topbar {
+      min-height: 60px;
+      padding: 8px 12px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+    }
+
+    .brand-copy p {
+      display: none;
+    }
+
+    .level-card {
+      padding: 12px 13px 9px;
+    }
+
+    .level-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .meter {
+      margin-top: 9px;
+    }
+
+    .level-foot {
+      margin-top: 4px;
+    }
+
+    .mode-card {
+      min-height: 292px;
+      padding: 12px 13px;
+    }
+
+    .metrics {
+      margin-top: 10px;
+      padding-top: 9px;
+      gap: 5px;
+    }
+
+    .why {
+      padding-top: 10px;
+    }
+
+    .why-copy {
+      min-height: calc(1.5em * 3);
+      font-size: 10.8px;
+      line-height: 1.5;
+    }
+
+    .stat-card {
+      min-height: 66px;
+      padding: 8px 11px;
+    }
+
+    .stat-value {
+      font-size: 17px;
+    }
+
+    .hint-bar {
+      min-height: 20px;
+    }
+  }
+
+  @media (max-height: 700px) {
+    body {
+      overflow-y: auto;
+      place-items: start center;
+    }
+
+    .app {
+      height: auto;
+      min-height: 100dvh;
+      justify-content: flex-start;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-wave" viewBox="0 0 24 24">
+    <path d="M2.5 12h2.3l1.9-6.3 3 12.6 3.1-9.5 1.8 3.2h5.9"></path>
+  </symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24">
+    <rect x="9" y="2.5" width="6" height="11" rx="3"></rect>
+    <path d="M5.5 10.5v1a6.5 6.5 0 0 0 13 0v-1M12 18v3.5M8.5 21.5h7"></path>
+  </symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24">
+    <path d="M4 9.2v5.6h3.5l4.6 3.8V5.4L7.5 9.2H4Z"></path>
+    <path d="M15.5 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8"></path>
+  </symbol>
+  <symbol id="i-out" viewBox="0 0 24 24">
+    <path d="M3.5 12h12.2M12.5 8.2 16.3 12l-3.8 3.8M20 4.5v15"></path>
+  </symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24">
+    <rect x="7" y="7" width="10" height="10" rx="2"></rect>
+    <path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"></path>
+  </symbol>
+  <symbol id="i-power" viewBox="0 0 24 24">
+    <path d="M12 2.8v9M6.4 6.2a8 8 0 1 0 11.2 0"></path>
+  </symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24">
+    <rect x="3.2" y="4" width="17.6" height="16" rx="3"></rect>
+    <path d="M8.5 10.2 12 13.7l3.5-3.5"></path>
+  </symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24">
+    <path d="M9 3v5M15 3v5M7.5 8h9v2.5a4.5 4.5 0 0 1-9 0V8ZM12 15v6"></path>
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24">
+    <path d="M9 18h6M10 21h4M8.2 14.7A6 6 0 1 1 15.8 14.7c-.8.6-1.3 1.4-1.3 2.3h-5c0-.9-.5-1.7-1.3-2.3Z"></path>
+  </symbol>
+</svg>
+
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg class="icon"><use href="#i-wave"></use></svg>
+      </div>
+      <div class="brand-copy">
+        <h1>VoiceAec <span>· 回声消除麦克风</span></h1>
+        <p>本地实时音频控制台</p>
+      </div>
+    </div>
+
+    <div class="top-status">
+      <div class="run-state is-connecting" id="runState">
+        <span class="run-dot" aria-hidden="true"></span>
+        <span id="runText">正在连接…</span>
+      </div>
+
+      <div class="cpu-chip" title="整机 CPU 占用">
+        <svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg>
+        <span>CPU</span>
+        <strong id="cpuValue">--</strong>
+        <span class="cpu-unit">%</span>
+      </div>
+
+      <div class="mode-badge" id="modeBadge" data-mode="v1.2" role="status" aria-live="polite" aria-atomic="true">
+        <span class="mode-badge-caption">当前模式</span>
+        <strong id="modeBadgeText">v1.2 · 均衡</strong>
+      </div>
+
+      <div class="autostart" id="autostartField" data-enabled="false" title="开机后自动在后台运行，无需手动启动">
+        <span class="autostart-copy">
+          <span class="autostart-title">
+            开机自启
+            <span class="autostart-state" id="autostartState" aria-live="polite">读取中…</span>
+          </span>
+          <span class="autostart-hint" id="autostartHint">开机后自动在后台运行，无需手动启动</span>
+        </span>
+        <button class="toggle" id="autostartToggle" type="button" role="switch" aria-checked="false" aria-label="开机自启，正在读取" aria-describedby="autostartHint" disabled>
+          <span class="toggle-thumb" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <button class="panel-btn" id="panelBtn" type="button" title="关闭面板（程序继续在系统托盘运行）" aria-haspopup="dialog">
+        <svg class="icon" aria-hidden="true"><use href="#i-collapse"></use></svg>
+        <span>关闭面板</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="levels" aria-label="实时音频电平">
+
+    <article class="level-card" data-level="mic" title="麦克风输入：人声与音箱回声会被一起采集">
+      <div class="level-top">
+        <div class="level-identity">
+          <span class="level-icon" aria-hidden="true">
+            <svg class="icon"><use href="#i-mic"></use></svg>
+          </span>
+          <div class="level-copy">
+            <div class="level-heading">
+              <h2>麦克风</h2>
+              <span class="role-chip" data-tone="mic">输入</span>
+            </div>
+            <p class="device-name" id="micName">正在获取设备…</p>
+          </div>
+        </div>
+        <div class="level-reading">
+          <span class="db-value" id="micDb">-∞</span>
+          <span class="db-unit">dB</span>
+        </div>
+      </div>
+      <div class="meter" id="micMeter" role="meter" aria-label="麦克风电平" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" aria-valuetext="静音">
+        <div class="meter-track">
+          <span class="meter-fill fill-mic" id="micFill"></span>
+        </div>
+        <span class="peak-mark" id="micPeak" aria-hidden="true"></span>
+      </div>
+      <div class="level-foot">
+        <span class="buffer-text" id="micBuffer">缓冲 — ms</span>
+        <span class="meter-scale">-60 … 0 dBFS</span>
+      </div>
+    </article>
+
+    <article class="level-card" data-level="ref" title="参考回采：音箱正在播放的声音">
+      <div class="level-top">
+        <div class="level-identity">
+          <span class="level-icon" aria-hidden="true">
+            <svg class="icon"><use href="#i-speaker"></use></svg>
+          </span>
+          <div class="level-copy">
+            <div class="level-heading">
+              <h2>参考回采</h2>
+              <span class="status-pill" id="refPill" data-active="false">静默</span>
+            </div>
+            <p class="device-name" id="refName">正在获取设备…</p>
+          </div>
+        </div>
+        <div class="level-reading">
+          <span class="db-value" id="refDb">-∞</span>
+          <span class="db-unit">dB</span>
+        </div>
+      </div>
+      <div class="meter" id="refMeter" role="meter" aria-label="参考回采电平" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" aria-valuetext="静音">
+        <div class="meter-track">
+          <span class="meter-fill fill-ref" id="refFill"></span>
+        </div>
+        <span class="peak-mark" id="refPeak" aria-hidden="true"></span>
+      </div>
+      <div class="level-foot">
+        <span class="buffer-text" id="refBuffer">缓冲 — ms</span>
+        <span class="meter-scale">-60 … 0 dBFS</span>
+      </div>
+    </article>
+
+    <article class="level-card" data-level="out" title="输出：处理后的声音送入 CABLE 虚拟声卡">
+      <div class="level-top">
+        <div class="level-identity">
+          <span class="level-icon" aria-hidden="true">
+            <svg class="icon"><use href="#i-out"></use></svg>
+          </span>
+          <div class="level-copy">
+            <div class="level-heading">
+              <h2>输出</h2>
+              <span class="role-chip" data-tone="out">输出</span>
+            </div>
+            <p class="device-name" id="outName">正在获取设备…</p>
+          </div>
+        </div>
+        <div class="level-reading">
+          <span class="db-value" id="outDb">-∞</span>
+          <span class="db-unit">dB</span>
+        </div>
+      </div>
+      <div class="meter" id="outMeter" role="meter" aria-label="输出电平" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60" aria-valuetext="静音">
+        <div class="meter-track">
+          <span class="meter-fill fill-out" id="outFill"></span>
+        </div>
+        <span class="peak-mark" id="outPeak" aria-hidden="true"></span>
+      </div>
+      <div class="level-foot">
+        <span class="buffer-text" id="outBuffer">缓冲 — ms</span>
+        <span class="meter-scale">-60 … 0 dBFS</span>
+      </div>
+    </article>
+
+  </section>
+
+  <section class="modes-section" aria-labelledby="modesTitle">
+    <div class="section-head">
+      <div class="section-heading">
+        <h2 id="modesTitle">处理模式</h2>
+        <p>按场景选择合适模式</p>
+      </div>
+      <div class="switch-state" id="switchState" role="status" aria-live="polite">
+        <span class="switch-dot" aria-hidden="true"></span>
+        <span id="switchText">正在连接…</span>
+      </div>
+    </div>
+
+    <div class="mode-grid" id="modeGrid" aria-label="处理模式选择" aria-busy="false">
+
+      <button class="mode-card" type="button" data-mode="off" aria-pressed="false">
+        <span class="mode-top">
+          <span class="mode-title-wrap">
+            <span class="mode-key">OFF</span>
+            <span class="mode-name" data-mode-title>关闭（直通）</span>
+          </span>
+          <span class="mode-badges">
+            <span class="badge badge-current" data-current hidden>使用中</span>
+            <span class="badge badge-missing" data-missing hidden>文件缺失</span>
+            <span class="badge badge-switching" data-switching hidden>切换中…</span>
+          </span>
+        </span>
+        <span class="metrics">
+          <span class="metric" role="img" aria-label="消除强度 0/5">
+            <span class="metric-label" aria-hidden="true">消除强度</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">0/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="人声保留 5/5">
+            <span class="metric-label" aria-hidden="true">人声保留</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">5/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">1/5</span>
+          </span>
+        </span>
+        <span class="why">
+          <span class="why-label">为什么</span>
+          <span class="why-copy">不做任何处理，麦克风原样送到 CABLE。省电省心，适合戴耳机或排查问题；外放时游戏声会原样串进通话。</span>
+        </span>
+      </button>
+
+      <button class="mode-card" type="button" data-mode="v1.2" aria-pressed="false">
+        <span class="mode-top">
+          <span class="mode-title-wrap">
+            <span class="mode-key">v1.2</span>
+            <span class="mode-name" data-mode-title>v1.2 · 均衡</span>
+          </span>
+          <span class="mode-badges">
+            <span class="badge badge-recommend">推荐 · 默认</span>
+            <span class="badge badge-current" data-current hidden>使用中</span>
+            <span class="badge badge-missing" data-missing hidden>文件缺失</span>
+            <span class="badge badge-switching" data-switching hidden>切换中…</span>
+          </span>
+        </span>
+        <span class="metrics">
+          <span class="metric" role="img" aria-label="消除强度 4/5">
+            <span class="metric-label" aria-hidden="true">消除强度</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">4/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="人声保留 4/5">
+            <span class="metric-label" aria-hidden="true">人声保留</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">4/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">1/5</span>
+          </span>
+        </span>
+        <span class="why">
+          <span class="why-label">为什么</span>
+          <span class="why-copy">回声消除够干净、人声保留好，实测只占整机约 3% CPU。日常外放游戏开语音选它。</span>
+        </span>
+      </button>
+
+      <button class="mode-card" type="button" data-mode="v1.3" aria-pressed="false">
+        <span class="mode-top">
+          <span class="mode-title-wrap">
+            <span class="mode-key">v1.3</span>
+            <span class="mode-name" data-mode-title>v1.3 · 最强消除</span>
+          </span>
+          <span class="mode-badges">
+            <span class="badge badge-current" data-current hidden>使用中</span>
+            <span class="badge badge-missing" data-missing hidden>文件缺失</span>
+            <span class="badge badge-switching" data-switching hidden>切换中…</span>
+          </span>
+        </span>
+        <span class="metrics">
+          <span class="metric" role="img" aria-label="消除强度 5/5">
+            <span class="metric-label" aria-hidden="true">消除强度</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">5/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="人声保留 3/5">
+            <span class="metric-label" aria-hidden="true">人声保留</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">3/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="CPU 占用 2/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">2/5</span>
+          </span>
+        </span>
+        <span class="why">
+          <span class="why-label">为什么</span>
+          <span class="why-copy">480 万参数大模型，消除最彻底还顺带降噪去混响；代价是偶尔削掉一点轻微人声，CPU 约 7%。音箱开很大或环境吵时用。</span>
+        </span>
+      </button>
+
+      <button class="mode-card" type="button" data-mode="v1.4" aria-pressed="false">
+        <span class="mode-top">
+          <span class="mode-title-wrap">
+            <span class="mode-key">v1.4</span>
+            <span class="mode-name" data-mode-title>v1.4 · 纯回声消除</span>
+          </span>
+          <span class="mode-badges">
+            <span class="badge badge-current" data-current hidden>使用中</span>
+            <span class="badge badge-missing" data-missing hidden>文件缺失</span>
+            <span class="badge badge-switching" data-switching hidden>切换中…</span>
+          </span>
+        </span>
+        <span class="metrics">
+          <span class="metric" role="img" aria-label="消除强度 2/5">
+            <span class="metric-label" aria-hidden="true">消除强度</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">2/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="人声保留 5/5">
+            <span class="metric-label" aria-hidden="true">人声保留</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">5/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">1/5</span>
+          </span>
+        </span>
+        <span class="why">
+          <span class="why-label">为什么</span>
+          <span class="why-copy">只减回声不碰人声，但 20 万参数小模型在麦克风离音箱较远、或房间混响明显时基本无效（本机实测）。仅适合近场麦克风尝鲜。</span>
+        </span>
+      </button>
+
+    </div>
+  </section>
+
+  <section class="stats" aria-label="运行统计">
+    <div class="stat-card">
+      <span class="stat-label">处理时长</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statProcessed">—</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">累计推理跳数</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statHops">—</span>
+        <span class="stat-unit">跳</span>
+      </div>
+    </div>
+    <div class="stat-card" id="statRateCard" title="正常值 62.5 跳/秒">
+      <span class="stat-label">每秒推理</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statRate">—</span>
+        <span class="stat-unit">跳/秒</span>
+      </div>
+      <span class="stat-note" id="hopsNote">正常值 62.5</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">参考静默跳数</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statSilent">—</span>
+        <span class="stat-unit">跳</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">输出补零次数</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statUnderruns">—</span>
+        <span class="stat-unit">次</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">降级直通次数</span>
+      <div class="stat-value-row">
+        <span class="stat-value" id="statPassthroughs">—</span>
+        <span class="stat-unit">次</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="hint-bar">
+    <span class="hint-pill">
+      <svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg>
+      提示
+    </span>
+    <p id="hintText" aria-live="polite">语音软件里选择 CABLE Output 作为麦克风</p>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="assertive" aria-atomic="true"></div>
+
+<div class="offline-overlay" id="offlineOverlay" aria-hidden="true" role="group" aria-labelledby="offlineTitle" aria-describedby="offlineDesc">
+  <div class="offline-panel">
+    <div class="offline-icon" aria-hidden="true">
+      <svg class="icon"><use href="#i-plug"></use></svg>
+    </div>
+    <span class="offline-kicker">连接中断</span>
+    <h2 id="offlineTitle">程序未在运行…</h2>
+    <p id="offlineDesc">VoiceAec 暂时没有响应。请确认程序已启动，页面会继续自动重连。</p>
+    <div class="offline-retry" aria-hidden="true">
+      <span class="retry-spinner"></span>
+      <span id="retryText">正在自动重连</span>
+    </div>
+  </div>
+</div>
+
+<dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
+  <div class="dialog-card">
+    <div class="dialog-icon" aria-hidden="true">
+      <svg class="icon"><use href="#i-collapse"></use></svg>
+    </div>
+    <h2 id="confirmTitle">要关闭这个面板吗？</h2>
+    <p id="confirmDesc">关闭页面后，VoiceAec 会继续在系统托盘运行，音频处理不会中断。需要完全退出时，请右键托盘图标选择“退出”。</p>
+    <div class="dialog-actions">
+      <button class="button button-soft" id="cancelPanelClose" type="button">取消</button>
+      <button class="button button-neutral" id="confirmPanelClose" type="button">关闭面板</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="sr-only" id="srStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const MODES = ['off', 'v1.2', 'v1.3', 'v1.4'];
+  const DEFAULT_MODELS = {
+    off: { available: true, label: '关闭（直通）' },
+    'v1.2': { available: true, label: 'v1.2 · 均衡' },
+    'v1.3': { available: true, label: 'v1.3 · 最强消除' },
+    'v1.4': { available: true, label: 'v1.4 · 纯回声消除' }
+  };
+  const DEFAULT_HINT = '语音软件里选择 CABLE Output 作为麦克风';
+  const POLL_MS = 500;
+  const STATUS_TIMEOUT_MS = 2500;
+  const SWITCH_TIMEOUT_MS = 10000;
+  const AUTOSTART_TIMEOUT_MS = 6000;
+
+  const $ = (id) => document.getElementById(id);
+
+  const els = {
+    app: $('app'),
+    runState: $('runState'),
+    runText: $('runText'),
+    cpuValue: $('cpuValue'),
+    modeBadge: $('modeBadge'),
+    modeBadgeText: $('modeBadgeText'),
+    autostartField: $('autostartField'),
+    autostartToggle: $('autostartToggle'),
+    autostartState: $('autostartState'),
+    panelBtn: $('panelBtn'),
+    switchState: $('switchState'),
+    switchText: $('switchText'),
+    modeGrid: $('modeGrid'),
+    refPill: $('refPill'),
+    statProcessed: $('statProcessed'),
+    statHops: $('statHops'),
+    statRate: $('statRate'),
+    statRateCard: $('statRateCard'),
+    hopsNote: $('hopsNote'),
+    statSilent: $('statSilent'),
+    statUnderruns: $('statUnderruns'),
+    statPassthroughs: $('statPassthroughs'),
+    hintText: $('hintText'),
+    toast: $('toast'),
+    offlineOverlay: $('offlineOverlay'),
+    retryText: $('retryText'),
+    srStatus: $('srStatus'),
+    confirmDialog: $('confirmDialog'),
+    cancelPanelClose: $('cancelPanelClose'),
+    confirmPanelClose: $('confirmPanelClose')
+  };
+
+  const channels = {
+    mic: {
+      name: $('micName'),
+      db: $('micDb'),
+      meter: $('micMeter'),
+      fill: $('micFill'),
+      peak: $('micPeak'),
+      buffer: $('micBuffer')
+    },
+    ref: {
+      name: $('refName'),
+      db: $('refDb'),
+      meter: $('refMeter'),
+      fill: $('refFill'),
+      peak: $('refPeak'),
+      buffer: $('refBuffer')
+    },
+    out: {
+      name: $('outName'),
+      db: $('outDb'),
+      meter: $('outMeter'),
+      fill: $('outFill'),
+      peak: $('outPeak'),
+      buffer: $('outBuffer')
+    }
+  };
+
+  const cardMap = new Map();
+  document.querySelectorAll('.mode-card').forEach((root) => {
+    const mode = root.dataset.mode;
+    if (!mode) return;
+    cardMap.set(mode, {
+      root,
+      title: root.querySelector('[data-mode-title]'),
+      current: root.querySelector('[data-current]'),
+      missing: root.querySelector('[data-missing]'),
+      switching: root.querySelector('[data-switching]')
+    });
+  });
+
+  const models = {};
+  MODES.forEach((mode) => {
+    models[mode] = { ...DEFAULT_MODELS[mode] };
+  });
+
+  const state = {
+    connected: false,
+    offline: false,
+    retryCount: 0,
+    currentMode: 'v1.2',
+    models,
+    serverSwitching: false,
+    localPending: false,
+    pendingMode: null,
+    autostart: false,
+    autostartKnown: false,
+    autostartPending: false,
+    polling: false,
+    peaks: {
+      mic: { value: 0, hold: 0 },
+      ref: { value: 0, hold: 0 },
+      out: { value: 0, hold: 0 }
+    },
+    toastTimer: 0
+  };
+
+  const numberFormatter = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
+
+  function setText(element, value) {
+    if (!element) return;
+    const next = value == null ? '' : String(value);
+    if (element.textContent !== next) element.textContent = next;
+  }
+
+  function toNumber(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    }
+    return NaN;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function formatDuration(totalSeconds) {
+    const seconds = toNumber(totalSeconds);
+    if (!Number.isFinite(seconds) || seconds < 0) return '—';
+    const whole = Math.floor(seconds);
+    const hours = Math.floor(whole / 3600);
+    const minutes = Math.floor((whole % 3600) / 60);
+    const secs = whole % 60;
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(secs).padStart(2, '0');
+    return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+
+  function formatDb(value) {
+    if (!Number.isFinite(value)) return '-∞';
+    let rounded = Math.round(value * 10) / 10;
+    if (Object.is(rounded, -0)) rounded = 0;
+    return rounded.toFixed(1);
+  }
+
+  function formatInteger(value) {
+    const n = toNumber(value);
+    return Number.isFinite(n) ? numberFormatter.format(Math.max(0, Math.round(n))) : '—';
+  }
+
+  function modelInfo(mode) {
+    return state.models[mode] || DEFAULT_MODELS[mode] || { available: false, label: String(mode) };
+  }
+
+  function modeLabel(mode) {
+    const info = modelInfo(mode);
+    return info.label || (DEFAULT_MODELS[mode] && DEFAULT_MODELS[mode].label) || String(mode || '—');
+  }
+
+  function showToast(message, tone = 'info') {
+    window.clearTimeout(state.toastTimer);
+    setText(els.toast, message);
+    els.toast.classList.toggle('is-error', tone === 'error');
+    els.toast.classList.toggle('is-success', tone === 'success');
+    els.toast.classList.add('is-visible');
+    const duration = tone === 'error' ? 5200 : (tone === 'info' ? 5000 : 3000);
+    state.toastTimer = window.setTimeout(() => {
+      els.toast.classList.remove('is-visible');
+    }, duration);
+  }
+
+  function markOnline() {
+    const wasOffline = state.offline;
+    state.offline = false;
+    state.connected = true;
+    state.retryCount = 0;
+
+    els.offlineOverlay.classList.remove('is-visible');
+    els.offlineOverlay.setAttribute('aria-hidden', 'true');
+    els.app.removeAttribute('inert');
+    els.runState.classList.remove('is-connecting', 'is-offline');
+
+    if (wasOffline) {
+      setText(els.srStatus, '已重新连接 VoiceAec。');
+      showToast('已重新连接 VoiceAec', 'success');
+    }
+  }
+
+  function goOffline() {
+    const firstFailure = !state.offline;
+    state.offline = true;
+    state.connected = false;
+    state.retryCount += 1;
+
+    if (firstFailure) {
+      if (els.confirmDialog.open) els.confirmDialog.close();
+      els.offlineOverlay.classList.add('is-visible');
+      els.offlineOverlay.setAttribute('aria-hidden', 'false');
+      els.app.setAttribute('inert', '');
+      setText(els.srStatus, 'VoiceAec 未在运行，正在自动重连。');
+    }
+
+    els.runState.classList.remove('is-connecting');
+    els.runState.classList.add('is-offline');
+    setText(els.runText, '连接中断');
+    setText(els.retryText, `正在自动重连 · 第 ${state.retryCount} 次`);
+
+    refreshControls();
+  }
+
+  function refreshModeBadge() {
+    const label = modeLabel(state.currentMode);
+    setText(els.modeBadgeText, label);
+    els.modeBadge.dataset.mode = state.currentMode;
+    els.modeBadge.classList.toggle('is-busy', state.localPending || state.serverSwitching);
+  }
+
+  function refreshModes() {
+    const busy = state.localPending || state.serverSwitching;
+    els.modeGrid.classList.toggle('is-busy', busy);
+    els.modeGrid.classList.toggle('is-locked', !state.connected);
+    els.modeGrid.setAttribute('aria-busy', busy ? 'true' : 'false');
+
+    MODES.forEach((mode) => {
+      const ui = cardMap.get(mode);
+      if (!ui) return;
+
+      const info = modelInfo(mode);
+      const available = info.available !== false;
+      const isCurrent = mode === state.currentMode;
+      const switchingHere = busy && (
+        state.localPending
+          ? state.pendingMode === mode
+          : (state.serverSwitching && isCurrent)
+      );
+      const disabled = !state.connected || busy || !available;
+      const label = modeLabel(mode);
+
+      ui.root.disabled = disabled;
+      ui.root.classList.toggle('is-current', isCurrent);
+      ui.root.classList.toggle('is-unavailable', !available);
+      ui.root.classList.toggle('is-pending', switchingHere);
+      ui.root.setAttribute('aria-pressed', isCurrent ? 'true' : 'false');
+
+      if (ui.title) {
+        setText(ui.title, label);
+        ui.title.title = label;
+      }
+      if (ui.current) ui.current.hidden = !isCurrent || switchingHere;
+      if (ui.missing) ui.missing.hidden = available;
+      if (ui.switching) ui.switching.hidden = !switchingHere;
+    });
+  }
+
+  function refreshSwitchState() {
+    let text = '点击卡片立即切换';
+    let busy = false;
+
+    if (!state.connected) {
+      text = state.offline ? '等待程序启动…' : '正在连接…';
+    } else if (state.localPending) {
+      text = `正在切换到 ${modeLabel(state.pendingMode || state.currentMode)}…`;
+      busy = true;
+    } else if (state.serverSwitching) {
+      text = '正在切换模式…';
+      busy = true;
+    }
+
+    setText(els.switchText, text);
+    els.switchState.classList.toggle('is-busy', busy);
+    els.switchState.classList.toggle('is-waiting', !state.connected && !busy);
+  }
+
+  function refreshControls() {
+    refreshModeBadge();
+    refreshModes();
+    refreshSwitchState();
+    renderAutostart();
+  }
+
+  function renderAutostart() {
+    if (!els.autostartToggle) return;
+
+    const pending = state.autostartPending;
+    const known = state.autostartKnown;
+    const enabled = state.autostart;
+    const stateText = pending
+      ? '保存中…'
+      : (known ? (enabled ? '已开启' : '已关闭') : '读取中…');
+    const ariaState = pending
+      ? '正在保存'
+      : (known ? (enabled ? '已开启' : '已关闭') : '正在读取');
+
+    els.autostartToggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+    els.autostartToggle.setAttribute('aria-label', `开机自启，${ariaState}`);
+    els.autostartToggle.disabled = !state.connected || !known || pending;
+
+    if (els.autostartField) {
+      els.autostartField.dataset.enabled = enabled ? 'true' : 'false';
+      els.autostartField.classList.toggle('is-pending', pending);
+      els.autostartField.setAttribute('aria-busy', pending ? 'true' : 'false');
+    }
+    setText(els.autostartState, stateText);
+  }
+
+  function updateAutostartState(value) {
+    if (typeof value !== 'boolean') return;
+    state.autostartKnown = true;
+    if (!state.autostartPending) {
+      state.autostart = value;
+    }
+  }
+
+  async function changeAutostart() {
+    if (!state.connected || !state.autostartKnown || state.autostartPending) return;
+
+    const previous = state.autostart;
+    const next = !previous;
+    state.autostart = next;
+    state.autostartPending = true;
+    refreshControls();
+
+    let failureMessage = '';
+
+    try {
+      const response = await fetchWithTimeout('/api/autostart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+          Accept: 'application/json'
+        },
+        body: next ? 'true' : 'false'
+      }, AUTOSTART_TIMEOUT_MS);
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = null;
+      }
+
+      if (response.ok && payload && payload.ok === true) {
+        state.autostartKnown = true;
+        if (typeof payload.autostart === 'boolean') {
+          state.autostart = payload.autostart;
+        }
+        setText(els.srStatus, state.autostart ? '开机自启已开启。' : '开机自启已关闭。');
+      } else if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+        failureMessage = payload.error.trim();
+      } else {
+        failureMessage = response.ok
+          ? '后端未确认设置'
+          : `服务返回异常（HTTP ${response.status}）`;
+      }
+    } catch (error) {
+      failureMessage = error && error.name === 'AbortError'
+        ? '设置请求超时，请重试'
+        : '网络连接异常，请重试';
+    } finally {
+      if (failureMessage) {
+        state.autostart = previous;
+        showToast(`开机自启设置失败：${failureMessage}`, 'error');
+      }
+      state.autostartPending = false;
+      refreshControls();
+    }
+  }
+
+  function updateRun(data) {
+    const uptime = toNumber(data.uptimeSec);
+    setText(els.runText, Number.isFinite(uptime) ? `运行中 · ${formatDuration(uptime)}` : '运行中');
+
+    const cpu = toNumber(data.cpuPercent);
+    setText(els.cpuValue, Number.isFinite(cpu) ? clamp(cpu, 0, 100).toFixed(1) : '--');
+  }
+
+  function updateChannel(key, info) {
+    const ui = channels[key];
+    const name = info && typeof info.name === 'string' && info.name.trim() ? info.name.trim() : '—';
+    setText(ui.name, name);
+    ui.name.title = name;
+
+    const raw = info ? toNumber(info.levelDb) : NaN;
+    const silent = !Number.isFinite(raw) || raw <= -120;
+    const shown = silent ? null : Math.min(0, raw);
+    const clamped = silent ? -60 : Math.max(-60, shown);
+    const percent = silent ? 0 : clamp(((clamped + 60) / 60) * 100, 0, 100);
+
+    ui.fill.style.width = `${percent.toFixed(2)}%`;
+
+    const peak = state.peaks[key];
+    if (silent) {
+      peak.value = 0;
+      peak.hold = 0;
+    } else if (percent >= peak.value) {
+      peak.value = percent;
+      peak.hold = 4;
+    } else if (peak.hold > 0) {
+      peak.hold -= 1;
+    } else {
+      peak.value = Math.max(percent, peak.value - 2.2);
+    }
+
+    const peakVisible = !silent && peak.value > 0.2;
+    ui.peak.classList.toggle('is-visible', peakVisible);
+    if (peakVisible) {
+      ui.peak.style.left = `${clamp(peak.value, 0.4, 99.6).toFixed(2)}%`;
+    }
+
+    setText(ui.db, silent ? '-∞' : formatDb(shown));
+    ui.db.classList.toggle('is-silent', silent);
+
+    const buffer = info ? toNumber(info.bufferMs) : NaN;
+    setText(ui.buffer, Number.isFinite(buffer) ? `缓冲 ${Math.round(Math.max(0, buffer))} ms` : '缓冲 — ms');
+
+    const ariaNow = silent ? -60 : Number(clamped.toFixed(1));
+    ui.meter.setAttribute('aria-valuenow', String(ariaNow));
+    ui.meter.setAttribute('aria-valuetext', silent ? '静音' : `${formatDb(shown)} dBFS`);
+  }
+
+  function updateLevels(data) {
+    updateChannel('mic', data.mic);
+    updateChannel('ref', data.ref);
+    updateChannel('out', data.out);
+
+    const active = Boolean(data.ref && data.ref.active);
+    setText(els.refPill, active ? '播放中' : '静默');
+    els.refPill.dataset.active = active ? 'true' : 'false';
+    els.refPill.title = active ? '参考回采：音箱正在出声' : '参考回采：当前静默';
+  }
+
+  function updateStats(data) {
+    const stats = data.stats && typeof data.stats === 'object' ? data.stats : {};
+
+    setText(els.statProcessed, formatDuration(stats.processedSec));
+    setText(els.statHops, formatInteger(stats.hops));
+    setText(els.statSilent, formatInteger(stats.silentRefHops));
+    setText(els.statUnderruns, formatInteger(stats.underruns));
+    setText(els.statPassthroughs, formatInteger(stats.passthroughs));
+
+    const rate = toNumber(stats.hopsPerSec);
+    const hasRate = Number.isFinite(rate);
+    setText(els.statRate, hasRate ? rate.toFixed(1) : '—');
+
+    const warn = hasRate && (rate < 55 || rate > 70);
+    els.statRateCard.classList.toggle('is-warn', warn);
+    els.statRateCard.setAttribute(
+      'aria-label',
+      `每秒推理 ${hasRate ? rate.toFixed(1) : '未知'} 跳每秒，${warn ? '偏离正常范围' : '正常值 62.5'}`
+    );
+    setText(els.hopsNote, warn ? '偏离正常范围' : '正常值 62.5');
+  }
+
+  function updateHint(hint) {
+    const text = typeof hint === 'string' && hint.trim() ? hint.trim() : DEFAULT_HINT;
+    setText(els.hintText, text);
+    els.hintText.title = text;
+  }
+
+  function updateModelState(modelsPayload) {
+    if (!modelsPayload || typeof modelsPayload !== 'object') return;
+
+    MODES.forEach((mode) => {
+      const incoming = modelsPayload[mode];
+      if (!incoming || typeof incoming !== 'object') return;
+      if (typeof incoming.available === 'boolean') {
+        state.models[mode].available = incoming.available;
+      }
+      if (typeof incoming.label === 'string' && incoming.label.trim()) {
+        state.models[mode].label = incoming.label.trim();
+      }
+    });
+  }
+
+  function applyStatus(data) {
+    markOnline();
+    updateModelState(data.models);
+
+    if (!state.localPending && MODES.includes(data.mode)) {
+      state.currentMode = data.mode;
+    }
+    state.serverSwitching = Boolean(data.switching);
+
+    updateRun(data);
+    updateLevels(data);
+    updateStats(data);
+    updateHint(data.hint);
+    updateAutostartState(data.autostart);
+    refreshControls();
+  }
+
+  async function fetchWithTimeout(url, options, timeoutMs) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  async function pollStatus() {
+    if (state.polling) return;
+    state.polling = true;
+
+    try {
+      const response = await fetchWithTimeout('/api/status', {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      }, STATUS_TIMEOUT_MS);
+
+      if (!response.ok) throw new Error('status request failed');
+      const data = await response.json();
+      if (!data || typeof data !== 'object' || data.ok === false) {
+        throw new Error('invalid status payload');
+      }
+      applyStatus(data);
+    } catch (_) {
+      goOffline();
+    } finally {
+      state.polling = false;
+    }
+  }
+
+  async function switchMode(mode) {
+    if (!MODES.includes(mode) || !state.connected) return;
+    if (state.localPending || state.serverSwitching) return;
+    if (mode === state.currentMode) return;
+    if (modelInfo(mode).available === false) return;
+
+    state.localPending = true;
+    state.pendingMode = mode;
+    refreshControls();
+
+    let failureMessage = '';
+
+    try {
+      const response = await fetchWithTimeout('/api/model', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain; charset=UTF-8',
+          Accept: 'application/json'
+        },
+        body: mode
+      }, SWITCH_TIMEOUT_MS);
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = null;
+      }
+
+      if (response.ok && payload && payload.ok === true) {
+        state.currentMode = MODES.includes(payload.mode) ? payload.mode : mode;
+        state.serverSwitching = false;
+      } else if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+        failureMessage = payload.error.trim();
+      } else {
+        failureMessage = response.ok
+          ? '后端未确认切换，请重试'
+          : `服务返回异常（HTTP ${response.status}）`;
+      }
+    } catch (error) {
+      failureMessage = error && error.name === 'AbortError'
+        ? '切换请求超时，请重试'
+        : '网络连接异常，已保持原模式';
+    } finally {
+      if (failureMessage) {
+        showToast(`切换失败：${failureMessage}`, 'error');
+      }
+      window.setTimeout(() => {
+        state.localPending = false;
+        state.pendingMode = null;
+        refreshControls();
+      }, 300);
+    }
+  }
+
+  function openPanelDialog() {
+    if (els.confirmDialog.open) return;
+    els.confirmDialog.showModal();
+    window.requestAnimationFrame(() => els.cancelPanelClose.focus());
+  }
+
+  function acknowledgePanelClose() {
+    if (els.confirmDialog.open) els.confirmDialog.close();
+
+    if (window.chrome?.webview) {
+      window.chrome.webview.postMessage('close-panel');
+      return;
+    }
+
+    const message = '面板已可关闭，程序仍在系统托盘继续运行；右键托盘图标选择“退出”可完全退出';
+    showToast(message, 'info');
+    setText(els.srStatus, '面板可以关闭了，程序仍在系统托盘继续运行。');
+  }
+
+  els.modeGrid.addEventListener('click', (event) => {
+    const card = event.target.closest('.mode-card');
+    if (!card || card.disabled) return;
+    const mode = card.dataset.mode;
+    if (!MODES.includes(mode)) return;
+    if (mode === state.currentMode) return;
+    if (modelInfo(mode).available === false) return;
+    void switchMode(mode);
+  });
+
+  els.panelBtn.addEventListener('click', openPanelDialog);
+
+  els.autostartToggle.addEventListener('click', () => {
+    void changeAutostart();
+  });
+
+  els.cancelPanelClose.addEventListener('click', () => {
+    els.confirmDialog.close();
+  });
+
+  els.confirmPanelClose.addEventListener('click', acknowledgePanelClose);
+
+  els.confirmDialog.addEventListener('click', (event) => {
+    if (event.target === els.confirmDialog) els.confirmDialog.close();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) pollStatus();
+  });
+
+  function init() {
+    updateHint(DEFAULT_HINT);
+    refreshControls();
+    pollStatus();
+    window.setInterval(pollStatus, POLL_MS);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
