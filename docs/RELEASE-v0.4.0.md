@@ -44,9 +44,13 @@
 ## 校验
 
 ```
-SHA256 (VoiceAec-v0.4.0-setup-x64.exe) = 05aaddee284fbd59b526e3612c1b2846397676811b0c6215d78e3778bf52da8c
-SHA256 (VoiceAec-v0.4.0-win-x64.zip)    = 34d4b56241cb8127dd10d4f5a288757d6408fff45563aad36090ad0435460a41
+SHA256 (VoiceAec-v0.4.0-setup-x64.exe) = cdc1769dd8c011fd9d4a64c7afabd5c4ea351e7d62ff64518723265f9086c0ce
+SHA256 (VoiceAec-v0.4.0-win-x64.zip)    = 607c6b5fced85ba8667dc66b7dabc27b11104b38b8f11563a03d1c79f982423e
 ```
+
+## 许可
+
+应用代码 [MIT](https://github.com/384615666/VoiceAec/blob/main/LICENSE);发布包内第三方组件(LocalVQE Apache-2.0、ggml/NAudio/.NET MIT、MinGW 运行库等)见 [THIRD-PARTY-NOTICES](https://github.com/384615666/VoiceAec/blob/main/THIRD-PARTY-NOTICES.md)。
 
 ## 已知限制
 
