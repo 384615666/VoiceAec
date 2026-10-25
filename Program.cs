@@ -17,6 +17,22 @@ string Arg(string name, string fallback)
     return i >= 0 && i + 1 < argsList.Count ? argsList[i + 1] : fallback;
 }
 
+// ── 设备配置持久化:命令行 > voiceaec.json > 智能默认 ────────────────
+var cfgPath = Path.Combine(AppContext.BaseDirectory, "voiceaec.json");
+Dictionary<string, string> LoadCfg()
+{
+    try
+    {
+        if (File.Exists(cfgPath))
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(cfgPath)) ?? [];
+    }
+    catch { }
+    return [];
+}
+var cfg = LoadCfg();
+void SaveCfg() { try { File.WriteAllText(cfgPath, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true })); } catch { } }
+bool HasArg(string name) => argsList.Contains(name);
+
 var pluginData = @"C:\ProgramData\obs-studio\plugins\obs-localvqe\data";
 var modelDirs = new[] { Path.Combine(AppContext.BaseDirectory, "models"), pluginData };
 var modelFiles = new Dictionary<string, string>
@@ -48,10 +64,10 @@ if (argsList.Contains("--list"))
     return 0;
 }
 
-var micSub = Arg("--mic", "2K Web Camera");
-var refSub = Arg("--ref", "USB HiFi");
-var ref2Sub = Arg("--ref2", "G2500");
-var outSub = Arg("--out", "CABLE Input");
+var micSub = HasArg("--mic") ? Arg("--mic", "") : cfg.GetValueOrDefault("mic", "");
+var refSub = HasArg("--ref") ? Arg("--ref", "") : cfg.GetValueOrDefault("ref", "");
+var ref2Sub = HasArg("--ref2") ? Arg("--ref2", "") : cfg.GetValueOrDefault("ref2", "");
+var outSub = HasArg("--out") ? Arg("--out", "") : cfg.GetValueOrDefault("out", "");
 var threads = int.Parse(Arg("--threads", "2"));
 var startMode = Arg("--model", "v1.2");
 var port = int.Parse(Arg("--port", "8765"));
@@ -76,6 +92,20 @@ MMDevice Find(DataFlow flow, string substring)
     return hits[0];
 }
 
+// 智能默认:未配置时取系统默认通信麦克风 + 默认播放设备;输出必须是 CABLE Input
+if (micSub.Length == 0)
+{
+    try { micSub = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications).FriendlyName; }
+    catch { micSub = "麦克风"; }
+}
+if (refSub.Length == 0)
+{
+    try { refSub = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console).FriendlyName; }
+    catch { refSub = "扬声器"; }
+}
+if (ref2Sub.Length == 0) ref2Sub = "none";
+if (outSub.Length == 0) outSub = "CABLE Input";
+
 var micDevice = Find(DataFlow.Capture, micSub);
 var refDevice = Find(DataFlow.Render, refSub);
 MMDevice? ref2Device = null;
@@ -85,6 +115,11 @@ if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
     catch { Console.WriteLine("  (ref2 not found, single-ref)"); }
 }
 var outDevice = Find(DataFlow.Render, outSub);
+cfg["mic"] = micDevice.FriendlyName;   // 固化本次解析结果,后续系统默认变化不影响
+cfg["ref"] = refDevice.FriendlyName;
+cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
+cfg["out"] = outDevice.FriendlyName;
+SaveCfg();
 
 // ── engine / mode management ─────────────────────────────────────────
 const int Rate = 16000;
@@ -144,7 +179,7 @@ string SwitchModel(string requested)
 var target16k = WaveFormat.CreateIeeeFloatWaveFormat(Rate, 1);
 var micRing = new SampleRing(Rate * 4 * 4);
 var refRing = new SampleRing(Rate / 2 * 4);
-var ref2Ring = ref2Device != null ? new SampleRing(Rate / 2 * 4) : null;
+var ref2Ring = new SampleRing(Rate / 2 * 4);   // 始终创建,便于运行时热加 ref2
 var outRing = new SampleRing(Rate * 2 * 4);
 
 long hops = 0, passthroughs = 0, outUnderruns = 0, refTrims = 0, refZeroHops = 0;
@@ -193,7 +228,6 @@ static double RmsDb(float[] buf)
 var micCap = StartCapture(micDevice, micRing, "mic");
 var refCap = StartCapture(refDevice, refRing, "ref");
 var ref2Cap = ref2Device != null ? StartCapture(ref2Device, ref2Ring!, "ref2") : null;
-
 void TrimRef(SampleRing r)
 {
     var excess = r.BufferedBytes - Rate / 2 * 4;
@@ -208,6 +242,69 @@ var waveOut = new WasapiOut(outDevice, AudioClientShareMode.Shared, true, 50);
 waveOut.Init(feed);
 waveOut.Play();
 Console.WriteLine($"  [output]  -> {outDevice.FriendlyName}");
+
+// ── 设备热切换:采集端/输出端重绑,推理引擎与 ring 不动 ────────────────
+var devSwitchLock = new object();
+
+string SwitchDevices(string? micName, string? refName, string? ref2Name, string? outName)
+{
+    lock (devSwitchLock)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(micName))
+            {
+                var d = Find(DataFlow.Capture, micName);
+                var old = micCap;
+                micDevice = d;
+                micCap = StartCapture(d, micRing, "mic");
+                try { old?.StopRecording(); old?.Dispose(); } catch { }
+            }
+            if (!string.IsNullOrEmpty(refName))
+            {
+                var d = Find(DataFlow.Render, refName);
+                var old = refCap;
+                refDevice = d;
+                refCap = StartCapture(d, refRing, "ref");
+                try { old?.StopRecording(); old?.Dispose(); } catch { }
+            }
+            if (ref2Name != null)
+            {
+                var old2 = ref2Cap;
+                ref2Cap = null;
+                try { old2?.StopRecording(); old2?.Dispose(); } catch { }
+                ref2Device = null;
+                if (!ref2Name.Equals("none", StringComparison.OrdinalIgnoreCase))
+                {
+                    var d = Find(DataFlow.Render, ref2Name);
+                    ref2Device = d;
+                    ref2Cap = StartCapture(d, ref2Ring, "ref2");
+                }
+            }
+            if (!string.IsNullOrEmpty(outName))
+            {
+                var d = Find(DataFlow.Render, outName);
+                try { waveOut.Stop(); waveOut.Dispose(); } catch { }
+                outDevice = d;
+                var wo = new WasapiOut(d, AudioClientShareMode.Shared, true, 50);
+                wo.Init(feed);
+                wo.Play();
+                waveOut = wo;
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"设备切换失败: {ex.Message}";
+        }
+    }
+    cfg["mic"] = micDevice.FriendlyName;
+    cfg["ref"] = refDevice.FriendlyName;
+    cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
+    cfg["out"] = outDevice.FriendlyName;
+    SaveCfg();
+    Console.WriteLine($"[devices] mic={cfg["mic"]} ref={cfg["ref"]} ref2={cfg["ref2"]} out={cfg["out"]}");
+    return "";
+}
 
 var running = true;
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; running = false; };
@@ -439,6 +536,58 @@ var httpThread = new Thread(() =>
                             ok ? (object)new { ok, mode = nowMode } : new { ok, error }, jsonOpts);
                         ctx.Response.ContentType = "application/json; charset=utf-8";
                         ctx.Response.OutputStream.Write(bytes);
+                        break;
+                    }
+                    case "/api/devices":
+                    {
+                        if (ctx.Request.HttpMethod == "GET")
+                        {
+                            var caps = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(d => d.FriendlyName).ToList();
+                            var renders = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Select(d => d.FriendlyName).ToList();
+                            var bytes = JsonSerializer.SerializeToUtf8Bytes(new
+                            {
+                                ok = true,
+                                inputs = caps,
+                                loops = renders,
+                                outputs = renders,
+                                current = new
+                                {
+                                    mic = micDevice.FriendlyName,
+                                    @ref = refDevice.FriendlyName,
+                                    ref2 = ref2Device?.FriendlyName ?? "none",
+                                    @out = outDevice.FriendlyName
+                                }
+                            }, jsonOpts);
+                            ctx.Response.ContentType = "application/json; charset=utf-8";
+                            ctx.Response.ContentLength64 = bytes.Length;
+                            ctx.Response.OutputStream.Write(bytes);
+                        }
+                        else
+                        {
+                            string body;
+                            using (var sr = new StreamReader(ctx.Request.InputStream))
+                                body = sr.ReadToEnd() ?? "";
+                            string? mic = null, rf = null, rf2 = null, ot = null;
+                            try
+                            {
+                                using var doc = JsonDocument.Parse(body);
+                                if (doc.RootElement.TryGetProperty("mic", out var m) && m.ValueKind == JsonValueKind.String) mic = m.GetString();
+                                if (doc.RootElement.TryGetProperty("ref", out var r) && r.ValueKind == JsonValueKind.String) rf = r.GetString();
+                                if (doc.RootElement.TryGetProperty("ref2", out var r2) && r2.ValueKind == JsonValueKind.String) rf2 = r2.GetString();
+                                if (doc.RootElement.TryGetProperty("out", out var o) && o.ValueKind == JsonValueKind.String) ot = o.GetString();
+                            }
+                            catch { }
+                            string nowMic, nowRef, nowRef2, nowOut;
+                            lock (devSwitchLock) { nowMic = micDevice.FriendlyName; nowRef = refDevice.FriendlyName; nowRef2 = ref2Device?.FriendlyName ?? "none"; nowOut = outDevice.FriendlyName; }
+                            var err = mic == null && rf == null && rf2 == null && ot == null ? "请求体需含 mic/ref/ref2/out 字段" : SwitchDevices(mic, rf, rf2, ot);
+                            lock (devSwitchLock) { nowMic = micDevice.FriendlyName; nowRef = refDevice.FriendlyName; nowRef2 = ref2Device?.FriendlyName ?? "none"; nowOut = outDevice.FriendlyName; }
+                            var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                                err == "" ? (object)new { ok = true, current = new { mic = nowMic, @ref = nowRef, ref2 = nowRef2, @out = nowOut } }
+                                          : new { ok = false, error = err }, jsonOpts);
+                            ctx.Response.ContentType = "application/json; charset=utf-8";
+                            if (err != "") ctx.Response.StatusCode = 500;
+                            ctx.Response.OutputStream.Write(bytes);
+                        }
                         break;
                     }
                     case "/api/autostart":

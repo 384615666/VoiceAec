@@ -11,6 +11,8 @@
 1. **VB-Audio Virtual Cable**(虚拟声卡,免费;装完后确认"播放设备"里出现 `CABLE Input`)
 2. Windows 10/11 自带 WebView2 运行时(一般都有)
 
+**设备自动适配**:首次启动自动选系统默认通信麦克风 + 默认播放设备(参考回采),输出自动找 CABLE Input——换任何电脑开箱即用。设备不对?在面板电平卡上的下拉里直接换,热切换不停引擎,选择持久保存在 exe 旁 `voiceaec.json`。
+
 语音软件(QQ / Oopz)里把麦克风设备选成 **CABLE Output**;游戏/语音的播放设备走音箱。想开机自动后台运行:面板顶栏打开"开机自启"。
 
 ## 产品形态
@@ -34,6 +36,8 @@
 - 运行统计:处理时长 / 累计推理跳数 / 实时速率(正常值 62.5 跳/秒)/ 参考静默跳数 / 输出补零 / 降级直通
 - HTTP API(默认 `http://localhost:8765`,占用自动 +1 到 8774):
   - `GET /api/status` — 全量状态 JSON(含 `autostart`)
+  - `GET /api/devices` — 枚举输入/回采/输出设备 + 当前选择
+  - `POST /api/devices` — body JSON `{mic|ref|ref2|out: "设备名"}`(可多字段),热切换并持久化
   - `POST /api/model` — body 纯文本 `off` / `v1.2` / `v1.3` / `v1.4`
   - `POST /api/autostart` — body 纯文本 `true` / `false`
   - `POST /api/quit` — 退出进程(调试后门)
@@ -56,9 +60,9 @@ dotnet build -c Release
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--mic` | 2K Web Camera | 麦克风设备(子串匹配) |
-| `--ref` | USB HiFi | 参考回采回采设备(render loopback) |
-| `--ref2` | G2500 | 第二参考(找不到自动降级单参考;`none` 关闭) |
+| `--mic` | 智能默认(见上) | 麦克风设备(子串匹配,优先级高于 voiceaec.json) |
+| `--ref` | 智能默认 | 参考回采设备(render loopback) |
+| `--ref2` | none(配置可存) | 第二参考(找不到自动降级单参考;`none` 关闭) |
 | `--out` | CABLE Input | 输出设备 |
 | `--threads` | 2 | 推理线程数 |
 | `--model` | v1.2 | 启动模式 |
