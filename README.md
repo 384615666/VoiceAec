@@ -2,6 +2,17 @@
 
 本地实时回声消除(AEC)桌面小工具:把麦克风信号与音箱参考回采一起送入 [LocalVQE](https://github.com/384615666/obs-localvqe-windows) 神经网络模型,消除对方听到的游戏/媒体回声后,输出到 VB-CABLE 虚拟声卡。QQ / Oopz 等语音软件选择 **CABLE Output** 作为麦克风即可获得干净的语音,游戏声音照常外放。
 
+## 下载即用
+
+从 [Releases](../../releases) 下载 `VoiceAec-v*-win-x64.zip`(**自包含,免 .NET 运行时,含全部模型**),解压到任意目录,双击 `VoiceAec.exe` 即可。
+
+前置条件(目标机器需要自备,与本工具无关):
+
+1. **VB-Audio Virtual Cable**(虚拟声卡,免费;装完后确认"播放设备"里出现 `CABLE Input`)
+2. Windows 10/11 自带 WebView2 运行时(一般都有)
+
+语音软件(QQ / Oopz)里把麦克风设备选成 **CABLE Output**;游戏/语音的播放设备走音箱。想开机自动后台运行:面板顶栏打开"开机自启"。
+
 ## 产品形态
 
 - **原生桌面窗口**(WinForms + WebView2 承载控制面板,1280×800 一屏)
@@ -38,7 +49,7 @@ dotnet build -c Release
   - `liblocalvqe.dll`(LocalVQE 推理库,来自 LocalVQE 源码树 ggml/build/bin)
   - `ggml*.dll`(ggml CPU 后端全家桶)
   - `libgcc_s_seh-1.dll`、`libstdc++-6.dll`、`libwinpthread-1.dll`(MSYS2 ucrt64 运行时)
-- **模型文件**从 obs-localvqe 插件部署目录读取(`C:\ProgramData\obs-studio\plugins\obs-localvqe\data` 下的 `localvqe-v1.2-1.3M-f32.gguf` 等,路径写死于 Program.cs,与 OBS 插件共用模型)
+- **模型文件**查找顺序:exe 旁 `models\` 目录(Release 包内置,推荐)→ obs-localvqe 插件目录 `C:\ProgramData\obs-studio\plugins\obs-localvqe\data`(与 OBS 插件共用,路径写死于 Program.cs)
 - 前端 `wwwroot/index.html` 为单文件零依赖页面,build 时自动拷贝到输出目录
 
 ## 命令行参数

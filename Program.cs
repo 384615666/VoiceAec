@@ -18,12 +18,16 @@ string Arg(string name, string fallback)
 }
 
 var pluginData = @"C:\ProgramData\obs-studio\plugins\obs-localvqe\data";
+var modelDirs = new[] { Path.Combine(AppContext.BaseDirectory, "models"), pluginData };
 var modelFiles = new Dictionary<string, string>
 {
-    ["v1.2"] = Path.Combine(pluginData, "localvqe-v1.2-1.3M-f32.gguf"),
-    ["v1.3"] = Path.Combine(pluginData, "localvqe-v1.3-4.8M-f32.gguf"),
-    ["v1.4"] = Path.Combine(pluginData, "localvqe-v1.4-aec-200K-f32.gguf"),
+    ["v1.2"] = "localvqe-v1.2-1.3M-f32.gguf",
+    ["v1.3"] = "localvqe-v1.3-4.8M-f32.gguf",
+    ["v1.4"] = "localvqe-v1.4-aec-200K-f32.gguf",
 };
+string? ModelPath(string m) => modelFiles.TryGetValue(m, out var f)
+    ? modelDirs.Select(d => Path.Combine(d, f)).FirstOrDefault(File.Exists)
+    : null;
 var modelLabels = new Dictionary<string, string>
 {
     ["off"] = "关闭（直通）",
@@ -92,13 +96,13 @@ LocalVqe.Context? engine = null;
 var mode = "off";
 var switching = false;
 
-bool ModelExists(string m) => m == "off" || (modelFiles.TryGetValue(m, out var p) && File.Exists(p));
+bool ModelExists(string m) => m == "off" || ModelPath(m) != null;
 
 string SwitchModel(string requested)
 {
     if (!modelLabels.ContainsKey(requested)) return $"未知模式 '{requested}'";
     if (!ModelExists(requested))
-        return modelFiles.TryGetValue(requested, out var p) ? $"模型文件不存在: {p}" : "模型文件不存在";
+        return $"模型文件不存在: {modelFiles[requested]}(已查找 {string.Join("、", modelDirs)})";
     switching = true;
     try
     {
@@ -113,7 +117,7 @@ string SwitchModel(string requested)
             Console.WriteLine("[mode] off (passthrough)");
             return "";
         }
-        var fresh = LocalVqe.Context.Create(modelFiles[requested], threads);
+        var fresh = LocalVqe.Context.Create(ModelPath(requested)!, threads);
         LocalVqe.Context? old = null;
         lock (engineLock)
         {
