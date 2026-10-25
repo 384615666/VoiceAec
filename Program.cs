@@ -106,12 +106,24 @@ if (refSub.Length == 0)
 if (ref2Sub.Length == 0) ref2Sub = "none";
 if (outSub.Length == 0) outSub = "CABLE Input";
 
+static string ShortName(string fn) => fn.Contains('(') ? fn[..fn.IndexOf('(')].Trim() : fn;
+
+MMDevice? FindAny(string substring)
+{
+    var hits = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
+        .Where(d => d.FriendlyName.Contains(substring, StringComparison.OrdinalIgnoreCase)).ToList();
+    if (hits.Count > 0) return hits[0];
+    var caps = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
+        .Where(d => d.FriendlyName.Contains(substring, StringComparison.OrdinalIgnoreCase)).ToList();
+    return caps.Count > 0 ? caps[0] : throw new Exception($"no active device matching '{substring}'");
+}
+
 var micDevice = Find(DataFlow.Capture, micSub);
 var refDevice = Find(DataFlow.Render, refSub);
 MMDevice? ref2Device = null;
 if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
 {
-    try { ref2Device = Find(DataFlow.Render, ref2Sub); }
+    try { ref2Device = FindAny(ref2Sub); }   // ref2 可为播放设备回采或另一只麦克风(噪声参考)
     catch { Console.WriteLine("  (ref2 not found, single-ref)"); }
 }
 var outDevice = Find(DataFlow.Render, outSub);
@@ -276,7 +288,7 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
                 ref2Device = null;
                 if (!ref2Name.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
-                    var d = Find(DataFlow.Render, ref2Name);
+                    var d = FindAny(ref2Name);   // 支持播放回采或麦克风噪声参考
                     ref2Device = d;
                     ref2Cap = StartCapture(d, ref2Ring, "ref2");
                 }
@@ -450,7 +462,7 @@ object BuildStatus()
         },
         models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
         autostart = GetAutostart(),
-        hint = "语音软件里选择 CABLE Output 作为麦克风；游戏和语音的播放设备都走 USB HiFi 音箱效果最佳"
+        hint = $"语音软件里把麦克风选成 CABLE Output；游戏和语音都从「{ShortName(refDevice.FriendlyName)}」播放效果最佳——参考回采正在监听它"
     };
 }
 
@@ -544,12 +556,15 @@ var httpThread = new Thread(() =>
                         {
                             var caps = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(d => d.FriendlyName).ToList();
                             var renders = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Select(d => d.FriendlyName).ToList();
+                            var ref2Choices = renders.Select(n => new { name = n, kind = "playback" })
+                                .Concat(caps.Select(n => new { name = n, kind = "mic" })).ToList();
                             var bytes = JsonSerializer.SerializeToUtf8Bytes(new
                             {
                                 ok = true,
                                 inputs = caps,
                                 loops = renders,
                                 outputs = renders,
+                                ref2Choices,
                                 current = new
                                 {
                                     mic = micDevice.FriendlyName,

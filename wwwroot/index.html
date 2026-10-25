@@ -154,13 +154,13 @@
     min-height: 68px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 11px 14px 11px 16px;
-    border-radius: 22px;
-    background: linear-gradient(120deg, rgba(255, 255, 255, .86), rgba(255, 253, 250, .74));
-    border: 1px solid rgba(255, 255, 255, .94);
+    gap: 16px;
+    padding: 11px 16px;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, .87);
+    border: 1px solid rgba(255, 255, 255, .96);
     box-shadow: var(--shadow-soft);
-    backdrop-filter: blur(18px) saturate(1.08);
+    backdrop-filter: blur(10px);
   }
 
   .brand {
@@ -529,42 +529,6 @@
     to {
       transform: rotate(360deg);
     }
-  }
-
-  .panel-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(142, 124, 224, .16);
-    background: linear-gradient(135deg, #F8F4FF 0%, #EDF8FF 100%);
-    color: var(--violet-deep);
-    font-size: 11.5px;
-    line-height: 1.2;
-    font-weight: 750;
-    letter-spacing: .01em;
-    white-space: nowrap;
-    cursor: pointer;
-    box-shadow: 0 5px 14px rgba(142, 124, 224, .08);
-    transition: background .2s ease, transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  }
-
-  .panel-btn .icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .panel-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #F1EAFF 0%, #E1F4FF 100%);
-    border-color: rgba(142, 124, 224, .24);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(142, 124, 224, .13);
-  }
-
-  .panel-btn:active:not(:disabled) {
-    transform: translateY(0) scale(.985);
-    box-shadow: 0 4px 10px rgba(142, 124, 224, .10);
   }
 
   /* ── 三路电平 ─────────────────────────────────────────────── */
@@ -944,6 +908,227 @@
   .meter-scale {
     letter-spacing: .02em;
     white-space: nowrap;
+  }
+
+  /* ── 第二参考（噪声参考） ─────────────────────────────────── */
+
+  .ref2-block {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(223, 182, 218, .38);
+  }
+
+  .ref2-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .ref2-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    font-size: 9.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .03em;
+    color: var(--violet-deep);
+  }
+
+  .ref2-label::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--violet);
+  }
+
+  .ref2-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .ref2-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    height: 24px;
+    flex: 1 1 auto;
+    padding: 0 7px;
+    border: 1px dashed rgba(110, 86, 201, .3);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .62);
+    color: var(--violet-deep);
+    font: inherit;
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .12s ease, opacity .2s ease;
+  }
+
+  .ref2-btn:hover:not(:disabled) {
+    background: #F6F0FF;
+    border-color: rgba(110, 86, 201, .42);
+    box-shadow: 0 4px 10px rgba(110, 86, 201, .10);
+  }
+
+  .ref2-btn:active:not(:disabled) {
+    transform: scale(.99);
+  }
+
+  .ref2-btn:focus-visible {
+    outline: 2px solid rgba(110, 86, 201, .35);
+    outline-offset: 1px;
+  }
+
+  .ref2-btn:disabled {
+    opacity: .55;
+    cursor: wait;
+  }
+
+  .ref2-btn[data-active="true"] {
+    border: 1px solid rgba(110, 86, 201, .22);
+    background: linear-gradient(135deg, #F7F1FF, #EEE6FF);
+    box-shadow: 0 4px 12px rgba(110, 86, 201, .12);
+    color: #56409C;
+  }
+
+  .ref2-btn[data-active="true"]:hover:not(:disabled) {
+    background: linear-gradient(135deg, #F1E8FF, #E7DBFF);
+    border-color: rgba(110, 86, 201, .34);
+  }
+
+  .ref2-btn[aria-expanded="true"] {
+    background: #F6F0FF;
+    border-color: rgba(110, 86, 201, .4);
+  }
+
+  .ref2-btn[aria-expanded="true"] .device-caret {
+    transform: rotate(180deg);
+    color: var(--violet-deep);
+  }
+
+  .ref2-btn.is-busy {
+    opacity: 1;
+    background: #F6F0FF;
+    cursor: progress;
+  }
+
+  .ref2-btn.is-busy .device-caret {
+    display: none;
+  }
+
+  .ref2-btn.is-busy::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    flex: 0 0 auto;
+    border: 1.6px solid var(--violet);
+    border-right-color: transparent;
+    border-radius: 50%;
+    opacity: .9;
+    animation: spin .8s linear infinite;
+  }
+
+  .ref2-glyph {
+    width: 14px;
+    height: 14px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--violet);
+  }
+
+  .ref2-btn[data-active="true"] .ref2-glyph {
+    color: var(--violet-deep);
+  }
+
+  .ref2-glyph .icon {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2;
+  }
+
+  .ref2-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ref2-btn[data-active="true"] .ref2-name {
+    font-weight: 800;
+  }
+
+  .ref2-btn .device-caret {
+    width: 11px;
+    height: 11px;
+    color: var(--violet-deep);
+    opacity: .62;
+  }
+
+  .ref2-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 24px;
+    flex: 0 0 auto;
+    padding: 0 8px 0 6px;
+    border: 1px solid rgba(185, 79, 134, .2);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #FFF8FC, var(--pink));
+    color: var(--berry-deep);
+    font: inherit;
+    font-size: 9.5px;
+    line-height: 1;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(242, 123, 169, .10);
+    transition: background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  }
+
+  .ref2-clear .icon {
+    width: 10px;
+    height: 10px;
+    stroke-width: 2.2;
+  }
+
+  .ref2-clear:hover:not(:disabled) {
+    background: linear-gradient(135deg, #FDEAF4, #FBC9E1);
+    border-color: rgba(185, 79, 134, .3);
+    transform: scale(1.04);
+    box-shadow: 0 5px 12px rgba(242, 123, 169, .18);
+  }
+
+  .ref2-clear:active:not(:disabled) {
+    transform: scale(.95);
+  }
+
+  .ref2-clear:focus-visible {
+    outline: 2px solid rgba(185, 79, 134, .3);
+    outline-offset: 1px;
+  }
+
+  .ref2-clear:disabled {
+    opacity: .5;
+    cursor: wait;
+  }
+
+  .ref2-hint {
+    margin: 4px 0 0;
+    font-size: 9.3px;
+    line-height: 1.45;
+    color: var(--muted);
   }
 
   /* ── 处理模式 ─────────────────────────────────────────────── */
@@ -1553,6 +1738,12 @@
     --dev-deep: var(--blue-deep);
   }
 
+  .device-menu[data-channel="ref2"] {
+    --dev-accent: var(--violet);
+    --dev-soft: #F3ECFF;
+    --dev-deep: var(--violet-deep);
+  }
+
   .device-menu-head {
     display: flex;
     align-items: center;
@@ -1641,6 +1832,36 @@
     border-radius: 999px;
   }
 
+  .device-menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+
+  .device-menu-group + .device-menu-group {
+    margin-top: 6px;
+  }
+
+  .device-menu-group-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px 3px;
+    font-size: 9px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--muted);
+  }
+
+  .device-menu-group-label::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(90deg, var(--dev-soft), transparent);
+  }
+
   .device-option {
     display: flex;
     align-items: center;
@@ -1711,6 +1932,16 @@
 
   .device-option:active {
     transform: scale(.995);
+  }
+
+  .device-option:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  .device-option:disabled:hover {
+    background: transparent;
+    color: var(--ink-soft);
   }
 
   .device-option[aria-selected="true"] {
@@ -2010,125 +2241,6 @@
     flex: 0 0 auto;
   }
 
-  /* ── 二次确认 ─────────────────────────────────────────────── */
-
-  .confirm-dialog {
-    width: min(390px, calc(100vw - 36px));
-    max-width: 390px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--ink);
-  }
-
-  .confirm-dialog::backdrop {
-    background: rgba(70, 66, 87, .24);
-    backdrop-filter: blur(5px);
-  }
-
-  .dialog-card {
-    padding: 24px;
-    border-radius: 24px;
-    background: linear-gradient(160deg, #FFFDFC, #F8F6FF);
-    border: 1px solid rgba(255, 255, 255, .96);
-    box-shadow: 0 30px 70px rgba(142, 124, 224, .16), 0 10px 24px rgba(79, 168, 232, .08);
-  }
-
-  .confirm-dialog[open] .dialog-card {
-    animation: dialog-in .2s ease-out;
-  }
-
-  @keyframes dialog-in {
-    from {
-      opacity: .7;
-      transform: translateY(8px) scale(.985);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  .dialog-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, var(--lilac), var(--sky));
-    color: var(--violet-deep);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
-  }
-
-  .dialog-icon .icon {
-    width: 21px;
-    height: 21px;
-  }
-
-  .dialog-card h2 {
-    margin: 12px 0 0;
-    font-size: 19px;
-    line-height: 1.35;
-    font-weight: 800;
-    letter-spacing: -.02em;
-    color: var(--ink);
-  }
-
-  .dialog-card p {
-    margin: 8px 0 0;
-    font-size: 11.5px;
-    line-height: 1.7;
-    color: var(--ink-soft);
-  }
-
-  .dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 20px;
-  }
-
-  .button {
-    padding: 9px 16px;
-    border: 0;
-    border-radius: 12px;
-    font-size: 11.5px;
-    line-height: 1.2;
-    font-weight: 750;
-    cursor: pointer;
-    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
-  }
-
-  .button:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
-
-  .button:disabled {
-    opacity: .55;
-    cursor: wait;
-    transform: none;
-  }
-
-  .button-soft {
-    background: var(--mint);
-    color: var(--green-deep);
-  }
-
-  .button-soft:hover:not(:disabled) {
-    background: #C4F2DF;
-  }
-
-  .button-neutral {
-    background: linear-gradient(135deg, #EDE7FF, #D9EFFB);
-    color: var(--violet-deep);
-    box-shadow: inset 0 0 0 1px rgba(142, 124, 224, .12), 0 6px 14px rgba(142, 124, 224, .10);
-  }
-
-  .button-neutral:hover:not(:disabled) {
-    background: linear-gradient(135deg, #E5DCFF, #CDE9FB);
-    box-shadow: inset 0 0 0 1px rgba(142, 124, 224, .16), 0 10px 20px rgba(142, 124, 224, .14);
-  }
-
   /* ── 响应式高度兜底 ──────────────────────────────────────── */
 
   @media (max-height: 760px) {
@@ -2253,10 +2365,6 @@
   <symbol id="i-power" viewBox="0 0 24 24">
     <path d="M12 2.8v9M6.4 6.2a8 8 0 1 0 11.2 0"></path>
   </symbol>
-  <symbol id="i-collapse" viewBox="0 0 24 24">
-    <rect x="3.2" y="4" width="17.6" height="16" rx="3"></rect>
-    <path d="M8.5 10.2 12 13.7l3.5-3.5"></path>
-  </symbol>
   <symbol id="i-plug" viewBox="0 0 24 24">
     <path d="M9 3v5M15 3v5M7.5 8h9v2.5a4.5 4.5 0 0 1-9 0V8ZM12 15v6"></path>
   </symbol>
@@ -2271,6 +2379,12 @@
   </symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24">
     <path d="M20 11a8 8 0 1 0-2.3 6.4M20 4.8V11h-6.2"></path>
+  </symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24">
+    <path d="M12 5v14M5 12h14"></path>
+  </symbol>
+  <symbol id="i-close" viewBox="0 0 24 24">
+    <path d="m6 6 12 12M18 6 6 18"></path>
   </symbol>
 </svg>
 
@@ -2317,11 +2431,6 @@
           <span class="toggle-thumb" aria-hidden="true"></span>
         </button>
       </div>
-
-      <button class="panel-btn" id="panelBtn" type="button" title="关闭面板（程序继续在系统托盘运行）" aria-haspopup="dialog">
-        <svg class="icon" aria-hidden="true"><use href="#i-collapse"></use></svg>
-        <span>关闭面板</span>
-      </button>
     </div>
   </header>
 
@@ -2392,6 +2501,25 @@
       <div class="level-foot">
         <span class="buffer-text" id="refBuffer">缓冲 — ms</span>
         <span class="meter-scale">-60 … 0 dBFS</span>
+      </div>
+      <div class="ref2-block">
+        <div class="ref2-head">
+          <span class="ref2-label">第二参考</span>
+          <div class="ref2-control">
+            <button class="ref2-btn" id="ref2Btn" type="button" data-active="false" aria-haspopup="listbox" aria-expanded="false" aria-controls="deviceMenuList" aria-label="添加第二参考设备" title="添加第二参考设备">
+              <span class="ref2-glyph" aria-hidden="true">
+                <svg class="icon"><use id="ref2GlyphUse" href="#i-plus"></use></svg>
+              </span>
+              <span class="ref2-name" id="ref2Name">读取中…</span>
+              <svg class="icon device-caret" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+            <button class="ref2-clear" id="ref2Clear" type="button" title="关闭第二参考" aria-label="关闭第二参考" hidden>
+              <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+              <span>关闭</span>
+            </button>
+          </div>
+        </div>
+        <p class="ref2-hint">接第二只麦克风靠近旁人/噪声源，可帮助消除他们说话（建议配 v1.3）</p>
       </div>
     </article>
 
@@ -2480,8 +2608,8 @@
             </span>
             <span class="metric-score" aria-hidden="true">5/5</span>
           </span>
-          <span class="metric" role="img" aria-label="CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">整机 CPU</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
@@ -2493,8 +2621,8 @@
           </span>
         </span>
         <span class="why">
-          <span class="why-label">为什么</span>
-          <span class="why-copy">不做任何处理，麦克风原样送到 CABLE。省电省心，适合戴耳机或排查问题；外放时游戏声会原样串进通话。</span>
+          <span class="why-label">模式简介</span>
+          <span class="why-copy">不做任何处理，麦克风原样转发。戴耳机聊天时用它最省电；外放时对方会听到你电脑里的一切声音。</span>
         </span>
       </button>
 
@@ -2534,8 +2662,8 @@
             </span>
             <span class="metric-score" aria-hidden="true">4/5</span>
           </span>
-          <span class="metric" role="img" aria-label="CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">整机 CPU</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
@@ -2547,8 +2675,8 @@
           </span>
         </span>
         <span class="why">
-          <span class="why-label">为什么</span>
-          <span class="why-copy">回声消除够干净、人声保留好，实测只占整机约 3% CPU。日常外放游戏开语音选它。</span>
+          <span class="why-label">模式简介</span>
+          <span class="why-copy">消得干净、人声自然，整机 CPU 约 3%。日常外放开黑选它就对了。</span>
         </span>
       </button>
 
@@ -2587,8 +2715,8 @@
             </span>
             <span class="metric-score" aria-hidden="true">3/5</span>
           </span>
-          <span class="metric" role="img" aria-label="CPU 占用 2/5">
-            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+          <span class="metric" role="img" aria-label="整机 CPU 占用 2/5">
+            <span class="metric-label" aria-hidden="true">整机 CPU</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell on"></span>
@@ -2600,8 +2728,8 @@
           </span>
         </span>
         <span class="why">
-          <span class="why-label">为什么</span>
-          <span class="why-copy">480 万参数大模型，消除最彻底还顺带降噪去混响；代价是偶尔削掉一点轻微人声，CPU 约 7%。音箱开很大或环境吵时用。</span>
+          <span class="why-label">模式简介</span>
+          <span class="why-copy">消除力度最大，还能顺带压低周围噪声；代价是人声偶尔被轻微削掉，整机 CPU 约 7%。音箱开得响或环境吵时用。</span>
         </span>
       </button>
 
@@ -2640,8 +2768,8 @@
             </span>
             <span class="metric-score" aria-hidden="true">5/5</span>
           </span>
-          <span class="metric" role="img" aria-label="CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">整机 CPU</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
@@ -2653,8 +2781,8 @@
           </span>
         </span>
         <span class="why">
-          <span class="why-label">为什么</span>
-          <span class="why-copy">只减回声不碰人声，但 20 万参数小模型在麦克风离音箱较远、或房间混响明显时基本无效（本机实测）。仅适合近场麦克风尝鲜。</span>
+          <span class="why-label">模式简介</span>
+          <span class="why-copy">只消回声不碰人声，但模型太小，麦克风离音箱稍远或房间有混响就基本没用（本机实测）。仅适合麦克风贴近嘴边尝鲜。</span>
         </span>
       </button>
 
@@ -2711,7 +2839,7 @@
       <svg class="icon" aria-hidden="true"><use href="#i-bulb"></use></svg>
       提示
     </span>
-    <p id="hintText" aria-live="polite">语音软件里选择 CABLE Output 作为麦克风</p>
+    <p id="hintText" aria-live="polite">正在获取使用提示…</p>
   </footer>
 
 </div>
@@ -2730,7 +2858,7 @@
     <span class="device-menu-count" id="deviceMenuCount">—</span>
   </div>
   <div class="device-menu-list" id="deviceMenuList" role="listbox" aria-labelledby="deviceMenuTitle"></div>
-  <p class="device-menu-tip">设备名过长时，悬停可查看完整名称</p>
+  <p class="device-menu-tip" id="deviceMenuTip">设备名过长时，悬停可查看完整名称</p>
 </div>
 
 <div class="offline-overlay" id="offlineOverlay" aria-hidden="true" role="group" aria-labelledby="offlineTitle" aria-describedby="offlineDesc">
@@ -2748,20 +2876,6 @@
   </div>
 </div>
 
-<dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
-  <div class="dialog-card">
-    <div class="dialog-icon" aria-hidden="true">
-      <svg class="icon"><use href="#i-collapse"></use></svg>
-    </div>
-    <h2 id="confirmTitle">要关闭这个面板吗？</h2>
-    <p id="confirmDesc">关闭页面后，VoiceAec 会继续在系统托盘运行，音频处理不会中断。需要完全退出时，请右键托盘图标选择“退出”。</p>
-    <div class="dialog-actions">
-      <button class="button button-soft" id="cancelPanelClose" type="button">取消</button>
-      <button class="button button-neutral" id="confirmPanelClose" type="button">关闭面板</button>
-    </div>
-  </div>
-</dialog>
-
 <div class="sr-only" id="srStatus" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
@@ -2775,7 +2889,7 @@
     'v1.3': { available: true, label: 'v1.3 · 最强消除' },
     'v1.4': { available: true, label: 'v1.4 · 纯回声消除' }
   };
-  const DEFAULT_HINT = '语音软件里选择 CABLE Output 作为麦克风';
+  const HINT_PLACEHOLDER = '正在获取使用提示…';
   const POLL_MS = 500;
   const STATUS_TIMEOUT_MS = 2500;
   const SWITCH_TIMEOUT_MS = 10000;
@@ -2783,6 +2897,7 @@
   const DEVICE_TIMEOUT_MS = 15000;
   const DEVICE_RETRY_MS = 10000;
   const DEVICE_KEYS = ['mic', 'ref', 'out'];
+  const REF2_KEY = 'ref2';
 
   const $ = (id) => document.getElementById(id);
 
@@ -2796,11 +2911,14 @@
     autostartField: $('autostartField'),
     autostartToggle: $('autostartToggle'),
     autostartState: $('autostartState'),
-    panelBtn: $('panelBtn'),
     switchState: $('switchState'),
     switchText: $('switchText'),
     modeGrid: $('modeGrid'),
     refPill: $('refPill'),
+    ref2Btn: $('ref2Btn'),
+    ref2Name: $('ref2Name'),
+    ref2Clear: $('ref2Clear'),
+    ref2GlyphUse: $('ref2GlyphUse'),
     statProcessed: $('statProcessed'),
     statHops: $('statHops'),
     statRate: $('statRate'),
@@ -2814,14 +2932,12 @@
     offlineOverlay: $('offlineOverlay'),
     retryText: $('retryText'),
     srStatus: $('srStatus'),
-    confirmDialog: $('confirmDialog'),
-    cancelPanelClose: $('cancelPanelClose'),
-    confirmPanelClose: $('confirmPanelClose'),
     deviceMenu: $('deviceMenu'),
     deviceMenuTitle: $('deviceMenuTitle'),
     deviceMenuCount: $('deviceMenuCount'),
     deviceMenuList: $('deviceMenuList'),
-    deviceMenuIconUse: $('deviceMenuIconUse')
+    deviceMenuIconUse: $('deviceMenuIconUse'),
+    deviceMenuTip: $('deviceMenuTip')
   };
 
   const channels = {
@@ -2872,6 +2988,13 @@
       field: 'out',
       noun: '输出',
       icon: '#i-out'
+    },
+    ref2: {
+      btn: $('ref2Btn'),
+      label: $('ref2Name'),
+      field: REF2_KEY,
+      noun: '第二参考',
+      icon: '#i-mic'
     }
   };
 
@@ -2906,8 +3029,8 @@
     autostartKnown: false,
     autostartPending: false,
     polling: false,
-    devices: { inputs: [], loops: [], outputs: [] },
-    currentDevices: { mic: '', ref: '', out: '' },
+    devices: { inputs: [], loops: [], outputs: [], ref2Choices: [] },
+    currentDevices: { mic: '', ref: '', out: '', ref2: 'none' },
     deviceNames: { mic: '', ref: '', out: '' },
     deviceNameLock: { mic: 0, ref: 0, out: 0 },
     devicesStatus: 'idle',
@@ -2916,6 +3039,7 @@
     lastDevicesAttempt: 0,
     devicePending: null,
     devicePendingName: '',
+    lastRef2ChangeAt: 0,
     openMenuKey: null,
     peaks: {
       mic: { value: 0, hold: 0 },
@@ -3006,8 +3130,103 @@
     return value.filter(isDeviceName).map((name) => name.trim());
   }
 
+  function readRef2Choices(value) {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set();
+    const choices = [];
+    value.forEach((item) => {
+      if (!item || typeof item !== 'object') return;
+      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      choices.push({ name, kind: item.kind === 'mic' ? 'mic' : 'playback' });
+    });
+    return choices;
+  }
+
   function knownDeviceName(key) {
+    if (key === REF2_KEY) return state.currentDevices.ref2 || 'none';
     return state.deviceNames[key] || state.currentDevices[key] || '';
+  }
+
+  function ref2Kind(name) {
+    if (!name || name === 'none') return '';
+    const found = state.devices.ref2Choices.find((item) => item.name === name);
+    return found ? found.kind : '';
+  }
+
+  function ref2Active() {
+    const value = state.currentDevices.ref2;
+    return isDeviceName(value) && value !== 'none';
+  }
+
+  function displayRef2Name() {
+    if (state.devicePending === REF2_KEY) {
+      const target = state.devicePendingName;
+      return target && target !== 'none' ? target : '正在关闭…';
+    }
+    if (ref2Active()) return state.currentDevices.ref2;
+    if (!state.devicesLoaded) {
+      if (state.offline) return '等待连接…';
+      if (state.devicesStatus === 'error') return '暂不可用';
+      return '读取中…';
+    }
+    return '未启用';
+  }
+
+  function renderRef2() {
+    const btn = els.ref2Btn;
+    if (!btn) return;
+
+    const pending = state.devicePending === REF2_KEY;
+    const active = ref2Active();
+    const pendingTarget = state.devicePendingName;
+    const showActive = pending ? Boolean(pendingTarget && pendingTarget !== 'none') : active;
+    const label = displayRef2Name();
+
+    setText(els.ref2Name, label);
+    btn.dataset.active = showActive ? 'true' : 'false';
+    btn.classList.toggle('is-busy', pending);
+    btn.disabled = !state.connected || state.devicePending !== null;
+    setAttr(btn, 'aria-busy', pending ? 'true' : 'false');
+    setAttr(btn, 'aria-expanded', state.openMenuKey === REF2_KEY ? 'true' : 'false');
+    const pendingOn = Boolean(pendingTarget && pendingTarget !== 'none');
+    let ariaLabel;
+    let titleText;
+    if (pending) {
+      ariaLabel = pendingOn ? `正在将第二参考切换为 ${pendingTarget}` : '正在关闭第二参考';
+      titleText = pendingOn ? `正在切换到 ${pendingTarget}…` : '正在关闭第二参考…';
+    } else if (active) {
+      ariaLabel = `第二参考正在使用 ${state.currentDevices.ref2}，点击更换`;
+      titleText = `${state.currentDevices.ref2}（点击更换第二参考）`;
+    } else if (!state.devicesLoaded && state.devicesStatus === 'error') {
+      ariaLabel = '第二参考信息暂不可用，点击重试';
+      titleText = '第二参考信息暂不可用，点击重试';
+    } else if (!state.devicesLoaded) {
+      ariaLabel = '正在读取第二参考设备…';
+      titleText = '正在读取第二参考设备…';
+    } else {
+      ariaLabel = '添加第二参考设备，帮助消除旁人噪声';
+      titleText = '添加第二参考设备，帮助消除旁人噪声';
+    }
+    setAttr(btn, 'aria-label', ariaLabel);
+    setAttr(btn, 'title', titleText);
+    const glyphName = showActive ? (active ? state.currentDevices.ref2 : pendingTarget) : '';
+    const glyphKind = ref2Kind(glyphName);
+    const glyphIcon = !showActive
+      ? '#i-plus'
+      : (glyphKind === 'playback' ? '#i-speaker' : (glyphKind === 'mic' ? '#i-mic' : '#i-wave'));
+    setAttr(els.ref2GlyphUse, 'href', glyphIcon);
+
+    if (els.ref2Clear) {
+      els.ref2Clear.hidden = !active;
+      els.ref2Clear.disabled = !state.connected || state.devicePending !== null;
+      setAttr(
+        els.ref2Clear,
+        'title',
+        active ? `关闭第二参考（${state.currentDevices.ref2}）` : '关闭第二参考'
+      );
+    }
   }
 
   function displayDeviceName(key) {
@@ -3049,6 +3268,8 @@
           : (name ? `${name}（点击更换设备）` : `更换${picker.noun}设备`)
       );
     });
+
+    renderRef2();
   }
 
   function positionDeviceMenu() {
@@ -3075,7 +3296,7 @@
   }
 
   function focusMenuSelection() {
-    const options = [...els.deviceMenuList.querySelectorAll('.device-option')];
+    const options = [...els.deviceMenuList.querySelectorAll('.device-option:not(:disabled)')];
     if (!options.length) return false;
     const selected = options.find((option) => option.getAttribute('aria-selected') === 'true') || options[0];
     selected.focus({ preventScroll: true });
@@ -3166,29 +3387,88 @@
     return group;
   }
 
+  function createDeviceGroup(label, options) {
+    const group = document.createElement('div');
+    group.className = 'device-menu-group';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', label);
+
+    const heading = document.createElement('span');
+    heading.className = 'device-menu-group-label';
+    heading.setAttribute('aria-hidden', 'true');
+    heading.textContent = label;
+    group.appendChild(heading);
+
+    options.forEach((option) => group.appendChild(option));
+    return group;
+  }
+
+  function createRef2Option(value, label, selected, disabled) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'device-option';
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', selected ? 'true' : 'false');
+    option.tabIndex = -1;
+    option.dataset.value = value;
+    option.disabled = Boolean(disabled);
+    option.title = label;
+
+    const dot = document.createElement('span');
+    dot.className = 'device-option-dot';
+    dot.setAttribute('aria-hidden', 'true');
+
+    const text = document.createElement('span');
+    text.className = 'device-option-text';
+    text.textContent = label;
+
+    const check = document.createElement('span');
+    check.className = 'device-option-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.innerHTML = '<svg class="icon"><use href="#i-check"></use></svg>';
+
+    option.append(dot, text, check);
+    return option;
+  }
+
   function renderDeviceMenu() {
     const key = state.openMenuKey;
     if (!key || !pickers[key]) return;
 
     const picker = pickers[key];
-    const list = state.devices[picker.listKey] || [];
+    const isRef2 = key === REF2_KEY;
+    const list = isRef2 ? state.devices.ref2Choices : (state.devices[picker.listKey] || []);
     const loading = state.devicesStatus === 'idle' || state.devicesStatus === 'loading';
-    const failed = state.devicesStatus === 'error' && list.length === 0;
+    const failed = state.devicesStatus === 'error' && !state.devicesLoaded;
+    const noList = list.length === 0;
 
-    els.deviceMenu.dataset.channel = key;
+    els.deviceMenu.dataset.channel = isRef2 ? REF2_KEY : key;
     setAttr(els.deviceMenuIconUse, 'href', picker.icon);
-    setText(els.deviceMenuTitle, `${picker.noun}设备`);
-    setAttr(els.deviceMenuList, 'aria-label', `${picker.noun}设备列表`);
+    setText(els.deviceMenuTitle, isRef2 ? '第二参考' : `${picker.noun}设备`);
+    setAttr(els.deviceMenuList, 'aria-label', isRef2 ? '第二参考设备列表' : `${picker.noun}设备列表`);
+    setText(els.deviceMenuTip, isRef2 ? '选「无」即可关闭第二参考' : '设备名过长时，悬停可查看完整名称');
 
-    let countText = `${list.length} 个可选`;
-    if (loading && list.length === 0) {
+    let countText;
+    if (loading && noList) {
       countText = '读取中';
     } else if (failed) {
       countText = '读取失败';
+    } else if (isRef2 && noList) {
+      countText = '未添加';
+    } else {
+      countText = `${list.length} 个可选`;
     }
     setText(els.deviceMenuCount, countText);
 
     const frag = document.createDocumentFragment();
+
+    if (isRef2) {
+      const currentValue = state.currentDevices.ref2 || 'none';
+      frag.appendChild(createDeviceGroup('无', [
+        createRef2Option('none', '不使用第二参考', currentValue === 'none', !state.devicesLoaded)
+      ]));
+    }
+
     if (failed) {
       frag.appendChild(createDeviceState({
         icon: '#i-plug',
@@ -3196,19 +3476,41 @@
         text: '请确认程序正在运行，然后重试。',
         retry: true
       }));
-    } else if (loading && list.length === 0) {
+    } else if (loading && noList) {
       frag.appendChild(createDeviceState({
         loading: true,
         title: '正在读取设备列表…',
         text: '马上就好'
       }));
-    } else if (list.length === 0) {
+    } else if (isRef2 && noList) {
+      frag.appendChild(createDeviceState({
+        icon: '#i-mic',
+        title: '没有找到可用的第二参考设备',
+        text: '连接一只麦克风或选择播放设备后即可添加。',
+        retry: false
+      }));
+    } else if (!isRef2 && noList) {
       frag.appendChild(createDeviceState({
         icon: picker.icon,
         title: '没有找到可用设备',
         text: '确认设备已连接，或重新读取列表。',
         retry: true
       }));
+    } else if (isRef2) {
+      const playback = list.filter((item) => item.kind === 'playback');
+      const microphones = list.filter((item) => item.kind === 'mic');
+      const currentValue = state.currentDevices.ref2 || 'none';
+
+      if (playback.length) {
+        frag.appendChild(createDeviceGroup('播放设备', playback.map((item) => (
+          createRef2Option(item.name, item.name, currentValue === item.name, false)
+        ))));
+      }
+      if (microphones.length) {
+        frag.appendChild(createDeviceGroup('麦克风（噪声参考）', microphones.map((item) => (
+          createRef2Option(item.name, item.name, currentValue === item.name, false)
+        ))));
+      }
     } else {
       list.forEach((name) => frag.appendChild(createDeviceOption(key, name)));
     }
@@ -3227,7 +3529,10 @@
     positionDeviceMenu();
     els.deviceMenu.classList.add('is-open');
     setAttr(picker.btn, 'aria-expanded', 'true');
-    setText(els.srStatus, `${picker.noun}设备菜单已打开。`);
+    setText(
+      els.srStatus,
+      key === REF2_KEY ? '第二参考菜单已打开。' : `${picker.noun}设备菜单已打开。`
+    );
     focusMenuSelection();
   }
 
@@ -3238,14 +3543,22 @@
       const value = current[key];
       if (isDeviceName(value)) state.currentDevices[key] = value.trim();
     });
+    if (typeof current.ref2 === 'string') {
+      const staleRef2 = options.startedAt != null && options.startedAt < state.lastRef2ChangeAt;
+      if (!staleRef2 && (options.allowPending || state.devicePending !== REF2_KEY)) {
+        const value = current.ref2.trim();
+        state.currentDevices.ref2 = value || 'none';
+      }
+    }
   }
 
   async function refreshDevices(options = {}) {
     if (state.devicesFetching) return;
     const quiet = Boolean(options.quiet);
+    const requestStartedAt = Date.now();
 
     state.devicesFetching = true;
-    state.lastDevicesAttempt = Date.now();
+    state.lastDevicesAttempt = requestStartedAt;
 
     if (!quiet) {
       state.devicesStatus = 'loading';
@@ -3279,7 +3592,8 @@
       state.devices.inputs = readDeviceList(payload.inputs);
       state.devices.loops = readDeviceList(payload.loops);
       state.devices.outputs = readDeviceList(payload.outputs);
-      applyDeviceCurrent(payload.current, { allowPending: false });
+      state.devices.ref2Choices = readRef2Choices(payload.ref2Choices);
+      applyDeviceCurrent(payload.current, { allowPending: false, startedAt: requestStartedAt });
       state.devicesStatus = 'ready';
       state.devicesLoaded = true;
     } catch (_) {
@@ -3317,7 +3631,10 @@
 
     state.devicePending = key;
     state.devicePendingName = name;
-    setText(els.srStatus, `正在切换${picker.noun}设备…`);
+    setText(
+      els.srStatus,
+      key === REF2_KEY ? '正在更新第二参考…' : `正在切换${picker.noun}设备…`
+    );
     renderDevicePickers();
 
     let failureMessage = '';
@@ -3345,10 +3662,19 @@
           ? payload.current[key].trim()
           : name;
         state.currentDevices[key] = confirmed;
-        state.deviceNames[key] = confirmed;
-        state.deviceNameLock[key] = Date.now() + 2500;
-        showToast('设备已切换', 'success');
-        setText(els.srStatus, `${picker.noun}设备已切换为 ${confirmed}。`);
+        if (key !== REF2_KEY) {
+          state.deviceNames[key] = confirmed;
+          state.deviceNameLock[key] = Date.now() + 2500;
+        }
+        if (key === REF2_KEY) {
+          state.lastRef2ChangeAt = Date.now();
+          const closed = confirmed === 'none';
+          showToast(closed ? '第二参考已关闭' : '第二参考已启用', 'success');
+          setText(els.srStatus, closed ? '第二参考已关闭。' : `第二参考已设为 ${confirmed}。`);
+        } else {
+          showToast('设备已切换', 'success');
+          setText(els.srStatus, `${picker.noun}设备已切换为 ${confirmed}。`);
+        }
         void refreshDevices({ quiet: true });
       } else if (payload && typeof payload.error === 'string' && payload.error.trim()) {
         failureMessage = payload.error.trim();
@@ -3364,9 +3690,14 @@
     } finally {
       if (failureMessage) {
         state.currentDevices[key] = previousName;
-        if (previousName) state.deviceNames[key] = previousName;
-        showToast(`设备切换失败：${failureMessage}`, 'error');
-        setText(els.srStatus, `${picker.noun}设备切换失败，已保持原设备。`);
+        if (key !== REF2_KEY && previousName) state.deviceNames[key] = previousName;
+        if (key === REF2_KEY) {
+          showToast(`第二参考设置失败：${failureMessage}`, 'error');
+          setText(els.srStatus, '第二参考设置失败，已保持原设置。');
+        } else {
+          showToast(`设备切换失败：${failureMessage}`, 'error');
+          setText(els.srStatus, `${picker.noun}设备切换失败，已保持原设备。`);
+        }
       }
       state.devicePending = null;
       state.devicePendingName = '';
@@ -3403,7 +3734,6 @@
     state.retryCount += 1;
 
     if (firstFailure) {
-      if (els.confirmDialog.open) els.confirmDialog.close();
       els.offlineOverlay.classList.add('is-visible');
       els.offlineOverlay.setAttribute('aria-hidden', 'false');
       els.app.setAttribute('inert', '');
@@ -3665,9 +3995,9 @@
   }
 
   function updateHint(hint) {
-    const text = typeof hint === 'string' && hint.trim() ? hint.trim() : DEFAULT_HINT;
+    const text = typeof hint === 'string' && hint.trim() ? hint.trim() : HINT_PLACEHOLDER;
     setText(els.hintText, text);
-    els.hintText.title = text;
+    setAttr(els.hintText, 'title', text);
   }
 
   function updateModelState(modelsPayload) {
@@ -3792,26 +4122,7 @@
     }
   }
 
-  function openPanelDialog() {
-    if (els.confirmDialog.open) return;
-    els.confirmDialog.showModal();
-    window.requestAnimationFrame(() => els.cancelPanelClose.focus());
-  }
-
-  function acknowledgePanelClose() {
-    if (els.confirmDialog.open) els.confirmDialog.close();
-
-    if (window.chrome?.webview) {
-      window.chrome.webview.postMessage('close-panel');
-      return;
-    }
-
-    const message = '面板已可关闭，程序仍在系统托盘继续运行；右键托盘图标选择“退出”可完全退出';
-    showToast(message, 'info');
-    setText(els.srStatus, '面板可以关闭了，程序仍在系统托盘继续运行。');
-  }
-
-  DEVICE_KEYS.forEach((key) => {
+  Object.keys(pickers).forEach((key) => {
     const picker = pickers[key];
     if (!picker || !picker.btn) return;
 
@@ -3840,6 +4151,13 @@
     });
   });
 
+  if (els.ref2Clear) {
+    els.ref2Clear.addEventListener('click', () => {
+      if (!state.connected || state.devicePending) return;
+      void chooseDevice(REF2_KEY, 'none');
+    });
+  }
+
   els.deviceMenuList.addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return;
     const retryBtn = event.target.closest('.device-retry');
@@ -3851,7 +4169,8 @@
     if (!option) return;
     const key = state.openMenuKey;
     if (!key) return;
-    void chooseDevice(key, option.dataset.name || '');
+    const value = option.dataset.value != null ? option.dataset.value : (option.dataset.name || '');
+    void chooseDevice(key, value);
   });
 
   els.deviceMenu.addEventListener('keydown', (event) => {
@@ -3867,7 +4186,7 @@
       return;
     }
 
-    const options = [...els.deviceMenuList.querySelectorAll('.device-option')];
+    const options = [...els.deviceMenuList.querySelectorAll('.device-option:not(:disabled)')];
     if (!options.length) return;
     const index = options.indexOf(document.activeElement);
 
@@ -3915,20 +4234,8 @@
     void switchMode(mode);
   });
 
-  els.panelBtn.addEventListener('click', openPanelDialog);
-
   els.autostartToggle.addEventListener('click', () => {
     void changeAutostart();
-  });
-
-  els.cancelPanelClose.addEventListener('click', () => {
-    els.confirmDialog.close();
-  });
-
-  els.confirmPanelClose.addEventListener('click', acknowledgePanelClose);
-
-  els.confirmDialog.addEventListener('click', (event) => {
-    if (event.target === els.confirmDialog) els.confirmDialog.close();
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -3943,7 +4250,7 @@
   });
 
   function init() {
-    updateHint(DEFAULT_HINT);
+    updateHint(HINT_PLACEHOLDER);
     refreshControls();
     void refreshDevices();
     pollStatus();
