@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
+<meta name="voiceaec-token" content="__VOICEAEC_TOKEN__">
 <title>VoiceAec · 回声消除麦克风</title>
 <style>
   :root {
@@ -203,15 +204,6 @@
     white-space: nowrap;
   }
 
-  .brand-copy h1 span {
-    margin-left: 3px;
-    font-size: 11.5px;
-    line-height: 1.2;
-    font-weight: 600;
-    letter-spacing: 0;
-    color: var(--muted);
-  }
-
   .brand-copy p {
     margin: 2px 0 0;
     font-size: 9.5px;
@@ -293,6 +285,10 @@
     box-shadow: none;
   }
 
+  html.is-background * {
+    animation-play-state: paused !important;
+  }
+
   .cpu-chip {
     display: inline-flex;
     align-items: center;
@@ -326,7 +322,7 @@
     color: var(--blue-deep);
   }
 
-  .autostart {
+  .top-switch {
     display: inline-flex;
     align-items: center;
     gap: 9px;
@@ -334,63 +330,30 @@
     padding: 6px 9px;
     border-radius: 13px;
     border: 1px solid rgba(255, 255, 255, .95);
-    background: linear-gradient(135deg, rgba(255, 255, 255, .88), rgba(240, 232, 255, .78));
+    background: linear-gradient(135deg, rgba(255, 255, 255, .9), rgba(240, 232, 255, .72));
     box-shadow: 0 5px 14px rgba(142, 124, 224, .08);
     transition: background .2s ease, box-shadow .2s ease, opacity .2s ease;
   }
 
-  .autostart.is-pending {
+  .top-switch[data-enabled="true"] {
+    background: linear-gradient(135deg, #F2FCF7, var(--mint));
+  }
+
+  .top-switch.is-pending {
     opacity: .76;
   }
 
-  .autostart-copy {
-    min-width: 0;
-  }
-
-  .autostart-title {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+  .top-switch-label {
     color: var(--ink);
     font-size: 10.5px;
     line-height: 1.2;
     font-weight: 800;
     white-space: nowrap;
+    transition: color .2s ease;
   }
 
-  .autostart-state {
-    display: inline-flex;
-    align-items: center;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--lilac);
-    color: var(--violet-deep);
-    font-size: 10px;
-    line-height: 1;
-    font-weight: 800;
-    letter-spacing: .02em;
-    white-space: nowrap;
-    transition: background .2s ease, color .2s ease;
-  }
-
-  .autostart[data-enabled="true"] .autostart-state {
-    background: var(--mint);
+  .top-switch[data-enabled="true"] .top-switch-label {
     color: var(--green-deep);
-  }
-
-  .autostart.is-pending .autostart-state {
-    background: var(--sky);
-    color: var(--blue-deep);
-  }
-
-  .autostart-hint {
-    display: block;
-    margin-top: 2px;
-    color: var(--ink-soft);
-    font-size: 9.5px;
-    line-height: 1.25;
-    white-space: nowrap;
   }
 
   .toggle {
@@ -447,6 +410,129 @@
   .toggle:disabled {
     opacity: .56;
     cursor: wait;
+    box-shadow: none;
+  }
+
+  .app.is-paused .run-state:not(.is-offline) {
+    background: linear-gradient(135deg, var(--lemon), #FFF9E8);
+    color: #8A5E00;
+  }
+
+  .app.is-paused .run-state:not(.is-offline) .run-dot {
+    background: #E0AE3E;
+    animation: none;
+    box-shadow: none;
+  }
+
+  .obs-top-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px solid rgba(142, 124, 224, .18);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #FAF7FF, #EFF9FF);
+    color: var(--violet-deep);
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(142, 124, 224, .08);
+    transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+
+  .obs-top-btn .icon {
+    width: 13px;
+    height: 13px;
+    stroke-width: 2;
+  }
+
+  .obs-top-btn:hover {
+    background: linear-gradient(135deg, #F2EAFF, #E3F4FF);
+    border-color: rgba(142, 124, 224, .3);
+    transform: translateY(-1px);
+    box-shadow: 0 7px 16px rgba(142, 124, 224, .13);
+  }
+
+  .obs-top-btn:active {
+    transform: translateY(0) scale(.985);
+    box-shadow: 0 3px 8px rgba(142, 124, 224, .1);
+  }
+
+  .obs-top-btn:focus-visible {
+    outline: 2px solid rgba(142, 124, 224, .35);
+    outline-offset: 2px;
+  }
+
+  .pause-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-width: 180px;
+    max-width: 218px;
+    min-height: 46px;
+    height: 46px;
+    padding: 0 15px;
+    border: 1px solid rgba(36, 127, 190, .34);
+    border-radius: 14px;
+    background: linear-gradient(135deg, #247FBE, #4FA8E8);
+    color: #FFFFFF;
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(79, 168, 232, .22);
+    transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  }
+
+  .pause-btn .icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .pause-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2C8ACD, #68B9EF);
+    border-color: rgba(36, 127, 190, .46);
+    transform: translateY(-1px);
+    box-shadow: 0 11px 24px rgba(79, 168, 232, .28);
+  }
+
+  .pause-btn:active:not(:disabled) {
+    transform: translateY(0) scale(.985);
+    box-shadow: 0 5px 12px rgba(79, 168, 232, .18);
+  }
+
+  .pause-btn:focus-visible {
+    outline: 3px solid rgba(79, 168, 232, .32);
+    outline-offset: 2px;
+  }
+
+  .pause-btn[aria-pressed="true"] {
+    background: linear-gradient(135deg, #D99A2B, #F5D96A);
+    border-color: #C08A1E;
+    color: #5C3D00;
+    box-shadow: 0 8px 18px rgba(224, 174, 62, .24);
+  }
+
+  .pause-btn[aria-pressed="true"]:hover:not(:disabled) {
+    background: linear-gradient(135deg, #D08F1E, #F8E07E);
+    border-color: #B27B12;
+    box-shadow: 0 11px 24px rgba(224, 174, 62, .3);
+  }
+
+  .pause-btn:disabled {
+    opacity: .55;
+    cursor: wait;
+    transform: none;
     box-shadow: none;
   }
 
@@ -534,9 +620,19 @@
   /* ── 三路电平 ─────────────────────────────────────────────── */
 
   .levels {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .level-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .level-grid.is-four-up {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .level-card {
@@ -578,6 +674,12 @@
     --level-accent: var(--blue);
     --level-soft: var(--sky);
     box-shadow: 0 10px 28px rgba(79, 168, 232, .10);
+  }
+
+  .level-card[data-level="ref2"] {
+    --level-accent: var(--berry);
+    --level-soft: var(--pink);
+    box-shadow: 0 10px 28px rgba(242, 123, 169, .11);
   }
 
   .level-top {
@@ -893,11 +995,48 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
     margin-top: 5px;
     font-size: 10px;
     line-height: 1.3;
     color: var(--muted);
+  }
+
+  .meter-ticks {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 3px;
+    padding: 0 1px;
+    color: var(--muted);
+    font-size: 8.5px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .level-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .level-stat-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--level-accent, var(--green));
+    opacity: .5;
+    flex: 0 0 auto;
+  }
+
+  .level-stat.peak .level-stat-dot {
+    opacity: .9;
   }
 
   .buffer-text {
@@ -905,230 +1044,44 @@
     white-space: nowrap;
   }
 
-  .meter-scale {
-    letter-spacing: .02em;
+  .peak-text {
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
   /* ── 第二参考（噪声参考） ─────────────────────────────────── */
 
-  .ref2-block {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed rgba(223, 182, 218, .38);
-  }
-
-  .ref2-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .ref2-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    flex: 0 0 auto;
-    font-size: 9.5px;
-    line-height: 1.2;
-    font-weight: 800;
-    letter-spacing: .03em;
-    color: var(--violet-deep);
-  }
-
-  .ref2-label::before {
-    content: "";
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--violet);
-  }
-
-  .ref2-control {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  .ref2-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-    height: 24px;
-    flex: 1 1 auto;
-    padding: 0 7px;
-    border: 1px dashed rgba(110, 86, 201, .3);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, .62);
-    color: var(--violet-deep);
-    font: inherit;
-    font-size: 10.5px;
-    line-height: 1.2;
-    font-weight: 700;
-    text-align: left;
-    cursor: pointer;
-    transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease, transform .12s ease, opacity .2s ease;
-  }
-
-  .ref2-btn:hover:not(:disabled) {
-    background: #F6F0FF;
-    border-color: rgba(110, 86, 201, .42);
-    box-shadow: 0 4px 10px rgba(110, 86, 201, .10);
-  }
-
-  .ref2-btn:active:not(:disabled) {
-    transform: scale(.99);
-  }
-
-  .ref2-btn:focus-visible {
-    outline: 2px solid rgba(110, 86, 201, .35);
-    outline-offset: 1px;
-  }
-
-  .ref2-btn:disabled {
-    opacity: .55;
-    cursor: wait;
-  }
-
-  .ref2-btn[data-active="true"] {
-    border: 1px solid rgba(110, 86, 201, .22);
-    background: linear-gradient(135deg, #F7F1FF, #EEE6FF);
-    box-shadow: 0 4px 12px rgba(110, 86, 201, .12);
-    color: #56409C;
-  }
-
-  .ref2-btn[data-active="true"]:hover:not(:disabled) {
-    background: linear-gradient(135deg, #F1E8FF, #E7DBFF);
-    border-color: rgba(110, 86, 201, .34);
-  }
-
-  .ref2-btn[aria-expanded="true"] {
-    background: #F6F0FF;
-    border-color: rgba(110, 86, 201, .4);
-  }
-
-  .ref2-btn[aria-expanded="true"] .device-caret {
-    transform: rotate(180deg);
-    color: var(--violet-deep);
-  }
-
-  .ref2-btn.is-busy {
-    opacity: 1;
-    background: #F6F0FF;
-    cursor: progress;
-  }
-
-  .ref2-btn.is-busy .device-caret {
-    display: none;
-  }
-
-  .ref2-btn.is-busy::after {
-    content: "";
-    width: 10px;
-    height: 10px;
-    flex: 0 0 auto;
-    border: 1.6px solid var(--violet);
-    border-right-color: transparent;
-    border-radius: 50%;
-    opacity: .9;
-    animation: spin .8s linear infinite;
-  }
-
-  .ref2-glyph {
-    width: 14px;
-    height: 14px;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    color: var(--violet);
-  }
-
-  .ref2-btn[data-active="true"] .ref2-glyph {
-    color: var(--violet-deep);
-  }
-
-  .ref2-glyph .icon {
-    width: 12px;
-    height: 12px;
-    stroke-width: 2;
-  }
-
-  .ref2-name {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .ref2-btn[data-active="true"] .ref2-name {
-    font-weight: 800;
-  }
-
-  .ref2-btn .device-caret {
-    width: 11px;
-    height: 11px;
-    color: var(--violet-deep);
-    opacity: .62;
-  }
-
-  .ref2-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    height: 24px;
-    flex: 0 0 auto;
-    padding: 0 8px 0 6px;
-    border: 1px solid rgba(185, 79, 134, .2);
-    border-radius: 999px;
-    background: linear-gradient(135deg, #FFF8FC, var(--pink));
-    color: var(--berry-deep);
-    font: inherit;
-    font-size: 9.5px;
-    line-height: 1;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 3px 8px rgba(242, 123, 169, .10);
-    transition: background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease, opacity .2s ease;
-  }
-
-  .ref2-clear .icon {
-    width: 10px;
-    height: 10px;
-    stroke-width: 2.2;
-  }
-
-  .ref2-clear:hover:not(:disabled) {
-    background: linear-gradient(135deg, #FDEAF4, #FBC9E1);
-    border-color: rgba(185, 79, 134, .3);
-    transform: scale(1.04);
-    box-shadow: 0 5px 12px rgba(242, 123, 169, .18);
-  }
-
-  .ref2-clear:active:not(:disabled) {
-    transform: scale(.95);
-  }
-
-  .ref2-clear:focus-visible {
-    outline: 2px solid rgba(185, 79, 134, .3);
-    outline-offset: 1px;
-  }
-
-  .ref2-clear:disabled {
-    opacity: .5;
-    cursor: wait;
-  }
-
-  .ref2-hint {
-    margin: 4px 0 0;
+  .ref2-note {
+    margin: 7px 0 0;
     font-size: 9.3px;
     line-height: 1.45;
     color: var(--muted);
+  }
+
+  .ref2-off-hint {
+    color: var(--muted);
+    font-size: 9.5px;
+    line-height: 1.2;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    text-align: right;
+  }
+
+  .ref2-card:not([hidden]) {
+    animation: ref2-card-in .22s ease-out;
+  }
+
+  @keyframes ref2-card-in {
+    from {
+      opacity: .55;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* ── 处理模式 ─────────────────────────────────────────────── */
@@ -1229,7 +1182,6 @@
   .mode-card {
     position: relative;
     min-width: 0;
-    min-height: 320px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -1246,17 +1198,6 @@
     appearance: none;
     user-select: none;
     transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, opacity .2s ease;
-  }
-
-  .mode-card::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--mode-accent, var(--green)), transparent 82%);
-    opacity: .9;
   }
 
   .mode-card[data-mode="off"] {
@@ -1333,6 +1274,7 @@
 
   .mode-card.is-unavailable .mode-title-wrap,
   .mode-card.is-unavailable .metrics,
+  .mode-card.is-unavailable .mode-fit,
   .mode-card.is-unavailable .why {
     opacity: .42;
   }
@@ -1356,23 +1298,13 @@
     flex: 1 1 auto;
   }
 
-  .mode-key {
-    display: block;
-    font-size: 8.5px;
-    line-height: 1.2;
-    font-weight: 800;
-    letter-spacing: .16em;
-    color: var(--mode-deep, var(--green-deep));
-    text-transform: uppercase;
-  }
-
   .mode-name {
     display: block;
-    margin-top: 2px;
-    font-size: 14.5px;
-    line-height: 1.25;
+    margin-top: 0;
+    font-size: 15.5px;
+    line-height: 1.3;
     font-weight: 800;
-    color: var(--ink);
+    color: var(--mode-deep, var(--green-deep));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1483,11 +1415,48 @@
     opacity: .7;
   }
 
+  .mode-fit {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .fit-label {
+    display: inline-flex;
+    align-items: center;
+    font-size: 8.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--muted);
+  }
+
+  .fit-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .fit-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--mode-soft, var(--mint));
+    color: var(--mode-deep, var(--green-deep));
+    font-size: 9.5px;
+    line-height: 1;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
   .why {
     display: flex;
     flex-direction: column;
-    margin-top: auto;
-    padding-top: 14px;
+    margin-top: 0;
+    padding-top: 16px;
     align-self: stretch;
   }
 
@@ -1511,11 +1480,10 @@
   }
 
   .why-copy {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: calc(1.62em * 3);
+    display: block;
     margin-top: 4px;
+    min-height: calc(3 * 1.62em);
+    min-height: 3lh;
     font-size: 11.3px;
     line-height: 1.62;
     color: var(--ink-soft);
@@ -1679,10 +1647,185 @@
   .hint-bar p {
     margin: 0;
     min-width: 0;
+    flex: 1 1 auto;
     color: var(--ink-soft);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ── OBS 插件设置 ─────────────────────────────────────────── */
+
+  .obs-dialog {
+    width: min(560px, calc(100vw - 40px));
+    max-height: calc(100dvh - 40px);
+    padding: 24px 26px 22px;
+    border: 1px solid rgba(255, 255, 255, .96);
+    border-radius: 24px;
+    background: linear-gradient(160deg, #FFFDFC, #F8F6FF);
+    color: var(--ink);
+    box-shadow: 0 30px 70px rgba(142, 124, 224, .16), 0 10px 24px rgba(79, 168, 232, .08);
+    overflow-y: auto;
+  }
+
+  .obs-dialog::backdrop {
+    background: rgba(70, 66, 87, .24);
+    backdrop-filter: blur(5px);
+  }
+
+  .obs-dialog[open] {
+    animation: obs-dialog-in .2s ease-out;
+  }
+
+  @keyframes obs-dialog-in {
+    from {
+      opacity: .7;
+      transform: translateY(8px) scale(.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .obs-dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .obs-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .obs-title-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--lilac), var(--sky));
+    color: var(--violet-deep);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    flex: 0 0 auto;
+  }
+
+  .obs-title-icon .icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.9;
+  }
+
+  .obs-dialog h2 {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.3;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ink);
+  }
+
+  .obs-close {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    padding: 6px 11px;
+    border: 1px solid rgba(142, 124, 224, .16);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #F8F4FF, #EDF8FF);
+    color: var(--violet-deep);
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+
+  .obs-close:hover {
+    background: linear-gradient(135deg, #F1EAFF, #E1F4FF);
+    border-color: rgba(142, 124, 224, .26);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(142, 124, 224, .1);
+  }
+
+  .obs-dialog p {
+    margin: 9px 0 0;
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+
+  .obs-plugin-state {
+    margin-top: 12px !important;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, .85);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(214, 247, 232, .62), rgba(217, 239, 251, .62));
+    color: var(--ink-soft);
+    font-size: 11px;
+    line-height: 1.55;
+    font-weight: 600;
+  }
+
+  .obs-plugin-target {
+    margin-top: 6px !important;
+    color: var(--muted);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .obs-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .obs-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 13px;
+    border: 1px solid rgba(142, 124, 224, .14);
+    border-radius: 10px;
+    background: linear-gradient(135deg, #F7F3FF, #EDF8FF);
+    color: var(--violet-deep);
+    font: inherit;
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
+  }
+
+  .obs-actions .obs-install {
+    background: linear-gradient(135deg, #11805A, #2EC489);
+    border-color: rgba(17, 128, 90, .24);
+    color: #FFFFFF;
+    box-shadow: 0 6px 14px rgba(46, 196, 137, .2);
+  }
+
+  .obs-actions button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 16px rgba(142, 124, 224, .13);
+  }
+
+  .obs-actions .obs-install:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0F7452, #2EC489);
+    box-shadow: 0 8px 18px rgba(46, 196, 137, .26);
+  }
+
+  .obs-actions button:disabled {
+    opacity: .5;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
   }
 
   /* ── 设备选择浮层 ─────────────────────────────────────────── */
@@ -1739,9 +1882,9 @@
   }
 
   .device-menu[data-channel="ref2"] {
-    --dev-accent: var(--violet);
-    --dev-soft: #F3ECFF;
-    --dev-deep: var(--violet-deep);
+    --dev-accent: var(--berry);
+    --dev-soft: #FFF0F7;
+    --dev-deep: var(--berry-deep);
   }
 
   .device-menu-head {
@@ -2073,13 +2216,41 @@
     line-height: 1.4;
   }
 
+  .device-menu-tip.is-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 7px 9px;
+    border-top: 0;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FFFDF7, var(--lemon));
+    color: #8A5E00;
+    font-weight: 650;
+    line-height: 1.5;
+  }
+
+  .device-menu-tip.is-warning::before {
+    content: "!";
+    width: 13px;
+    height: 13px;
+    margin-top: 1px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: #F5D96A;
+    color: #7A5200;
+    font-size: 8px;
+    line-height: 1;
+    font-weight: 900;
+    flex: 0 0 auto;
+  }
+
   /* ── Toast ───────────────────────────────────────────────── */
 
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 64px;
-    bottom: max(64px, calc(50vh - 366px));
+    top: 88px;
     z-index: 120;
     max-width: min(580px, calc(100vw - 32px));
     padding: 11px 16px;
@@ -2092,7 +2263,7 @@
     box-shadow: 0 16px 36px rgba(70, 66, 87, .18);
     opacity: 0;
     visibility: hidden;
-    transform: translate(-50%, 14px);
+    transform: translate(-50%, -10px);
     pointer-events: none;
     word-break: break-word;
     transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
@@ -2281,8 +2452,11 @@
       margin-top: 4px;
     }
 
+    .meter-ticks {
+      margin-top: 2px;
+    }
+
     .mode-card {
-      min-height: 292px;
       padding: 12px 13px;
     }
 
@@ -2297,7 +2471,6 @@
     }
 
     .why-copy {
-      min-height: calc(1.5em * 3);
       font-size: 10.8px;
       line-height: 1.5;
     }
@@ -2386,6 +2559,12 @@
   <symbol id="i-close" viewBox="0 0 24 24">
     <path d="m6 6 12 12M18 6 6 18"></path>
   </symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24">
+    <path d="M8 5h3v14H8zM13 5h3v14h-3z"></path>
+  </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24">
+    <path d="M8.5 4.8 19.5 12 8.5 19.2Z"></path>
+  </symbol>
 </svg>
 
 <div class="app" id="app">
@@ -2396,7 +2575,7 @@
         <svg class="icon"><use href="#i-wave"></use></svg>
       </div>
       <div class="brand-copy">
-        <h1>VoiceAec <span>· 回声消除麦克风</span></h1>
+        <h1>VoiceAec</h1>
         <p>本地实时音频控制台</p>
       </div>
     </div>
@@ -2407,34 +2586,47 @@
         <span id="runText">正在连接…</span>
       </div>
 
-      <div class="cpu-chip" title="整机 CPU 占用">
+      <div class="cpu-chip" title="本程序音频进程的 CPU 占用（占整机算力的比例，不含其他程序）">
         <svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg>
-        <span>CPU</span>
+        <span>CPU 占用</span>
         <strong id="cpuValue">--</strong>
         <span class="cpu-unit">%</span>
       </div>
 
-      <div class="mode-badge" id="modeBadge" data-mode="v1.2" role="status" aria-live="polite" aria-atomic="true">
-        <span class="mode-badge-caption">当前模式</span>
-        <strong id="modeBadgeText">v1.2 · 均衡</strong>
-      </div>
+      <button class="obs-top-btn" id="obsPluginOpen" type="button" title="安装或卸载 OBS 音频滤镜">
+        <svg class="icon" aria-hidden="true"><use href="#i-plug"></use></svg>
+        <span>OBS 插件</span>
+      </button>
 
-      <div class="autostart" id="autostartField" data-enabled="false" title="开机后自动在后台运行，无需手动启动">
-        <span class="autostart-copy">
-          <span class="autostart-title">
-            开机自启
-            <span class="autostart-state" id="autostartState" aria-live="polite">读取中…</span>
-          </span>
-          <span class="autostart-hint" id="autostartHint">开机后自动在后台运行，无需手动启动</span>
-        </span>
-        <button class="toggle" id="autostartToggle" type="button" role="switch" aria-checked="false" aria-label="开机自启，正在读取" aria-describedby="autostartHint" disabled>
+      <div class="top-switch" id="ref2TopSwitch" data-enabled="false" title="开启后可在电平区配置第二参考麦克风">
+        <span class="top-switch-label">开启第二参考</span>
+        <button class="toggle" id="ref2TopToggle" type="button" role="switch" aria-checked="false" aria-label="开启第二参考，已关闭" disabled>
           <span class="toggle-thumb" aria-hidden="true"></span>
         </button>
       </div>
+
+      <div class="top-switch" id="autostartField" data-enabled="false" title="开机后自动在后台运行，无需手动启动">
+        <span class="top-switch-label">开机自启</span>
+        <button class="toggle" id="autostartToggle" type="button" role="switch" aria-checked="false" aria-label="开机自启，正在读取" disabled>
+          <span class="toggle-thumb" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <div class="mode-badge" id="modeBadge" data-mode="v1.2" role="status" aria-live="polite" aria-atomic="true">
+        <span class="mode-badge-caption">当前模式</span>
+        <strong id="modeBadgeText">均衡模式</strong>
+      </div>
+
+      <button class="pause-btn" id="pauseOutput" type="button" aria-pressed="false" disabled title="暂停采集、推理和输出；静音并降低占用，恢复后沿用当前设备和模式">
+        <svg class="icon" aria-hidden="true"><use id="pauseIconUse" href="#i-pause"></use></svg>
+        <span id="pauseLabel">暂停并静音</span>
+      </button>
     </div>
   </header>
 
   <section class="levels" aria-label="实时音频电平">
+
+    <div class="level-grid" id="levelGrid">
 
     <article class="level-card" data-level="mic" title="麦克风输入：人声与音箱回声会被一起采集">
       <div class="level-top">
@@ -2464,9 +2656,21 @@
         </div>
         <span class="peak-mark" id="micPeak" aria-hidden="true"></span>
       </div>
+      <div class="meter-ticks" aria-hidden="true">
+        <span>-60</span>
+        <span>-40</span>
+        <span>-20</span>
+        <span>0 dBFS</span>
+      </div>
       <div class="level-foot">
-        <span class="buffer-text" id="micBuffer">缓冲 — ms</span>
-        <span class="meter-scale">-60 … 0 dBFS</span>
+        <span class="level-stat">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="buffer-text" id="micBuffer">缓冲 — ms</span>
+        </span>
+        <span class="level-stat peak">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="peak-text" id="micPeakText">峰值 —</span>
+        </span>
       </div>
     </article>
 
@@ -2498,28 +2702,21 @@
         </div>
         <span class="peak-mark" id="refPeak" aria-hidden="true"></span>
       </div>
-      <div class="level-foot">
-        <span class="buffer-text" id="refBuffer">缓冲 — ms</span>
-        <span class="meter-scale">-60 … 0 dBFS</span>
+      <div class="meter-ticks" aria-hidden="true">
+        <span>-60</span>
+        <span>-40</span>
+        <span>-20</span>
+        <span>0 dBFS</span>
       </div>
-      <div class="ref2-block">
-        <div class="ref2-head">
-          <span class="ref2-label">第二参考</span>
-          <div class="ref2-control">
-            <button class="ref2-btn" id="ref2Btn" type="button" data-active="false" aria-haspopup="listbox" aria-expanded="false" aria-controls="deviceMenuList" aria-label="添加第二参考设备" title="添加第二参考设备">
-              <span class="ref2-glyph" aria-hidden="true">
-                <svg class="icon"><use id="ref2GlyphUse" href="#i-plus"></use></svg>
-              </span>
-              <span class="ref2-name" id="ref2Name">读取中…</span>
-              <svg class="icon device-caret" aria-hidden="true"><use href="#i-chevron"></use></svg>
-            </button>
-            <button class="ref2-clear" id="ref2Clear" type="button" title="关闭第二参考" aria-label="关闭第二参考" hidden>
-              <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
-              <span>关闭</span>
-            </button>
-          </div>
-        </div>
-        <p class="ref2-hint">接第二只麦克风靠近旁人/噪声源，可帮助消除他们说话（建议配 v1.3）</p>
+      <div class="level-foot">
+        <span class="level-stat">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="buffer-text" id="refBuffer">缓冲 — ms</span>
+        </span>
+        <span class="level-stat peak">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="peak-text" id="refPeakText">峰值 —</span>
+        </span>
       </div>
     </article>
 
@@ -2551,11 +2748,54 @@
         </div>
         <span class="peak-mark" id="outPeak" aria-hidden="true"></span>
       </div>
+      <div class="meter-ticks" aria-hidden="true">
+        <span>-60</span>
+        <span>-40</span>
+        <span>-20</span>
+        <span>0 dBFS</span>
+      </div>
       <div class="level-foot">
-        <span class="buffer-text" id="outBuffer">缓冲 — ms</span>
-        <span class="meter-scale">-60 … 0 dBFS</span>
+        <span class="level-stat">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="buffer-text" id="outBuffer">缓冲 — ms</span>
+        </span>
+        <span class="level-stat peak">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span class="peak-text" id="outPeakText">峰值 —</span>
+        </span>
       </div>
     </article>
+
+    <article class="level-card ref2-card" data-level="ref2" id="ref2Card" hidden title="第二参考：接另一只麦克风帮助消除旁人噪声">
+      <div class="level-top">
+        <div class="level-identity">
+          <span class="level-icon" aria-hidden="true">
+            <svg class="icon"><use id="ref2GlyphUse" href="#i-mic"></use></svg>
+          </span>
+          <div class="level-copy">
+            <div class="level-heading">
+              <h2>第二参考</h2>
+              <span class="role-chip">噪声参考</span>
+            </div>
+            <button class="device-btn" id="ref2Btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="deviceMenuList" aria-label="选择第二参考设备" title="选择第二参考设备">
+              <span class="device-name" id="ref2Name">点击选择设备</span>
+              <svg class="icon device-caret" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </button>
+          </div>
+        </div>
+        <span class="status-pill" id="ref2Pill" data-active="false">待选择</span>
+      </div>
+      <p class="ref2-note">接第二只麦克风靠近旁人/噪声源，可帮助消除他们说话（建议配强力模式）</p>
+      <div class="level-foot">
+        <span class="level-stat">
+          <span class="level-stat-dot" aria-hidden="true"></span>
+          <span id="ref2KindText">尚未选择设备</span>
+        </span>
+        <span class="ref2-off-hint">关闭顶部开关停用</span>
+      </div>
+    </article>
+
+    </div>
 
   </section>
 
@@ -2576,7 +2816,6 @@
       <button class="mode-card" type="button" data-mode="off" aria-pressed="false">
         <span class="mode-top">
           <span class="mode-title-wrap">
-            <span class="mode-key">OFF</span>
             <span class="mode-name" data-mode-title>关闭（直通）</span>
           </span>
           <span class="mode-badges">
@@ -2608,8 +2847,8 @@
             </span>
             <span class="metric-score" aria-hidden="true">5/5</span>
           </span>
-          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">整机 CPU</span>
+          <span class="metric" role="img" aria-label="CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
@@ -2619,18 +2858,35 @@
             </span>
             <span class="metric-score" aria-hidden="true">1/5</span>
           </span>
+          <span class="metric" role="img" aria-label="模型体积 0/5">
+            <span class="metric-label" aria-hidden="true">模型体积</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">0/5</span>
+          </span>
+        </span>
+        <span class="mode-fit">
+          <span class="fit-label">适合场景</span>
+          <span class="fit-tags">
+            <span class="fit-tag">戴耳机聊天</span>
+            <span class="fit-tag">音乐监听</span>
+          </span>
         </span>
         <span class="why">
           <span class="why-label">模式简介</span>
-          <span class="why-copy">不做任何处理，麦克风原样转发。戴耳机聊天时用它最省电；外放时对方会听到你电脑里的一切声音。</span>
+          <span class="why-copy">不做任何处理，麦克风原样转发。戴耳机聊天时用它最省电；外放时对方会听到你音箱里放出的声音。</span>
         </span>
       </button>
 
       <button class="mode-card" type="button" data-mode="v1.2" aria-pressed="false">
         <span class="mode-top">
           <span class="mode-title-wrap">
-            <span class="mode-key">v1.2</span>
-            <span class="mode-name" data-mode-title>v1.2 · 均衡</span>
+            <span class="mode-name" data-mode-title>均衡模式</span>
           </span>
           <span class="mode-badges">
             <span class="badge badge-recommend">推荐 · 默认</span>
@@ -2662,29 +2918,46 @@
             </span>
             <span class="metric-score" aria-hidden="true">4/5</span>
           </span>
-          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">整机 CPU</span>
+          <span class="metric" role="img" aria-label="CPU 占用 2/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
             <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
               <span class="metric-cell"></span>
               <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">2/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="模型体积 2/5">
+            <span class="metric-label" aria-hidden="true">模型体积</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
               <span class="metric-cell"></span>
             </span>
-            <span class="metric-score" aria-hidden="true">1/5</span>
+            <span class="metric-score" aria-hidden="true">2/5</span>
+          </span>
+        </span>
+        <span class="mode-fit">
+          <span class="fit-label">适合场景</span>
+          <span class="fit-tags">
+            <span class="fit-tag">日常开黑</span>
+            <span class="fit-tag">外放音箱</span>
           </span>
         </span>
         <span class="why">
           <span class="why-label">模式简介</span>
-          <span class="why-copy">消得干净、人声自然，整机 CPU 约 3%。日常外放开黑选它就对了。</span>
+          <span class="why-copy">约 130 万参数，消得干净、人声自然，程序 CPU 约 3%。日常外放开黑首选。</span>
         </span>
       </button>
 
       <button class="mode-card" type="button" data-mode="v1.3" aria-pressed="false">
         <span class="mode-top">
           <span class="mode-title-wrap">
-            <span class="mode-key">v1.3</span>
-            <span class="mode-name" data-mode-title>v1.3 · 最强消除</span>
+            <span class="mode-name" data-mode-title>强力模式</span>
           </span>
           <span class="mode-badges">
             <span class="badge badge-current" data-current hidden>使用中</span>
@@ -2715,29 +2988,46 @@
             </span>
             <span class="metric-score" aria-hidden="true">3/5</span>
           </span>
-          <span class="metric" role="img" aria-label="整机 CPU 占用 2/5">
-            <span class="metric-label" aria-hidden="true">整机 CPU</span>
+          <span class="metric" role="img" aria-label="CPU 占用 5/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell on"></span>
-              <span class="metric-cell"></span>
-              <span class="metric-cell"></span>
-              <span class="metric-cell"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
             </span>
-            <span class="metric-score" aria-hidden="true">2/5</span>
+            <span class="metric-score" aria-hidden="true">5/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="模型体积 5/5">
+            <span class="metric-label" aria-hidden="true">模型体积</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+              <span class="metric-cell on"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">5/5</span>
+          </span>
+        </span>
+        <span class="mode-fit">
+          <span class="fit-label">适合场景</span>
+          <span class="fit-tags">
+            <span class="fit-tag">嘈杂环境</span>
+            <span class="fit-tag">大音量外放</span>
           </span>
         </span>
         <span class="why">
           <span class="why-label">模式简介</span>
-          <span class="why-copy">消除力度最大，还能顺带压低周围噪声；代价是人声偶尔被轻微削掉，整机 CPU 约 7%。音箱开得响或环境吵时用。</span>
+          <span class="why-copy">约 480 万参数，消除力度最大，压低周围噪声；代价是人声偶尔被轻微削掉，程序 CPU 约 7%。音箱开得响或环境吵时用。</span>
         </span>
       </button>
 
       <button class="mode-card" type="button" data-mode="v1.4" aria-pressed="false">
         <span class="mode-top">
           <span class="mode-title-wrap">
-            <span class="mode-key">v1.4</span>
-            <span class="mode-name" data-mode-title>v1.4 · 纯回声消除</span>
+            <span class="mode-name" data-mode-title>纯回声消除模式</span>
           </span>
           <span class="mode-badges">
             <span class="badge badge-current" data-current hidden>使用中</span>
@@ -2768,8 +3058,19 @@
             </span>
             <span class="metric-score" aria-hidden="true">5/5</span>
           </span>
-          <span class="metric" role="img" aria-label="整机 CPU 占用 1/5">
-            <span class="metric-label" aria-hidden="true">整机 CPU</span>
+          <span class="metric" role="img" aria-label="CPU 占用 1/5">
+            <span class="metric-label" aria-hidden="true">CPU 占用</span>
+            <span class="metric-cells" aria-hidden="true">
+              <span class="metric-cell on"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+              <span class="metric-cell"></span>
+            </span>
+            <span class="metric-score" aria-hidden="true">1/5</span>
+          </span>
+          <span class="metric" role="img" aria-label="模型体积 1/5">
+            <span class="metric-label" aria-hidden="true">模型体积</span>
             <span class="metric-cells" aria-hidden="true">
               <span class="metric-cell on"></span>
               <span class="metric-cell"></span>
@@ -2780,9 +3081,16 @@
             <span class="metric-score" aria-hidden="true">1/5</span>
           </span>
         </span>
+        <span class="mode-fit">
+          <span class="fit-label">适合场景</span>
+          <span class="fit-tags">
+            <span class="fit-tag">房间回音</span>
+            <span class="fit-tag">保留全部人声</span>
+          </span>
+        </span>
         <span class="why">
           <span class="why-label">模式简介</span>
-          <span class="why-copy">只消回声不碰人声，但模型太小，麦克风离音箱稍远或房间有混响就基本没用（本机实测）。仅适合麦克风贴近嘴边尝鲜。</span>
+          <span class="why-copy">约 20 万参数的小模型，只消回声不碰人声；如果有播放对话声则效果不佳，仅适合只需要消除房间的回音的场景。</span>
         </span>
       </button>
 
@@ -2844,6 +3152,29 @@
 
 </div>
 
+<dialog class="obs-dialog" id="obsPluginDialog" aria-labelledby="obsPluginTitle">
+  <div class="obs-dialog-head">
+    <div class="obs-title-wrap">
+      <span class="obs-title-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-plug"></use></svg>
+      </span>
+      <h2 id="obsPluginTitle">安装到 OBS</h2>
+    </div>
+    <button class="obs-close" id="obsPluginClose" type="button" aria-label="关闭 OBS 插件设置">关闭</button>
+  </div>
+  <p>将 VoiceAec 安装为 OBS 音频滤镜。普通安装版 OBS 64 位可用，便携模式不使用此安装目录。</p>
+  <p class="obs-plugin-state" id="obsPluginState" role="status" aria-live="polite">正在读取插件状态…</p>
+  <p class="obs-plugin-target" id="obsPluginTarget"></p>
+  <p>请先退出 OBS。完成后重启 OBS，在麦克风的「滤镜 → 音频滤镜」中添加 VoiceAec。</p>
+  <p>安装前自动备份旧版本；卸载时恢复安装前版本。系统可能请求管理员权限。</p>
+  <p>使用 OBS 滤镜时可暂停桌面端，避免重复处理同一路麦克风和增加占用。</p>
+  <div class="obs-actions">
+    <button class="obs-install" id="obsPluginInstall" type="button" disabled>一键安装到 OBS</button>
+    <button id="obsPluginUninstall" type="button" disabled>一键卸载</button>
+    <button id="obsPluginRefresh" type="button">刷新状态</button>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="assertive" aria-atomic="true"></div>
 
 <div class="device-menu" id="deviceMenu" data-channel="mic" data-placement="bottom">
@@ -2867,8 +3198,8 @@
       <svg class="icon"><use href="#i-plug"></use></svg>
     </div>
     <span class="offline-kicker">连接中断</span>
-    <h2 id="offlineTitle">程序未在运行…</h2>
-    <p id="offlineDesc">VoiceAec 暂时没有响应。请确认程序已启动，页面会继续自动重连。</p>
+    <h2 id="offlineTitle">面板连接暂时中断</h2>
+    <p id="offlineDesc">暂时无法读取程序状态，音频处理可能仍在继续。面板正在自动重连。</p>
     <div class="offline-retry" aria-hidden="true">
       <span class="retry-spinner"></span>
       <span id="retryText">正在自动重连</span>
@@ -2885,12 +3216,15 @@
   const MODES = ['off', 'v1.2', 'v1.3', 'v1.4'];
   const DEFAULT_MODELS = {
     off: { available: true, label: '关闭（直通）' },
-    'v1.2': { available: true, label: 'v1.2 · 均衡' },
-    'v1.3': { available: true, label: 'v1.3 · 最强消除' },
-    'v1.4': { available: true, label: 'v1.4 · 纯回声消除' }
+    'v1.2': { available: true, label: '均衡模式' },
+    'v1.3': { available: true, label: '强力模式' },
+    'v1.4': { available: true, label: '纯回声消除模式' }
   };
   const HINT_PLACEHOLDER = '正在获取使用提示…';
   const POLL_MS = 500;
+  const PAUSED_POLL_MS = 2000;
+  const OFFLINE_GRACE_MS = 4000;
+  const API_TOKEN = document.querySelector('meta[name="voiceaec-token"]')?.content || '';
   const STATUS_TIMEOUT_MS = 2500;
   const SWITCH_TIMEOUT_MS = 10000;
   const AUTOSTART_TIMEOUT_MS = 6000;
@@ -2906,18 +3240,28 @@
     runState: $('runState'),
     runText: $('runText'),
     cpuValue: $('cpuValue'),
+    pauseOutput: $('pauseOutput'),
+    pauseLabel: $('pauseLabel'),
+    pauseIconUse: $('pauseIconUse'),
+    obsOpen: $('obsPluginOpen'), obsDialog: $('obsPluginDialog'), obsClose: $('obsPluginClose'),
+    obsState: $('obsPluginState'), obsTarget: $('obsPluginTarget'), obsInstall: $('obsPluginInstall'),
+    obsUninstall: $('obsPluginUninstall'), obsRefresh: $('obsPluginRefresh'),
     modeBadge: $('modeBadge'),
     modeBadgeText: $('modeBadgeText'),
     autostartField: $('autostartField'),
     autostartToggle: $('autostartToggle'),
-    autostartState: $('autostartState'),
+    ref2TopSwitch: $('ref2TopSwitch'),
+    ref2TopToggle: $('ref2TopToggle'),
     switchState: $('switchState'),
     switchText: $('switchText'),
     modeGrid: $('modeGrid'),
+    levelGrid: $('levelGrid'),
     refPill: $('refPill'),
+    ref2Card: $('ref2Card'),
     ref2Btn: $('ref2Btn'),
     ref2Name: $('ref2Name'),
-    ref2Clear: $('ref2Clear'),
+    ref2Pill: $('ref2Pill'),
+    ref2KindText: $('ref2KindText'),
     ref2GlyphUse: $('ref2GlyphUse'),
     statProcessed: $('statProcessed'),
     statHops: $('statHops'),
@@ -2946,6 +3290,7 @@
       meter: $('micMeter'),
       fill: $('micFill'),
       peak: $('micPeak'),
+      peakText: $('micPeakText'),
       buffer: $('micBuffer')
     },
     ref: {
@@ -2953,6 +3298,7 @@
       meter: $('refMeter'),
       fill: $('refFill'),
       peak: $('refPeak'),
+      peakText: $('refPeakText'),
       buffer: $('refBuffer')
     },
     out: {
@@ -2960,6 +3306,7 @@
       meter: $('outMeter'),
       fill: $('outFill'),
       peak: $('outPeak'),
+      peakText: $('outPeakText'),
       buffer: $('outBuffer')
     }
   };
@@ -3029,6 +3376,15 @@
     autostartKnown: false,
     autostartPending: false,
     polling: false,
+    paused: false,
+    pausePending: false,
+    panelVisible: !document.hidden,
+    pollTimer: 0,
+    obsTimer: 0,
+    obsFetching: false,
+    obsBusy: false,
+    lastStatusAt: 0,
+    failureStartedAt: 0,
     devices: { inputs: [], loops: [], outputs: [], ref2Choices: [] },
     currentDevices: { mic: '', ref: '', out: '', ref2: 'none' },
     deviceNames: { mic: '', ref: '', out: '' },
@@ -3041,6 +3397,8 @@
     devicePendingName: '',
     lastRef2ChangeAt: 0,
     openMenuKey: null,
+    menuAnchor: null,
+    ref2Visible: false,
     peaks: {
       mic: { value: 0, hold: 0 },
       ref: { value: 0, hold: 0 },
@@ -3130,16 +3488,22 @@
     return value.filter(isDeviceName).map((name) => name.trim());
   }
 
-  function readRef2Choices(value) {
+  function readChoices(value) {
     if (!Array.isArray(value)) return [];
     const seen = new Set();
     const choices = [];
     value.forEach((item) => {
-      if (!item || typeof item !== 'object') return;
-      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      let name = '';
+      let kind = 'playback';
+      if (typeof item === 'string') {
+        name = item.trim();
+      } else if (item && typeof item === 'object') {
+        name = typeof item.name === 'string' ? item.name.trim() : '';
+        kind = item.kind === 'mic' ? 'mic' : 'playback';
+      }
       if (!name || seen.has(name)) return;
       seen.add(name);
-      choices.push({ name, kind: item.kind === 'mic' ? 'mic' : 'playback' });
+      choices.push({ name, kind });
     });
     return choices;
   }
@@ -3171,7 +3535,14 @@
       if (state.devicesStatus === 'error') return '暂不可用';
       return '读取中…';
     }
-    return '未启用';
+    return state.ref2Visible ? '点击选择设备' : '未启用';
+  }
+
+  function ref2KindText(name) {
+    const kind = ref2Kind(name);
+    if (kind === 'mic') return '麦克风 · 噪声参考';
+    if (kind === 'playback') return '播放设备 · 辅助参考';
+    return '第二参考已启用';
   }
 
   function renderRef2() {
@@ -3180,51 +3551,76 @@
 
     const pending = state.devicePending === REF2_KEY;
     const active = ref2Active();
+    const visible = state.ref2Visible;
     const pendingTarget = state.devicePendingName;
-    const showActive = pending ? Boolean(pendingTarget && pendingTarget !== 'none') : active;
-    const label = displayRef2Name();
-
-    setText(els.ref2Name, label);
-    btn.dataset.active = showActive ? 'true' : 'false';
-    btn.classList.toggle('is-busy', pending);
-    btn.disabled = !state.connected || state.devicePending !== null;
-    setAttr(btn, 'aria-busy', pending ? 'true' : 'false');
-    setAttr(btn, 'aria-expanded', state.openMenuKey === REF2_KEY ? 'true' : 'false');
     const pendingOn = Boolean(pendingTarget && pendingTarget !== 'none');
+    const showCard = visible;
+
+    if (els.levelGrid) els.levelGrid.classList.toggle('is-four-up', showCard);
+    if (els.ref2Card) els.ref2Card.hidden = !showCard;
+
+    const label = displayRef2Name();
+    setText(els.ref2Name, label);
+    btn.disabled = !state.connected || state.devicePending !== null;
+    btn.classList.toggle('is-busy', pending && showCard);
+    setAttr(btn, 'aria-busy', pending && showCard ? 'true' : 'false');
+    const cardMenuOpen = state.openMenuKey === REF2_KEY && state.menuAnchor === btn;
+    setAttr(btn, 'aria-expanded', cardMenuOpen ? 'true' : 'false');
+
     let ariaLabel;
     let titleText;
-    if (pending) {
-      ariaLabel = pendingOn ? `正在将第二参考切换为 ${pendingTarget}` : '正在关闭第二参考';
-      titleText = pendingOn ? `正在切换到 ${pendingTarget}…` : '正在关闭第二参考…';
+    if (pending && pendingOn) {
+      ariaLabel = `正在启用第二参考 ${pendingTarget}`;
+      titleText = `正在启用 ${pendingTarget}…`;
+    } else if (pending) {
+      ariaLabel = '正在关闭第二参考';
+      titleText = '正在关闭第二参考…';
     } else if (active) {
       ariaLabel = `第二参考正在使用 ${state.currentDevices.ref2}，点击更换`;
       titleText = `${state.currentDevices.ref2}（点击更换第二参考）`;
-    } else if (!state.devicesLoaded && state.devicesStatus === 'error') {
-      ariaLabel = '第二参考信息暂不可用，点击重试';
-      titleText = '第二参考信息暂不可用，点击重试';
-    } else if (!state.devicesLoaded) {
-      ariaLabel = '正在读取第二参考设备…';
-      titleText = '正在读取第二参考设备…';
     } else {
-      ariaLabel = '添加第二参考设备，帮助消除旁人噪声';
-      titleText = '添加第二参考设备，帮助消除旁人噪声';
+      ariaLabel = '选择第二参考设备';
+      titleText = '选择第二参考设备，帮助消除旁人噪声';
     }
     setAttr(btn, 'aria-label', ariaLabel);
     setAttr(btn, 'title', titleText);
-    const glyphName = showActive ? (active ? state.currentDevices.ref2 : pendingTarget) : '';
-    const glyphKind = ref2Kind(glyphName);
-    const glyphIcon = !showActive
-      ? '#i-plus'
-      : (glyphKind === 'playback' ? '#i-speaker' : (glyphKind === 'mic' ? '#i-mic' : '#i-wave'));
-    setAttr(els.ref2GlyphUse, 'href', glyphIcon);
 
-    if (els.ref2Clear) {
-      els.ref2Clear.hidden = !active;
-      els.ref2Clear.disabled = !state.connected || state.devicePending !== null;
+    const glyphName = active ? state.currentDevices.ref2 : (pendingOn ? pendingTarget : '');
+    const glyphKind = ref2Kind(glyphName);
+    setAttr(
+      els.ref2GlyphUse,
+      'href',
+      glyphKind === 'playback' ? '#i-speaker' : (glyphKind === 'mic' ? '#i-mic' : '#i-wave')
+    );
+
+    if (els.ref2Pill) {
+      setAttr(els.ref2Pill, 'data-active', active ? 'true' : 'false');
+      setText(
+        els.ref2Pill,
+        active ? '已启用' : (pending && pendingOn ? '启用中…' : '待选择')
+      );
+    }
+
+    setText(
+      els.ref2KindText,
+      active
+        ? ref2KindText(state.currentDevices.ref2)
+        : (pendingOn ? `正在启用 ${pendingTarget}` : '尚未选择设备')
+    );
+
+    if (els.ref2TopSwitch) {
+      els.ref2TopSwitch.dataset.enabled = visible ? 'true' : 'false';
+      els.ref2TopSwitch.classList.toggle('is-pending', pending);
+      setAttr(els.ref2TopSwitch, 'aria-busy', pending ? 'true' : 'false');
+    }
+
+    if (els.ref2TopToggle) {
+      setAttr(els.ref2TopToggle, 'aria-checked', visible ? 'true' : 'false');
+      els.ref2TopToggle.disabled = !state.connected || state.devicePending !== null;
       setAttr(
-        els.ref2Clear,
-        'title',
-        active ? `关闭第二参考（${state.currentDevices.ref2}）` : '关闭第二参考'
+        els.ref2TopToggle,
+        'aria-label',
+        `开启第二参考，${visible ? '已开启' : '已关闭'}`
       );
     }
   }
@@ -3276,7 +3672,10 @@
     const key = state.openMenuKey;
     if (!key || !pickers[key]) return;
 
-    const rect = pickers[key].btn.getBoundingClientRect();
+    const anchor = state.menuAnchor || pickers[key].btn;
+    if (!anchor) return;
+
+    const rect = anchor.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const width = Math.min(Math.max(rect.width + 90, 360), 460, Math.max(280, vw - 24));
@@ -3284,6 +3683,9 @@
 
     const height = els.deviceMenu.offsetHeight;
     let left = rect.left - 6;
+    if (rect.width > width + 20) {
+      left = rect.left + (rect.width - width) / 2;
+    }
     left = clamp(left, 12, Math.max(12, vw - width - 12));
 
     const fitsBelow = rect.bottom + 8 + height <= vh - 12;
@@ -3307,12 +3709,13 @@
   function closeDeviceMenu(options = {}) {
     const key = state.openMenuKey;
     if (!key) return;
+    const anchor = state.menuAnchor || (pickers[key] && pickers[key].btn);
     state.openMenuKey = null;
+    state.menuAnchor = null;
     els.deviceMenu.classList.remove('is-open');
-    const picker = pickers[key];
-    if (picker && picker.btn) {
-      setAttr(picker.btn, 'aria-expanded', 'false');
-      if (options.focusBack) picker.btn.focus({ preventScroll: true });
+    if (anchor) {
+      setAttr(anchor, 'aria-expanded', 'false');
+      if (options.focusBack) anchor.focus({ preventScroll: true });
     }
   }
 
@@ -3403,7 +3806,7 @@
     return group;
   }
 
-  function createRef2Option(value, label, selected, disabled) {
+  function createChoiceOption(value, label, selected, disabled) {
     const option = document.createElement('button');
     option.type = 'button';
     option.className = 'device-option';
@@ -3437,7 +3840,11 @@
 
     const picker = pickers[key];
     const isRef2 = key === REF2_KEY;
-    const list = isRef2 ? state.devices.ref2Choices : (state.devices[picker.listKey] || []);
+    const isRef = key === 'ref';
+    const grouped = isRef2 || isRef;
+    const list = isRef2
+      ? state.devices.ref2Choices
+      : (isRef ? state.devices.loops : (state.devices[picker.listKey] || []));
     const loading = state.devicesStatus === 'idle' || state.devicesStatus === 'loading';
     const failed = state.devicesStatus === 'error' && !state.devicesLoaded;
     const noList = list.length === 0;
@@ -3446,28 +3853,27 @@
     setAttr(els.deviceMenuIconUse, 'href', picker.icon);
     setText(els.deviceMenuTitle, isRef2 ? '第二参考' : `${picker.noun}设备`);
     setAttr(els.deviceMenuList, 'aria-label', isRef2 ? '第二参考设备列表' : `${picker.noun}设备列表`);
-    setText(els.deviceMenuTip, isRef2 ? '选「无」即可关闭第二参考' : '设备名过长时，悬停可查看完整名称');
+
+    if (isRef) {
+      setText(els.deviceMenuTip, '选麦克风当参考时，它听到的人声也会被当作要消除的成分');
+    } else if (isRef2) {
+      setText(els.deviceMenuTip, '选择设备后立即生效；停用请关闭顶部开关');
+    } else {
+      setText(els.deviceMenuTip, '设备名过长时，悬停可查看完整名称');
+    }
+    els.deviceMenuTip.classList.toggle('is-warning', isRef);
 
     let countText;
     if (loading && noList) {
       countText = '读取中';
     } else if (failed) {
       countText = '读取失败';
-    } else if (isRef2 && noList) {
-      countText = '未添加';
     } else {
       countText = `${list.length} 个可选`;
     }
     setText(els.deviceMenuCount, countText);
 
     const frag = document.createDocumentFragment();
-
-    if (isRef2) {
-      const currentValue = state.currentDevices.ref2 || 'none';
-      frag.appendChild(createDeviceGroup('无', [
-        createRef2Option('none', '不使用第二参考', currentValue === 'none', !state.devicesLoaded)
-      ]));
-    }
 
     if (failed) {
       frag.appendChild(createDeviceState({
@@ -3489,27 +3895,39 @@
         text: '连接一只麦克风或选择播放设备后即可添加。',
         retry: false
       }));
-    } else if (!isRef2 && noList) {
+    } else if (isRef && noList) {
+      frag.appendChild(createDeviceState({
+        icon: picker.icon,
+        title: '没有找到可用的参考设备',
+        text: '确认设备已连接，或重新读取列表。',
+        retry: true
+      }));
+    } else if (!grouped && noList) {
       frag.appendChild(createDeviceState({
         icon: picker.icon,
         title: '没有找到可用设备',
         text: '确认设备已连接，或重新读取列表。',
         retry: true
       }));
-    } else if (isRef2) {
+    } else if (grouped) {
       const playback = list.filter((item) => item.kind === 'playback');
       const microphones = list.filter((item) => item.kind === 'mic');
-      const currentValue = state.currentDevices.ref2 || 'none';
+      const currentValue = isRef2
+        ? (state.currentDevices.ref2 || 'none')
+        : knownDeviceName('ref');
 
       if (playback.length) {
         frag.appendChild(createDeviceGroup('播放设备', playback.map((item) => (
-          createRef2Option(item.name, item.name, currentValue === item.name, false)
+          createChoiceOption(item.name, item.name, currentValue === item.name, false)
         ))));
       }
       if (microphones.length) {
-        frag.appendChild(createDeviceGroup('麦克风（噪声参考）', microphones.map((item) => (
-          createRef2Option(item.name, item.name, currentValue === item.name, false)
-        ))));
+        frag.appendChild(createDeviceGroup(
+          isRef2 ? '麦克风（噪声参考）' : '麦克风',
+          microphones.map((item) => (
+            createChoiceOption(item.name, item.name, currentValue === item.name, false)
+          ))
+        ));
       }
     } else {
       list.forEach((name) => frag.appendChild(createDeviceOption(key, name)));
@@ -3518,17 +3936,20 @@
     els.deviceMenuList.replaceChildren(frag);
   }
 
-  function openDeviceMenu(key) {
+  function openDeviceMenu(key, anchor = null) {
     const picker = pickers[key];
     if (!picker || !state.connected || state.devicePending) return;
+    const anchorEl = anchor || picker.btn;
+    if (!anchorEl) return;
     if (state.openMenuKey === key) return;
     if (state.openMenuKey) closeDeviceMenu();
 
     state.openMenuKey = key;
+    state.menuAnchor = anchorEl;
     renderDeviceMenu();
     positionDeviceMenu();
     els.deviceMenu.classList.add('is-open');
-    setAttr(picker.btn, 'aria-expanded', 'true');
+    setAttr(anchorEl, 'aria-expanded', 'true');
     setText(
       els.srStatus,
       key === REF2_KEY ? '第二参考菜单已打开。' : `${picker.noun}设备菜单已打开。`
@@ -3548,6 +3969,7 @@
       if (!staleRef2 && (options.allowPending || state.devicePending !== REF2_KEY)) {
         const value = current.ref2.trim();
         state.currentDevices.ref2 = value || 'none';
+        if (state.currentDevices.ref2 !== 'none') state.ref2Visible = true;
       }
     }
   }
@@ -3590,9 +4012,9 @@
       }
 
       state.devices.inputs = readDeviceList(payload.inputs);
-      state.devices.loops = readDeviceList(payload.loops);
+      state.devices.loops = readChoices(payload.loops);
       state.devices.outputs = readDeviceList(payload.outputs);
-      state.devices.ref2Choices = readRef2Choices(payload.ref2Choices);
+      state.devices.ref2Choices = readChoices(payload.ref2Choices);
       applyDeviceCurrent(payload.current, { allowPending: false, startedAt: requestStartedAt });
       state.devicesStatus = 'ready';
       state.devicesLoaded = true;
@@ -3620,7 +4042,7 @@
     void refreshDevices({ quiet: true });
   }
 
-  async function chooseDevice(key, name) {
+  async function chooseDevice(key, name, options = {}) {
     const picker = pickers[key];
     if (!picker || !isDeviceName(name)) return;
     if (!state.connected || state.devicePending) return;
@@ -3631,6 +4053,7 @@
 
     state.devicePending = key;
     state.devicePendingName = name;
+    if (key === REF2_KEY && options.hideCard) state.ref2Visible = false;
     setText(
       els.srStatus,
       key === REF2_KEY ? '正在更新第二参考…' : `正在切换${picker.noun}设备…`
@@ -3690,6 +4113,7 @@
     } finally {
       if (failureMessage) {
         state.currentDevices[key] = previousName;
+        if (key === REF2_KEY && options.hideCard) state.ref2Visible = true;
         if (key !== REF2_KEY && previousName) state.deviceNames[key] = previousName;
         if (key === REF2_KEY) {
           showToast(`第二参考设置失败：${failureMessage}`, 'error');
@@ -3714,6 +4138,8 @@
     state.offline = false;
     state.connected = true;
     state.retryCount = 0;
+    state.failureStartedAt = 0;
+    state.lastStatusAt = Date.now();
 
     els.offlineOverlay.classList.remove('is-visible');
     els.offlineOverlay.setAttribute('aria-hidden', 'true');
@@ -3731,13 +4157,12 @@
     const firstFailure = !state.offline;
     state.offline = true;
     state.connected = false;
-    state.retryCount += 1;
 
     if (firstFailure) {
       els.offlineOverlay.classList.add('is-visible');
       els.offlineOverlay.setAttribute('aria-hidden', 'false');
       els.app.setAttribute('inert', '');
-      setText(els.srStatus, 'VoiceAec 未在运行，正在自动重连。');
+      setText(els.srStatus, '面板连接暂时中断，音频处理可能仍在继续，正在自动重连。');
     }
 
     els.runState.classList.remove('is-connecting');
@@ -3797,7 +4222,7 @@
     let busy = false;
 
     if (!state.connected) {
-      text = state.offline ? '等待程序启动…' : '正在连接…';
+      text = state.offline ? '等待恢复连接…' : '正在连接…';
     } else if (state.localPending) {
       text = `正在切换到 ${modeLabel(state.pendingMode || state.currentMode)}…`;
       busy = true;
@@ -3817,6 +4242,18 @@
     refreshSwitchState();
     renderAutostart();
     renderDevicePickers();
+    els.app.classList.toggle('is-paused', state.paused);
+    els.pauseOutput.disabled = !state.connected || state.pausePending || state.localPending || state.serverSwitching;
+    els.pauseOutput.setAttribute('aria-pressed', state.paused ? 'true' : 'false');
+    const pauseLabel = state.pausePending ? '正在切换…' : (state.paused ? '恢复处理与输出' : '暂停并静音');
+    setText(els.pauseLabel, pauseLabel);
+    setAttr(els.pauseIconUse, 'href', state.paused ? '#i-play' : '#i-pause');
+    setAttr(els.pauseOutput, 'aria-label', pauseLabel);
+    setAttr(
+      els.pauseOutput,
+      'title',
+      state.paused ? '恢复音频采集、推理和输出' : '暂停采集、推理和输出；静音并降低占用'
+    );
   }
 
   function renderAutostart() {
@@ -3825,9 +4262,6 @@
     const pending = state.autostartPending;
     const known = state.autostartKnown;
     const enabled = state.autostart;
-    const stateText = pending
-      ? '保存中…'
-      : (known ? (enabled ? '已开启' : '已关闭') : '读取中…');
     const ariaState = pending
       ? '正在保存'
       : (known ? (enabled ? '已开启' : '已关闭') : '正在读取');
@@ -3841,7 +4275,6 @@
       els.autostartField.classList.toggle('is-pending', pending);
       els.autostartField.setAttribute('aria-busy', pending ? 'true' : 'false');
     }
-    setText(els.autostartState, stateText);
   }
 
   function updateAutostartState(value) {
@@ -3909,7 +4342,9 @@
 
   function updateRun(data) {
     const uptime = toNumber(data.uptimeSec);
-    setText(els.runText, Number.isFinite(uptime) ? `运行中 · ${formatDuration(uptime)}` : '运行中');
+    state.paused = data.paused === true;
+    const label = state.paused ? '已暂停 · 静音' : '运行中';
+    setText(els.runText, Number.isFinite(uptime) ? `${label} · ${formatDuration(uptime)}` : label);
 
     const cpu = toNumber(data.cpuPercent);
     setText(els.cpuValue, Number.isFinite(cpu) ? clamp(cpu, 0, 100).toFixed(1) : '--');
@@ -3948,6 +4383,9 @@
       ui.peak.style.left = `${clamp(peak.value, 0.4, 99.6).toFixed(2)}%`;
     }
 
+    const peakDb = peakVisible ? clamp((peak.value / 100) * 60 - 60, -60, 0) : null;
+    setText(ui.peakText, peakDb == null ? '峰值 —' : `峰值 ${formatDb(peakDb)} dB`);
+
     setText(ui.db, silent ? '-∞' : formatDb(shown));
     ui.db.classList.toggle('is-silent', silent);
 
@@ -3985,13 +4423,13 @@
     const hasRate = Number.isFinite(rate);
     setText(els.statRate, hasRate ? rate.toFixed(1) : '—');
 
-    const warn = hasRate && (rate < 55 || rate > 70);
+    const warn = !state.paused && hasRate && (rate < 55 || rate > 70);
     els.statRateCard.classList.toggle('is-warn', warn);
     els.statRateCard.setAttribute(
       'aria-label',
-      `每秒推理 ${hasRate ? rate.toFixed(1) : '未知'} 跳每秒，${warn ? '偏离正常范围' : '正常值 62.5'}`
+      `每秒推理 ${hasRate ? rate.toFixed(1) : '未知'} 跳每秒，${state.paused ? '已暂停推理' : (warn ? '偏离正常范围' : '正常值 62.5')}`
     );
-    setText(els.hopsNote, warn ? '偏离正常范围' : '正常值 62.5');
+    setText(els.hopsNote, state.paused ? '已暂停推理' : (warn ? '偏离正常范围' : '正常值 62.5'));
   }
 
   function updateHint(hint) {
@@ -4008,9 +4446,6 @@
       if (!incoming || typeof incoming !== 'object') return;
       if (typeof incoming.available === 'boolean') {
         state.models[mode].available = incoming.available;
-      }
-      if (typeof incoming.label === 'string' && incoming.label.trim()) {
-        state.models[mode].label = incoming.label.trim();
       }
     });
   }
@@ -4037,14 +4472,19 @@
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      return await fetch(url, { ...options, signal: controller.signal });
+      return await fetch(url, {
+        ...options,
+        headers: { ...options.headers, 'X-VoiceAec-Token': API_TOKEN },
+        signal: controller.signal
+      });
     } finally {
       window.clearTimeout(timer);
     }
   }
 
   async function pollStatus() {
-    if (state.polling) return;
+    if (state.polling || !state.panelVisible || document.hidden) return;
+    window.clearTimeout(state.pollTimer);
     state.polling = true;
 
     try {
@@ -4061,9 +4501,104 @@
       }
       applyStatus(data);
     } catch (_) {
-      goOffline();
+      state.retryCount += 1;
+      if (!state.failureStartedAt) state.failureStartedAt = Date.now();
+      const since = state.lastStatusAt || state.failureStartedAt;
+      if (state.retryCount >= 3 && Date.now() - since >= OFFLINE_GRACE_MS) {
+        goOffline();
+      } else {
+        els.runState.classList.add('is-connecting');
+        setText(els.runText, state.lastStatusAt ? '状态更新延迟，重试中…' : '正在连接…');
+      }
     } finally {
       state.polling = false;
+      schedulePoll();
+    }
+  }
+
+  function schedulePoll() {
+    window.clearTimeout(state.pollTimer);
+    if (!state.panelVisible || document.hidden) return;
+    const delay = state.offline ? 3000 : (state.paused ? PAUSED_POLL_MS : POLL_MS);
+    state.pollTimer = window.setTimeout(pollStatus, delay);
+  }
+
+  async function changePaused() {
+    if (!state.connected || state.pausePending) return;
+    state.pausePending = true;
+    refreshControls();
+    try {
+      const response = await fetchWithTimeout('/api/pause', {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: String(!state.paused)
+      }, DEVICE_TIMEOUT_MS);
+      const data = await response.json();
+      if (typeof data.paused === 'boolean') state.paused = data.paused;
+      if (!response.ok || data.ok !== true) throw new Error(data.error || '请求未完成');
+      showToast(state.paused ? '已暂停并静音，音频采集和推理已停止' : '已恢复处理与输出', 'success');
+    } catch (error) {
+      showToast(`切换暂停状态失败：${error.message || '请重试'}`, 'error');
+    } finally {
+      state.pausePending = false;
+      refreshControls();
+      void pollStatus();
+    }
+  }
+
+  function renderObsPlugin(data) {
+    state.obsBusy = data.busy === true;
+    const description = data.error || (data.obsRunning ? 'OBS 正在运行，请先退出后再安装或卸载。'
+      : data.busy ? data.message
+      : data.message || (data.managed ? `已由 VoiceAec 安装 · ${data.version || ''}`
+        : data.installed ? '检测到已有插件。安装时会先备份，卸载时可恢复。'
+        : '尚未安装 OBS 插件。'));
+    setText(els.obsState, description);
+    if (!data.payloadAvailable && !data.managed) setText(els.obsState, '当前包缺少 OBS 插件资源，请使用完整整合包。');
+    setText(els.obsTarget, data.target ? `安装位置：${data.target}` : '');
+    els.obsInstall.disabled = !data.canInstall;
+    els.obsUninstall.disabled = !data.canUninstall;
+    els.obsRefresh.disabled = data.busy === true;
+    setText(els.obsInstall, data.managed ? '更新 / 重新安装' : '一键安装到 OBS');
+    els.obsUninstall.title = data.hadPrevious ? '移除本程序安装的版本，恢复安装前的插件' : '移除本程序安装的插件';
+  }
+
+  async function refreshObsPlugin() {
+    if (state.obsFetching || !els.obsDialog.open || document.hidden || !state.panelVisible) return;
+    window.clearTimeout(state.obsTimer);
+    state.obsFetching = true;
+    try {
+      const response = await fetchWithTimeout('/api/obs-plugin', {
+        method: 'GET', cache: 'no-store', headers: { Accept: 'application/json' }
+      }, STATUS_TIMEOUT_MS);
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || '读取失败');
+      renderObsPlugin(data);
+    } catch (error) {
+      setText(els.obsState, `无法读取 OBS 插件状态：${error.message || '请重试'}`);
+      els.obsInstall.disabled = els.obsUninstall.disabled = true;
+    } finally {
+      state.obsFetching = false;
+      if (state.obsBusy && els.obsDialog.open && state.panelVisible && !document.hidden)
+        state.obsTimer = window.setTimeout(refreshObsPlugin, 1000);
+    }
+  }
+
+  async function changeObsPlugin(action) {
+    if (state.obsBusy) return;
+    state.obsBusy = true;
+    els.obsInstall.disabled = els.obsUninstall.disabled = true;
+    setText(els.obsState, action === 'install' ? '正在准备安装，请留意系统的管理员权限提示…' : '正在准备卸载，请留意系统的管理员权限提示…');
+    try {
+      const response = await fetchWithTimeout(`/api/obs-plugin/${action}`, {
+        method: 'POST', headers: { Accept: 'application/json' }
+      }, AUTOSTART_TIMEOUT_MS);
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || '操作未完成');
+      renderObsPlugin(data);
+    } catch (error) {
+      showToast(`OBS 插件操作未完成：${error.message || '请重试'}`, 'error');
+    } finally {
+      state.obsBusy = false;
+      void refreshObsPlugin();
     }
   }
 
@@ -4151,10 +4686,21 @@
     });
   });
 
-  if (els.ref2Clear) {
-    els.ref2Clear.addEventListener('click', () => {
+  if (els.ref2TopToggle) {
+    els.ref2TopToggle.addEventListener('click', () => {
       if (!state.connected || state.devicePending) return;
-      void chooseDevice(REF2_KEY, 'none');
+      if (state.ref2Visible) {
+        closeDeviceMenu();
+        if (ref2Active()) {
+          void chooseDevice(REF2_KEY, 'none', { hideCard: true });
+        } else {
+          state.ref2Visible = false;
+          renderRef2();
+        }
+      } else {
+        state.ref2Visible = true;
+        renderRef2();
+      }
     });
   }
 
@@ -4181,7 +4727,8 @@
     }
     if (event.key === 'Tab') {
       const key = state.openMenuKey;
-      if (key && pickers[key]) pickers[key].btn.focus({ preventScroll: true });
+      const anchor = state.menuAnchor || (key && pickers[key] ? pickers[key].btn : null);
+      if (anchor) anchor.focus({ preventScroll: true });
       closeDeviceMenu();
       return;
     }
@@ -4209,6 +4756,7 @@
     const key = state.openMenuKey;
     if (!key) return;
     if (els.deviceMenu.contains(event.target)) return;
+    if (state.menuAnchor && state.menuAnchor.contains(event.target)) return;
     const picker = pickers[key];
     if (picker && picker.btn.contains(event.target)) return;
     closeDeviceMenu();
@@ -4237,8 +4785,30 @@
   els.autostartToggle.addEventListener('click', () => {
     void changeAutostart();
   });
+  els.pauseOutput.addEventListener('click', () => { void changePaused(); });
+  els.obsOpen.addEventListener('click', () => {
+    els.obsDialog.showModal(); void refreshObsPlugin();
+  });
+  els.obsClose.addEventListener('click', () => els.obsDialog.close());
+  els.obsDialog.addEventListener('close', () => window.clearTimeout(state.obsTimer));
+  els.obsInstall.addEventListener('click', () => { void changeObsPlugin('install'); });
+  els.obsUninstall.addEventListener('click', () => { void changeObsPlugin('uninstall'); });
+  els.obsRefresh.addEventListener('click', () => { void refreshObsPlugin(); });
+
+  function setPanelVisible(visible) {
+    state.panelVisible = visible;
+    document.documentElement.classList.toggle('is-background', !visible);
+    if (!visible) window.clearTimeout(state.pollTimer);
+    if (!visible) window.clearTimeout(state.obsTimer);
+    else { void pollStatus(); void refreshObsPlugin(); }
+  }
+
+  window.chrome?.webview?.addEventListener('message', (event) => {
+    if (typeof event.data?.panelVisible === 'boolean') setPanelVisible(event.data.panelVisible);
+  });
 
   document.addEventListener('visibilitychange', () => {
+    setPanelVisible(!document.hidden);
     if (document.hidden) return;
     pollStatus();
     if (!state.devicePending && state.devicesLoaded
@@ -4254,7 +4824,6 @@
     refreshControls();
     void refreshDevices();
     pollStatus();
-    window.setInterval(pollStatus, POLL_MS);
   }
 
   init();

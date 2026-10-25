@@ -22,21 +22,26 @@ internal sealed class SampleRing
 
     public int Write(byte[] data, int count)
     {
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (count > data.Length) throw new ArgumentOutOfRangeException(nameof(count));
         lock (_lock)
         {
-            var dropped = Math.Max(0, _count + count - _buffer.Length);
+            var offset = Math.Max(0, count - _buffer.Length);
+            var incoming = count - offset;
+            var dropped = Math.Max(0, _count + incoming - _buffer.Length);
             if (dropped > 0)
             {
                 _readPos = (_readPos + dropped) % _buffer.Length;
                 _count -= dropped;
             }
-            var first = Math.Min(count, _buffer.Length - _writePos);
-            Array.Copy(data, 0, _buffer, _writePos, first);
-            if (count > first)
-                Array.Copy(data, first, _buffer, 0, count - first);
-            _writePos = (_writePos + count) % _buffer.Length;
-            _count += count;
-            return dropped;
+            var first = Math.Min(incoming, _buffer.Length - _writePos);
+            Array.Copy(data, offset, _buffer, _writePos, first);
+            if (incoming > first)
+                Array.Copy(data, offset + first, _buffer, 0, incoming - first);
+            _writePos = (_writePos + incoming) % _buffer.Length;
+            _count += incoming;
+            return dropped + offset;
         }
     }
 

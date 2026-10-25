@@ -1,0 +1,33 @@
+Test project <LocalVQE>/ggml/build
+      Start  1: regression_localvqe-v1-1.3M-f32
+ 1/14 Test  #1: regression_localvqe-v1-1.3M-f32 ...............   Passed    0.18 sec
+      Start  2: regression_localvqe-v1.1-1.3M-f32
+ 2/14 Test  #2: regression_localvqe-v1.1-1.3M-f32 .............   Passed    0.20 sec
+      Start  3: regression_localvqe-v1.2-1.3M-f32
+ 3/14 Test  #3: regression_localvqe-v1.2-1.3M-f32 .............   Passed    0.21 sec
+      Start  4: regression_localvqe-v1.3-4.8M-f32
+ 4/14 Test  #4: regression_localvqe-v1.3-4.8M-f32 .............   Passed    0.39 sec
+      Start  5: regression_localvqe-v1.4-aec-200K-f32
+ 5/14 Test  #5: regression_localvqe-v1.4-aec-200K-f32 .........   Passed    0.16 sec
+      Start  6: regression_localvqe-v1.4-aec-200K-bf16
+ 6/14 Test  #6: regression_localvqe-v1.4-aec-200K-bf16 ........   Passed    0.17 sec
+      Start  7: regression_localvqe-v1.4-aec-2.7K-f32
+ 7/14 Test  #7: regression_localvqe-v1.4-aec-2.7K-f32 .........   Passed    0.09 sec
+      Start  8: regression_prime_localvqe-v1.4-aec-2.7K-f32
+ 8/14 Test  #8: regression_prime_localvqe-v1.4-aec-2.7K-f32 ...   Passed    0.16 sec
+      Start  9: fuzz_repro_frame_roundtrip
+ 9/14 Test  #9: fuzz_repro_frame_roundtrip ....................   Passed    0.11 sec
+      Start 10: fuzz_repro_reject_unhashed
+10/14 Test #10: fuzz_repro_reject_unhashed ....................   Passed    0.01 sec
+      Start 11: fuzz_repro_reject_malformed
+11/14 Test #11: fuzz_repro_reject_malformed ...................   Passed    0.01 sec
+      Start 12: daf_gain_covariance
+12/14 Test #12: daf_gain_covariance ...........................   Passed    0.01 sec
+      Start 13: daf_math_stability
+13/14 Test #13: daf_math_stability ............................   Passed    0.13 sec
+      Start 14: daf_math_stability_prime
+14/14 Test #14: daf_math_stability_prime ......................   Passed    0.25 sec
+
+100% tests passed out of 14
+
+Total Test time (real) =   2.07 sec

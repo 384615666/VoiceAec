@@ -4,7 +4,14 @@
 
 ## 下载即用
 
-从 [Releases](../../releases) 下载 `VoiceAec-v*-win-x64.zip`(**自包含,免 .NET 运行时,含全部模型**),解压到任意目录,双击 `VoiceAec.exe` 即可。
+从 [Releases](../../releases) 下载(**自包含,免 .NET 运行时,含全部模型**):
+
+| 包 | 说明 |
+|---|---|
+| `VoiceAec-v*-setup-x64.exe` | **推荐**。安装版:每用户安装、无需管理员,自动创建开始菜单/桌面快捷方式,可在"设置 → 应用"里卸载,升级时自动结束旧实例。 |
+| `VoiceAec-v*-win-x64.zip` | 便携版:解压到任意目录,双击 `VoiceAec.exe`;配置写在 exe 旁 `voiceaec.json`,适合放 U 盘或绿色使用。 |
+
+两种包功能一致;安装版与便携版不要同时运行(单实例会互相激活)。
 
 前置条件(目标机器需要自备,与本工具无关):
 
@@ -20,8 +27,33 @@
 - **原生桌面窗口**(WinForms + WebView2 承载控制面板,1280×800 一屏)
 - 点窗口 **X** 或面板"关闭面板" → 隐藏到系统托盘继续运行(音频不中断)
 - **唯一退出入口**:托盘图标右键 → 退出
-- 托盘左键 → 打开/聚焦窗口;右键菜单:处理模式四选一 / 开机自启 / 退出
+- 托盘左键 → 打开/聚焦窗口;右键菜单为自绘的马卡龙风格面板(圆角、彩色线性图标、状态胶囊、自启开关):打开控制面板 / 暂停并静音 / 处理模式四选一 / 开机自启 / 退出
 - **开机自启**(可选,面板开关或托盘勾选):注册 HKCU Run 键,开机以 `--tray` 静默后台运行,无需手动启动
+- **暂停并静音**：输出卡或托盘菜单可停止全部采集、推理与输出；恢复时沿用设备和模式，清空旧音频并重置模型状态。此功能与 OFF 原声直通不同。暂停不持久化，正常启动仍按原有方式运行。
+- 高 DPI 使用 PerMonitorV2；面板隐藏或最小化后暂停前端轮询并尝试挂起 WebView2。正常电平刷新维持 500 ms，暂停时状态轮询为 2 秒。
+- 单实例启动：重复运行只激活已有控制面板，避免两个实例混音。
+
+## 一键安装 / 卸载 OBS 插件
+
+完整整合包只需要下载一份。面板右下角的 **OBS 插件…** 可打开管理窗口：
+
+1. 退出 OBS，点击 **一键安装到 OBS**，按系统提示授予管理员权限。
+2. 安装器使用 OBS 普通安装版的标准路径 `%ProgramData%\obs-studio\plugins\obs-localvqe`，校验并安装插件、模型和依赖。已有版本先备份到 `%ProgramData%\VoiceAec\ObsPlugin\backups`。
+3. 重启 OBS，在麦克风的「滤镜 → 音频滤镜」中添加 **VoiceAec**，配置参考音频源。插件独立工作，可暂停桌面端以避免重复处理。
+4. 点击 **一键卸载** 会移除本程序安装的版本；如果安装前已有插件，则恢复备份。后来增加的模型、配置和外部改动文件会保留。不会自动卸载没有本程序安装记录的插件。
+
+OBS 正在运行时禁止安装 / 卸载，不会自动关闭 OBS。便携模式不加载上述标准目录，当前一键安装仅适用于普通安装版 OBS 64 位。安装管理在弹窗打开时按需读取状态，不增加正常面板轮询或音频处理负载。
+
+制作整合发布包：
+
+```powershell
+./tools/Package-Windows.ps1 -OutputDirectory <发布目录> `
+  -NativeBin <LocalVQE原生构建bin目录> -PluginDll <新obs-localvqe.dll> `
+  -ModelsDirectory <模型目录> -LocaleDirectory <插件locale目录> `
+  -RuntimeDirectory <MinGW运行库目录>
+```
+
+打包脚本会生成安装清单及 SHA256，并复用桌面包内的模型与原生库。普通 `dotnet publish` 不会自动生成 OBS 资源清单，缺少资源时安装入口会提示使用完整整合包。
 
 ## 面板功能
 
@@ -31,16 +63,19 @@
   | 模式 | 说明 |
   |---|---|
   | OFF | 直通省电,但外放串音全传对方 |
-  | v1.2 · 均衡 | 推荐默认,整机 CPU 约 3% |
-  | v1.3 · 最强消除 | 最彻底但轻微削人声,CPU 约 7% |
-  | v1.4 · 纯回声消除 | 远麦场景实测无效,仅近场尝鲜 |
+  | v1.2 · 均衡 | 推荐默认,程序 CPU 约 3%(原测试机器) |
+  | v1.3 · 最强消除 | 最彻底但轻微削人声,程序 CPU 约 7%(原测试机器) |
+  | v1.4 · 纯回声消除 | 仅消回声；v0.4.0 修正数值稳定性，实际效果需重新试听 |
 - 运行统计:处理时长 / 累计推理跳数 / 实时速率(正常值 62.5 跳/秒)/ 参考静默跳数 / 输出补零 / 降级直通
-- HTTP API(默认 `http://localhost:8765`,占用自动 +1 到 8774):
+- HTTP API(默认 `http://localhost:8765`,占用自动 +1 到 8774；仅允许 loopback 和本地 Host/Origin。所有 `/api/*` 请求需要 `X-VoiceAec-Token`，面板会自动携带当前会话令牌):
   - `GET /api/status` — 全量状态 JSON(含 `autostart`)
   - `GET /api/devices` — 枚举输入/回采/输出设备 + 当前选择 + `ref2Choices`(第二参考可选项,含麦克风)
   - `POST /api/devices` — body JSON `{mic|ref|ref2|out: "设备名"}`(可多字段),热切换并持久化;ref2 也接受另一只麦克风(噪声参考)或 "none"
   - `POST /api/model` — body 纯文本 `off` / `v1.2` / `v1.3` / `v1.4`
   - `POST /api/autostart` — body 纯文本 `true` / `false`
+  - `POST /api/pause` — body 纯文本 `true` 暂停并静音，`false` 恢复；失败保持静音并返回错误
+  - `GET /api/obs-plugin` — 插件安装状态、OBS 是否运行及最近任务结果
+  - `POST /api/obs-plugin/install` / `POST /api/obs-plugin/uninstall` — 异步启动安装 / 卸载，返回 202；管理员授权只在点击后请求
   - `POST /api/quit` — 退出进程(调试后门)
 
 ## 构建
@@ -56,6 +91,18 @@ dotnet build -c Release
   - `libgcc_s_seh-1.dll`、`libstdc++-6.dll`、`libwinpthread-1.dll`(MSYS2 ucrt64 运行时)
 - **模型文件**查找顺序:exe 旁 `models\` 目录(Release 包内置,推荐)→ obs-localvqe 插件目录 `C:\ProgramData\obs-studio\plugins\obs-localvqe\data`(与 OBS 插件共用,路径写死于 Program.cs)
 - 前端 `wwwroot/index.html` 为单文件零依赖页面,build 时自动拷贝到输出目录
+- 配置优先保留绿色包模式；exe 旁无法写入时自动落到 `%LocalAppData%\VoiceAec\voiceaec.json`。成功切换的设备独立持久化，失败设备保留旧绑定。
+
+验证（不启动音频设备）：
+
+```powershell
+dotnet run --project tests/VoiceAec.Tests.csproj -c Release
+node tests/frontend.test.cjs
+```
+
+v0.4.0 的原生修复保存为 [native/LocalVQE-windows.patch](native/LocalVQE-windows.patch)，
+应用与构建说明见 [native/README.md](native/README.md)。v1.4 的根因、保留旧基准的方式和
+验证边界见 [数值修复记录](docs/V14-AEC-NUMERICS.md)；发布说明见 [v0.4.0](docs/RELEASE-v0.4.0.md)。
 
 ## 命令行参数
 

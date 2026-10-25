@@ -8,8 +8,13 @@
     <Nullable>enable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>VoiceAec</AssemblyName>
+    <Version>0.4.0</Version>
     <RootNamespace>VoiceAec</RootNamespace>
+    <Product>VoiceAec</Product>
+    <AssemblyTitle>VoiceAec · 回声消除麦克风</AssemblyTitle>
+    <ApplicationIcon>assets\VoiceAec.ico</ApplicationIcon>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +24,15 @@
 
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="assets\VoiceAec.ico" LogicalName="VoiceAec.assets.VoiceAec.ico" />
+    <EmbeddedResource Include="assets\VoiceAecTray.ico" LogicalName="VoiceAec.assets.VoiceAecTray.ico" />
+    <Compile Remove="tests\**\*.cs" />
   </ItemGroup>
+
+  <Target Name="ExcludeUnusedWebView2Wpf" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

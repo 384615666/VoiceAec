@@ -10,6 +10,12 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using VoiceAec;
 
+if (args.Contains("--obs-plugin-action")) return ObsPluginManager.RunHelper(args);
+
+// Set process DPI awareness before either the tray or WebView creates HWNDs.
+Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+Application.EnableVisualStyles();
+
 var argsList = args.ToList();
 string Arg(string name, string fallback)
 {
@@ -18,7 +24,10 @@ string Arg(string name, string fallback)
 }
 
 // ── 设备配置持久化:命令行 > voiceaec.json > 智能默认 ────────────────
-var cfgPath = Path.Combine(AppContext.BaseDirectory, "voiceaec.json");
+var portableCfgPath = Path.Combine(AppContext.BaseDirectory, "voiceaec.json");
+var fallbackCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "voiceaec.json");
+var cfgPath = File.Exists(fallbackCfgPath) ? fallbackCfgPath : portableCfgPath;
+var cfgLock = new object();
 Dictionary<string, string> LoadCfg()
 {
     try
@@ -30,7 +39,28 @@ Dictionary<string, string> LoadCfg()
     return [];
 }
 var cfg = LoadCfg();
-void SaveCfg() { try { File.WriteAllText(cfgPath, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true })); } catch { } }
+void SaveCfg()
+{
+    lock (cfgLock)
+    {
+        var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true });
+        foreach (var path in new[] { cfgPath, fallbackCfgPath }.Distinct())
+        {
+            string? temporary = null;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                File.WriteAllText(temporary, json);
+                File.Move(temporary, path, overwrite: true);
+                cfgPath = path;
+                return;
+            }
+            catch (Exception ex) { Console.Error.WriteLine($"[config] {path}: {ex.Message}"); }
+            finally { if (temporary != null) try { File.Delete(temporary); } catch { } }
+        }
+    }
+}
 bool HasArg(string name) => argsList.Contains(name);
 
 var pluginData = @"C:\ProgramData\obs-studio\plugins\obs-localvqe\data";
@@ -47,9 +77,9 @@ string? ModelPath(string m) => modelFiles.TryGetValue(m, out var f)
 var modelLabels = new Dictionary<string, string>
 {
     ["off"] = "关闭（直通）",
-    ["v1.2"] = "v1.2 · 均衡",
-    ["v1.3"] = "v1.3 · 最强消除",
-    ["v1.4"] = "v1.4 · 纯回声消除",
+    ["v1.2"] = "均衡模式",
+    ["v1.3"] = "强力模式",
+    ["v1.4"] = "纯回声消除模式",
 };
 
 if (argsList.Contains("--list"))
@@ -64,6 +94,11 @@ if (argsList.Contains("--list"))
     return 0;
 }
 
+// Acquire before loading models or opening audio devices. A second launch
+// only wakes the primary UI, and cannot mix a second signal into VB-CABLE.
+using var instance = new SingleInstanceGuard();
+if (!instance.IsPrimary) return 0;
+
 var micSub = HasArg("--mic") ? Arg("--mic", "") : cfg.GetValueOrDefault("mic", "");
 var refSub = HasArg("--ref") ? Arg("--ref", "") : cfg.GetValueOrDefault("ref", "");
 var ref2Sub = HasArg("--ref2") ? Arg("--ref2", "") : cfg.GetValueOrDefault("ref2", "");
@@ -74,6 +109,9 @@ var port = int.Parse(Arg("--port", "8765"));
 var noBrowser = argsList.Contains("--nobrowser");
 var trayMode = argsList.Contains("--tray");     // 后台托盘运行：隐藏控制台 + 不开浏览器
 var keepConsole = argsList.Contains("--console"); // 调试：保留控制台窗口
+var paused = argsList.Contains("--start-paused") ? 1 : 0;
+using var shutdown = new CancellationTokenSource();
+using var audioEnabled = new ManualResetEventSlim(paused == 0);
 if (trayMode) noBrowser = true;
 
 if (!keepConsole && !argsList.Contains("--list"))
@@ -119,7 +157,7 @@ MMDevice? FindAny(string substring)
 }
 
 var micDevice = Find(DataFlow.Capture, micSub);
-var refDevice = Find(DataFlow.Render, refSub);
+var refDevice = FindAny(refSub);   // 主参考也允许麦克风(如近讲麦场景);默认仍是播放设备
 MMDevice? ref2Device = null;
 if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
 {
@@ -142,15 +180,21 @@ var engineLock = new object();
 LocalVqe.Context? engine = null;
 var mode = "off";
 var switching = false;
+var modeSwitchLock = new object();
 
 bool ModelExists(string m) => m == "off" || ModelPath(m) != null;
 
 string SwitchModel(string requested)
 {
+    lock (modeSwitchLock) return SwitchModelCore(requested);
+}
+
+string SwitchModelCore(string requested)
+{
     if (!modelLabels.ContainsKey(requested)) return $"未知模式 '{requested}'";
     if (!ModelExists(requested))
         return $"模型文件不存在: {modelFiles[requested]}(已查找 {string.Join("、", modelDirs)})";
-    switching = true;
+    Volatile.Write(ref switching, true);
     try
     {
         if (requested == "off")
@@ -180,7 +224,7 @@ string SwitchModel(string requested)
     {
         return $"加载失败: {ex.Message}";
     }
-    finally { switching = false; }
+    finally { Volatile.Write(ref switching, false); }
 }
 
 {
@@ -193,40 +237,18 @@ var micRing = new SampleRing(Rate * 4 * 4);
 var refRing = new SampleRing(Rate / 2 * 4);
 var ref2Ring = new SampleRing(Rate / 2 * 4);   // 始终创建,便于运行时热加 ref2
 var outRing = new SampleRing(Rate * 2 * 4);
+using var inputReady = new AutoResetEvent(false);
+var devSwitchLock = new object();
+string currentMic = micDevice.FriendlyName, currentRef = refDevice.FriendlyName;
+string currentRef2 = ref2Device?.FriendlyName ?? "none", currentOut = outDevice.FriendlyName;
 
 long hops = 0, passthroughs = 0, outUnderruns = 0, refTrims = 0, refZeroHops = 0;
 double micDb = -120, outDb = -120, refDb = -120;
 long refActiveTick = 0;
 
-static void SetBufferMs(WasapiCapture c, int ms)
+CaptureSession StartCapture(MMDevice dev, SampleRing ring, string label)
 {
-    var f = typeof(WasapiCapture).GetField("audioBufferMillisecondsLength", BindingFlags.Instance | BindingFlags.NonPublic);
-    f?.SetValue(c, Math.Max(10, ms));
-}
-
-WasapiCapture StartCapture(MMDevice dev, SampleRing ring, string label)
-{
-    WasapiCapture cap = dev.DataFlow == DataFlow.Capture
-        ? new WasapiCapture(dev)
-        : new WasapiLoopbackCapture(dev);
-    SetBufferMs(cap, 20);
-    var bp = new BufferedWaveProvider(cap.WaveFormat) { DiscardOnBufferOverflow = true, ReadFully = false, BufferDuration = TimeSpan.FromSeconds(2) };
-    var resampler = new MediaFoundationResampler(bp, target16k);
-    cap.DataAvailable += (_, e) =>
-    {
-        if (e.BytesRecorded == 0) return;
-        lock (bp) bp.AddSamples(e.Buffer, 0, e.BytesRecorded);
-        var tmp = new byte[8192];
-        int got;
-        do
-        {
-            lock (bp) got = resampler.Read(tmp, 0, tmp.Length);
-            if (got > 0) ring.Write(tmp, got);
-        } while (got > 0);
-    };
-    cap.StartRecording();
-    Console.WriteLine($"  [capture] {label}: {cap.WaveFormat} -> 16k mono");
-    return cap;
+    return new CaptureSession(dev, ring, target16k, label == "mic" ? () => inputReady.Set() : null);
 }
 
 static double RmsDb(float[] buf)
@@ -237,9 +259,8 @@ static double RmsDb(float[] buf)
     return rms <= 0 ? -120 : Math.Max(-120, Math.Min(0, 20 * Math.Log10(rms)));
 }
 
-var micCap = StartCapture(micDevice, micRing, "mic");
-var refCap = StartCapture(refDevice, refRing, "ref");
-var ref2Cap = ref2Device != null ? StartCapture(ref2Device, ref2Ring!, "ref2") : null;
+CaptureSession? micCap = null, refCap = null, ref2Cap = null;
+WasapiOut? waveOut = null;
 void TrimRef(SampleRing r)
 {
     var excess = r.BufferedBytes - Rate / 2 * 4;
@@ -249,77 +270,142 @@ void TrimRef(SampleRing r)
     Interlocked.Increment(ref refTrims);
 }
 
-var feed = new CableFeedProvider(outRing, () => Interlocked.Increment(ref outUnderruns));
-var waveOut = new WasapiOut(outDevice, AudioClientShareMode.Shared, true, 50);
-waveOut.Init(feed);
-waveOut.Play();
-Console.WriteLine($"  [output]  -> {outDevice.FriendlyName}");
+void DisposeAudio(IDisposable? resource)
+{
+    try { resource?.Dispose(); }
+    catch (Exception ex) { Console.Error.WriteLine($"[audio] dispose: {ex.Message}"); }
+}
+
+WasapiOut StartOutput(MMDevice device)
+{
+    var output = new WasapiOut(device, AudioClientShareMode.Shared, true, 50);
+    try
+    {
+        output.Init(new CableFeedProvider(outRing, () =>
+        {
+            if (Volatile.Read(ref paused) == 0) Interlocked.Increment(ref outUnderruns);
+        }));
+        output.Play();
+        return output;
+    }
+    catch { DisposeAudio(output); throw; }
+}
+
+void ClearAudioBuffers()
+{
+    micRing.Clear(); refRing.Clear(); ref2Ring.Clear(); outRing.Clear();
+    micDb = refDb = outDb = -120;
+    Interlocked.Exchange(ref refActiveTick, 0);
+}
+
+string SetPaused(bool value)
+{
+    lock (devSwitchLock)
+    {
+        if (value && Volatile.Read(ref paused) != 0) return "";
+        if (!value && Volatile.Read(ref paused) == 0 && micCap != null) return "";
+        Volatile.Write(ref paused, 1);
+        audioEnabled.Reset();
+        if (value)
+        {
+            DisposeAudio(waveOut); waveOut = null;
+            DisposeAudio(micCap); micCap = null;
+            DisposeAudio(refCap); refCap = null;
+            DisposeAudio(ref2Cap); ref2Cap = null;
+            ClearAudioBuffers();
+            return "";
+        }
+
+        // Publish the complete resumed pipeline only after every resource
+        // started successfully. Failure leaves the application safely muted.
+        CaptureSession? newMic = null, newRef = null, newRef2 = null;
+        WasapiOut? newOutput = null;
+        try
+        {
+            ClearAudioBuffers();
+            lock (engineLock) engine?.Reset();
+            newMic = StartCapture(micDevice, micRing, "mic");
+            newRef = StartCapture(refDevice, refRing, "ref");
+            if (ref2Device != null) newRef2 = StartCapture(ref2Device, ref2Ring, "ref2");
+            newOutput = StartOutput(outDevice);
+            micCap = newMic; refCap = newRef; ref2Cap = newRef2; waveOut = newOutput;
+            Volatile.Write(ref paused, 0);
+            audioEnabled.Set();
+            return "";
+        }
+        catch (Exception ex)
+        {
+            DisposeAudio(newOutput); DisposeAudio(newMic); DisposeAudio(newRef); DisposeAudio(newRef2);
+            ClearAudioBuffers();
+            return $"恢复失败，已保持静音: {ex.Message}";
+        }
+    }
+}
+
+if (Volatile.Read(ref paused) == 0)
+{
+    var error = SetPaused(false);
+    if (error != "") Console.Error.WriteLine(error);
+}
 
 // ── 设备热切换:采集端/输出端重绑,推理引擎与 ring 不动 ────────────────
-var devSwitchLock = new object();
-
 string SwitchDevices(string? micName, string? refName, string? ref2Name, string? outName)
 {
     lock (devSwitchLock)
     {
-        try
+        var errors = new List<string>();
+        void Change(string label, Action action)
         {
-            if (!string.IsNullOrEmpty(micName))
-            {
-                var d = Find(DataFlow.Capture, micName);
-                var old = micCap;
-                micDevice = d;
-                micCap = StartCapture(d, micRing, "mic");
-                try { old?.StopRecording(); old?.Dispose(); } catch { }
-            }
-            if (!string.IsNullOrEmpty(refName))
-            {
-                var d = Find(DataFlow.Render, refName);
-                var old = refCap;
-                refDevice = d;
-                refCap = StartCapture(d, refRing, "ref");
-                try { old?.StopRecording(); old?.Dispose(); } catch { }
-            }
-            if (ref2Name != null)
-            {
-                var old2 = ref2Cap;
-                ref2Cap = null;
-                try { old2?.StopRecording(); old2?.Dispose(); } catch { }
-                ref2Device = null;
-                if (!ref2Name.Equals("none", StringComparison.OrdinalIgnoreCase))
-                {
-                    var d = FindAny(ref2Name);   // 支持播放回采或麦克风噪声参考
-                    ref2Device = d;
-                    ref2Cap = StartCapture(d, ref2Ring, "ref2");
-                }
-            }
-            if (!string.IsNullOrEmpty(outName))
-            {
-                var d = Find(DataFlow.Render, outName);
-                try { waveOut.Stop(); waveOut.Dispose(); } catch { }
-                outDevice = d;
-                var wo = new WasapiOut(d, AudioClientShareMode.Shared, true, 50);
-                wo.Init(feed);
-                wo.Play();
-                waveOut = wo;
-            }
+            try { action(); }
+            catch (Exception ex) { errors.Add($"{label}: {ex.Message}"); }
         }
-        catch (Exception ex)
+        void ReplaceCapture(string name, DataFlow? flow, SampleRing ring, string label,
+            ref MMDevice? device, ref CaptureSession? capture, ref string selected)
         {
-            return $"设备切换失败: {ex.Message}";
+            if (name == selected) return;
+            MMDevice? freshDevice = name.Equals("none", StringComparison.OrdinalIgnoreCase)
+                && flow == null ? null : (flow == null ? FindAny(name) : Find(flow.Value, name));
+            CaptureSession? freshCapture = null;
+            try
+            {
+                var freshName = freshDevice?.FriendlyName ?? "none";
+                if (freshDevice != null && Volatile.Read(ref paused) == 0)
+                    freshCapture = StartCapture(freshDevice, ring, label);
+                var oldDevice = device; var oldCapture = capture;
+                device = freshDevice; capture = freshCapture; selected = freshName;
+                DisposeAudio(oldCapture); DisposeAudio(oldDevice);
+                ring.Clear();
+            }
+            catch { DisposeAudio(freshCapture); DisposeAudio(freshDevice); throw; }
         }
+        if (!string.IsNullOrEmpty(micName)) Change("麦克风", () =>
+            ReplaceCapture(micName, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic));
+        if (!string.IsNullOrEmpty(refName)) Change("参考回采", () =>
+            ReplaceCapture(refName, null, refRing, "ref", ref refDevice, ref refCap, ref currentRef));
+        if (ref2Name != null) Change("第二参考", () =>
+            ReplaceCapture(ref2Name, null, ref2Ring, "ref2", ref ref2Device, ref ref2Cap, ref currentRef2));
+        if (!string.IsNullOrEmpty(outName) && outName != currentOut) Change("输出", () =>
+        {
+            var freshDevice = Find(DataFlow.Render, outName);
+            WasapiOut? freshOutput = null;
+            try
+            {
+                var freshName = freshDevice.FriendlyName;
+                if (Volatile.Read(ref paused) == 0) freshOutput = StartOutput(freshDevice);
+                var oldOutput = waveOut; var oldDevice = outDevice;
+                waveOut = freshOutput; outDevice = freshDevice; currentOut = freshName;
+                DisposeAudio(oldOutput); DisposeAudio(oldDevice);
+            }
+            catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
+        });
+        cfg["mic"] = currentMic; cfg["ref"] = currentRef;
+        cfg["ref2"] = currentRef2; cfg["out"] = currentOut;
+        SaveCfg();
+        return errors.Count == 0 ? "" : "设备切换失败: " + string.Join("；", errors);
     }
-    cfg["mic"] = micDevice.FriendlyName;
-    cfg["ref"] = refDevice.FriendlyName;
-    cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
-    cfg["out"] = outDevice.FriendlyName;
-    SaveCfg();
-    Console.WriteLine($"[devices] mic={cfg["mic"]} ref={cfg["ref"]} ref2={cfg["ref2"]} out={cfg["out"]}");
-    return "";
 }
 
-var running = true;
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; running = false; };
+Console.CancelKeyPress += (_, e) => { e.Cancel = true; shutdown.Cancel(); };
 
 var proc = new Thread(() =>
 {
@@ -333,9 +419,15 @@ var proc = new Thread(() =>
     var refBytes = new byte[HopBytes];
     var outBytes = new byte[HopBytes];
     var swLog = Stopwatch.StartNew();
-    while (running)
+    var wakeHandles = new[] { inputReady, shutdown.Token.WaitHandle };
+    while (!shutdown.IsCancellationRequested)
     {
-        if (micRing.BufferedBytes < HopBytes) { Thread.Sleep(4); continue; }
+        try { audioEnabled.Wait(shutdown.Token); }
+        catch (OperationCanceledException) { break; }
+        if (micRing.BufferedBytes < HopBytes) { WaitHandle.WaitAny(wakeHandles); continue; }
+        lock (devSwitchLock)
+        {
+        if (Volatile.Read(ref paused) != 0 || micRing.BufferedBytes < HopBytes) continue;
         TrimRef(refRing);
         if (ref2Ring != null) TrimRef(ref2Ring);
 
@@ -398,6 +490,7 @@ var proc = new Thread(() =>
             swLog.Restart();
             Console.WriteLine($"[dbg] hops={Interlocked.Read(ref hops)} mic={micRing.BufferedBytes * 1000.0 / (Rate * 4):F0}ms ref={refRing.BufferedBytes * 1000.0 / (Rate * 4):F0}ms out={outRing.BufferedBytes * 1000.0 / (Rate * 4):F0}ms mode={mode}");
         }
+        }
     }
 }) { IsBackground = true };
 proc.Start();
@@ -408,7 +501,7 @@ var startAt = DateTime.UtcNow;
 var self = Process.GetCurrentProcess();
 var rateGate = new object();
 long lastHops = 0; DateTime lastRateAt = DateTime.UtcNow; double hopsPerSec = 0;
-double lastCpuMs = 0; DateTime lastCpuAt = DateTime.UtcNow; double cpuPercent = 0;
+double lastCpuMs = self.TotalProcessorTime.TotalMilliseconds; DateTime lastCpuAt = DateTime.UtcNow; double cpuPercent = 0;
 
 object BuildStatus()
 {
@@ -434,22 +527,28 @@ object BuildStatus()
     }
     string curMode;
     lock (engineLock) curMode = mode;
+    string micName, refName, ref2Name, outName;
+    lock (devSwitchLock)
+    {
+        micName = currentMic; refName = currentRef; ref2Name = currentRef2; outName = currentOut;
+    }
     return new
     {
         ok = true,
         mode = curMode,
-        switching,
+        switching = Volatile.Read(ref switching),
+        paused = Volatile.Read(ref paused) != 0,
         uptimeSec = (int)(DateTime.UtcNow - startAt).TotalSeconds,
         cpuPercent = Math.Round(cpuPercent, 1),
-        mic = new { name = micDevice.FriendlyName, levelDb = Math.Round(micDb, 1), bufferMs = Math.Round(micRing.BufferedBytes * 1000.0 / (Rate * 4), 0) },
+        mic = new { name = micName, levelDb = Math.Round(micDb, 1), bufferMs = Math.Round(micRing.BufferedBytes * 1000.0 / (Rate * 4), 0) },
         @ref = new
         {
-            name = refDevice.FriendlyName,
+            name = refName,
             active = refActiveTick != 0 && Environment.TickCount64 - refActiveTick < 1500,
             levelDb = Math.Round(refDb, 1),
             bufferMs = Math.Round(refRing.BufferedBytes * 1000.0 / (Rate * 4), 0)
         },
-        @out = new { name = outDevice.FriendlyName, levelDb = Math.Round(outDb, 1), bufferMs = Math.Round(outRing.BufferedBytes * 1000.0 / (Rate * 4), 0) },
+        @out = new { name = outName, levelDb = Math.Round(outDb, 1), bufferMs = Math.Round(outRing.BufferedBytes * 1000.0 / (Rate * 4), 0) },
         stats = new
         {
             hops = Interlocked.Read(ref hops),
@@ -462,7 +561,7 @@ object BuildStatus()
         },
         models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
         autostart = GetAutostart(),
-        hint = $"语音软件里把麦克风选成 CABLE Output；游戏和语音都从「{ShortName(refDevice.FriendlyName)}」播放效果最佳——参考回采正在监听它"
+        hint = Volatile.Read(ref paused) != 0 ? "已暂停并静音：采集、推理和输出均已停止，点击恢复后沿用当前设备与模式。" : $"语音软件里把麦克风选成 CABLE Output；游戏和语音都从「{ShortName(refName)}」播放效果最佳——参考回采正在监听它"
     };
 }
 
@@ -498,23 +597,70 @@ if (listener == null)
 if (listener == null) throw new Exception("cannot bind HTTP listener (8765-8774)");
 
 var indexHtml = Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html");
+var apiToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+var obsPlugins = new ObsPluginManager();
 
 var httpThread = new Thread(() =>
 {
     try
     {
-        while (running)
+        while (!shutdown.IsCancellationRequested)
         {
             var ctx = listener.GetContext();
             try
             {
                 var path = ctx.Request.Url?.AbsolutePath ?? "/";
+                ctx.Response.Headers["Cache-Control"] = "no-store";
+                ctx.Response.Headers["Content-Security-Policy"] = "frame-ancestors 'none'";
+                var allowed = LocalApiPolicy.Allows(ctx.Request.Headers["Host"] ?? "",
+                    ctx.Request.Headers["Origin"], ctx.Request.Headers["Sec-Fetch-Site"],
+                    ctx.Request.RemoteEndPoint?.Address, actualPort);
+                if (!allowed || (path.StartsWith("/api/", StringComparison.Ordinal) &&
+                    !LocalApiPolicy.TokenMatches(ctx.Request.Headers["X-VoiceAec-Token"], apiToken)))
+                {
+                    ctx.Response.StatusCode = 403;
+                    continue;
+                }
+                var expectedMethod = path is "/api/status" or "/api/obs-plugin" or "/" or "/index.html" ? "GET"
+                    : path == "/api/devices" ? ctx.Request.HttpMethod : "POST";
+                if (ctx.Request.HttpMethod != expectedMethod ||
+                    (path == "/api/devices" && ctx.Request.HttpMethod is not ("GET" or "POST")))
+                {
+                    ctx.Response.StatusCode = 405;
+                    continue;
+                }
                 switch (path)
                 {
+                    case "/api/obs-plugin":
+                    case "/api/obs-plugin/install":
+                    case "/api/obs-plugin/uninstall":
+                    {
+                        object response;
+                        try
+                        {
+                            if (path != "/api/obs-plugin")
+                            {
+                                if (!obsPlugins.Start(path.EndsWith("/uninstall", StringComparison.Ordinal) ? "uninstall" : "install"))
+                                    throw new InvalidOperationException("已有 OBS 插件任务正在执行。");
+                                ctx.Response.StatusCode = 202;
+                            }
+                            response = obsPlugins.Status();
+                        }
+                        catch (Exception ex)
+                        {
+                            ctx.Response.StatusCode = 409;
+                            response = new { ok = false, error = ex.Message };
+                        }
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(response, jsonOpts);
+                        ctx.Response.ContentLength64 = bytes.Length;
+                        ctx.Response.OutputStream.Write(bytes);
+                        break;
+                    }
                     case "/" or "/index.html":
                     {
                         var bytes = File.Exists(indexHtml)
-                            ? File.ReadAllBytes(indexHtml)
+                            ? System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(indexHtml).Replace("__VOICEAEC_TOKEN__", apiToken))
                             : "<meta charset='utf-8'><body style='font-family:sans-serif;padding:40px'>前端文件缺失: wwwroot/index.html</body>"u8.ToArray();
                         ctx.Response.ContentType = "text/html; charset=utf-8";
                         ctx.Response.ContentLength64 = bytes.Length;
@@ -562,15 +708,15 @@ var httpThread = new Thread(() =>
                             {
                                 ok = true,
                                 inputs = caps,
-                                loops = renders,
+                                loops = ref2Choices,
                                 outputs = renders,
                                 ref2Choices,
                                 current = new
                                 {
-                                    mic = micDevice.FriendlyName,
-                                    @ref = refDevice.FriendlyName,
-                                    ref2 = ref2Device?.FriendlyName ?? "none",
-                                    @out = outDevice.FriendlyName
+                                    mic = currentMic,
+                                    @ref = currentRef,
+                                    ref2 = currentRef2,
+                                    @out = currentOut
                                 }
                             }, jsonOpts);
                             ctx.Response.ContentType = "application/json; charset=utf-8";
@@ -593,12 +739,11 @@ var httpThread = new Thread(() =>
                             }
                             catch { }
                             string nowMic, nowRef, nowRef2, nowOut;
-                            lock (devSwitchLock) { nowMic = micDevice.FriendlyName; nowRef = refDevice.FriendlyName; nowRef2 = ref2Device?.FriendlyName ?? "none"; nowOut = outDevice.FriendlyName; }
                             var err = mic == null && rf == null && rf2 == null && ot == null ? "请求体需含 mic/ref/ref2/out 字段" : SwitchDevices(mic, rf, rf2, ot);
-                            lock (devSwitchLock) { nowMic = micDevice.FriendlyName; nowRef = refDevice.FriendlyName; nowRef2 = ref2Device?.FriendlyName ?? "none"; nowOut = outDevice.FriendlyName; }
+                            lock (devSwitchLock) { nowMic = currentMic; nowRef = currentRef; nowRef2 = currentRef2; nowOut = currentOut; }
                             var bytes = JsonSerializer.SerializeToUtf8Bytes(
                                 err == "" ? (object)new { ok = true, current = new { mic = nowMic, @ref = nowRef, ref2 = nowRef2, @out = nowOut } }
-                                          : new { ok = false, error = err }, jsonOpts);
+                                          : new { ok = false, error = err, current = new { mic = nowMic, @ref = nowRef, ref2 = nowRef2, @out = nowOut } }, jsonOpts);
                             ctx.Response.ContentType = "application/json; charset=utf-8";
                             if (err != "") ctx.Response.StatusCode = 500;
                             ctx.Response.OutputStream.Write(bytes);
@@ -642,7 +787,25 @@ var httpThread = new Thread(() =>
                     {
                         var bytes = "{\"ok\":true}"u8.ToArray();
                         ctx.Response.OutputStream.Write(bytes);
-                        running = false;
+                        shutdown.Cancel();
+                        break;
+                    }
+                    case "/api/pause":
+                    {
+                        using var reader = new StreamReader(ctx.Request.InputStream);
+                        if (!bool.TryParse(reader.ReadToEnd().Trim(), out var value))
+                        {
+                            ctx.Response.StatusCode = 400;
+                            break;
+                        }
+                        var error = SetPaused(value);
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        if (error != "") ctx.Response.StatusCode = 500;
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(new
+                        {
+                            ok = error == "", error, paused = Volatile.Read(ref paused) != 0
+                        }, jsonOpts);
+                        ctx.Response.OutputStream.Write(bytes);
                         break;
                     }
                     default:
@@ -664,24 +827,75 @@ const string AutoRegPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 bool GetAutostart()
 {
     using var k = Registry.CurrentUser.OpenSubKey(AutoRegPath);
-    return k?.GetValue("VoiceAec") is not null;
+    // Moving a portable installation must not leave the panel claiming an
+    // old, now invalid startup command is enabled for this executable.
+    return string.Equals(k?.GetValue("VoiceAec") as string, AutostartCommand(), StringComparison.OrdinalIgnoreCase);
+}
+
+string AutostartCommand()
+{
+    var executable = Environment.ProcessPath!;
+    var assembly = Assembly.GetEntryAssembly()!.Location;
+    return Path.GetFileNameWithoutExtension(executable).Equals("dotnet", StringComparison.OrdinalIgnoreCase)
+        ? $"\"{executable}\" \"{assembly}\" --tray" : $"\"{executable}\" --tray";
 }
 
 void SetAutostart(bool on)
 {
     using var k = Registry.CurrentUser.CreateSubKey(AutoRegPath);
-    if (on) k.SetValue("VoiceAec", $"\"{Environment.ProcessPath}\" --tray");
+    if (on) k.SetValue("VoiceAec", AutostartCommand());
     else k.DeleteValue("VoiceAec", throwOnMissingValue: false);
 }
 
+// Repair an existing opt-in after moving the portable installation. Do not
+// enable startup from scratch or replace another existing installation.
+try
+{
+    using var key = Registry.CurrentUser.OpenSubKey(AutoRegPath);
+    var saved = key?.GetValue("VoiceAec") as string;
+    if (!string.IsNullOrEmpty(saved) && !GetAutostart())
+    {
+        var executable = saved.StartsWith('"') ? saved.Split('"')[1] : saved.Split(' ')[0];
+        if (!File.Exists(executable)) SetAutostart(true);
+    }
+}
+catch (Exception ex) { Console.Error.WriteLine($"[startup] {ex.Message}"); }
+
 var trayThread = new Thread(() =>
 {
-    var panelUrl = $"http://localhost:{actualPort}/";
+    Console.WriteLine("[panel] tray thread started");
+    var panelUrl = listener.Prefixes.First();
     var exiting = false;
     Form? panelForm = null;
+    Microsoft.Web.WebView2.WinForms.WebView2? panelWebView = null;
+
+    async void UpdatePanelVisibility()
+    {
+        var view = panelWebView;
+        var core = view?.CoreWebView2;
+        if (view == null || core == null || panelForm == null) return;
+        var visible = panelForm.Visible && panelForm.WindowState != FormWindowState.Minimized;
+        try
+        {
+            if (visible)
+            {
+                view.Visible = true;
+                core.Resume();
+            }
+            core.PostWebMessageAsJson(visible ? "{\"panelVisible\":true}" : "{\"panelVisible\":false}");
+            if (!visible)
+            {
+                view.Visible = false;
+                await core.TrySuspendAsync();
+                if (panelForm.Visible && panelForm.WindowState != FormWindowState.Minimized) core.Resume();
+            }
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"[panel] visibility: {ex.Message}"); }
+    }
 
     void ShowPanel()
     {
+        Console.WriteLine("[panel] showing control panel");
         if (panelForm == null || panelForm.IsDisposed)
         {
             panelForm = new Form
@@ -690,11 +904,18 @@ var trayThread = new Thread(() =>
                 StartPosition = FormStartPosition.CenterScreen,
                 ClientSize = new Size(1280, 800),
                 MinimumSize = new Size(960, 640),
-                Icon = TraySupport.MakeIcon(),
+                Icon = TraySupport.AppIcon(64),
                 ShowInTaskbar = true,
+                AutoScaleDimensions = new SizeF(96, 96),
+                AutoScaleMode = AutoScaleMode.Dpi,
             };
+            Console.WriteLine("[panel] form created");
             var wv = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            Console.WriteLine("[panel] webview control created");
+            panelWebView = wv;
             panelForm.Controls.Add(wv);
+            panelForm.VisibleChanged += (_, _) => UpdatePanelVisibility();
+            panelForm.Resize += (_, _) => UpdatePanelVisibility();
             panelForm.FormClosing += (_, e) =>
             {
                 if (exiting) return;
@@ -705,9 +926,10 @@ var trayThread = new Thread(() =>
             {
                 try
                 {
-                    var udf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "WebView2");
+                    var udf = Arg("--webview-data-dir", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "WebView2"));
                     var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, udf);
                     await wv.EnsureCoreWebView2Async(env);
+                    wv.ZoomFactor = 1.0;
                     wv.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                     wv.CoreWebView2.Settings.IsZoomControlEnabled = false;
                     wv.CoreWebView2.WebMessageReceived += (_, e2) =>
@@ -716,9 +938,11 @@ var trayThread = new Thread(() =>
                             panelForm.BeginInvoke(() => panelForm.Hide());
                     };
                     wv.CoreWebView2.Navigate(panelUrl);
+                    wv.CoreWebView2.NavigationCompleted += (_, _) => UpdatePanelVisibility();
                 }
                 catch (Exception ex)
                 {
+                    Console.Error.WriteLine($"[panel] initialization failed: {ex}");
                     var tip = new Label
                     {
                         Dock = DockStyle.Fill,
@@ -732,59 +956,60 @@ var trayThread = new Thread(() =>
             };
         }
         panelForm.Show();
+        Console.WriteLine("[panel] form shown");
         if (panelForm.WindowState == FormWindowState.Minimized) panelForm.WindowState = FormWindowState.Normal;
         panelForm.Activate();
     }
 
+    using var trayIcon = TraySupport.TrayIcon();
     using var icon = new NotifyIcon
     {
-        Icon = TraySupport.MakeIcon(),
+        Icon = trayIcon,
         Text = "VoiceAec · 回声消除麦克风",
         Visible = true,
     };
-    using var menu = new ContextMenuStrip();
+    Console.WriteLine("[panel] tray icon ready");
 
-    var miOpen = new ToolStripMenuItem("打开控制面板(&P)");
-    miOpen.Click += (_, _) => ShowPanel();
-
-    var modeItems = modelLabels.Select(kv =>
+    var modeEntries = new List<TrayModeEntry>
     {
-        var mi = new ToolStripMenuItem(kv.Value) { Name = kv.Key };
-        mi.Click += (_, _) =>
-        {
-            var err = SwitchModel(kv.Key);
-            icon.ShowBalloonTip(2000, "VoiceAec",
-                err == "" ? $"已切换：{modelLabels[kv.Key]}" : $"切换失败：{err}", ToolTipIcon.Info);
-        };
-        return mi;
-    }).ToArray();
-    var miModeHead = new ToolStripMenuItem("处理模式(&M)");
-    miModeHead.DropDownItems.AddRange(modeItems);
-
-    var miAuto = new ToolStripMenuItem("开机自启(&S)") { CheckOnClick = true };
-    miAuto.Click += (_, _) =>
-    {
-        try { SetAutostart(miAuto.Checked); }
-        catch (Exception ex)
-        {
-            miAuto.Checked = !miAuto.Checked;
-            icon.ShowBalloonTip(2000, "VoiceAec", $"设置失败：{ex.Message}", ToolTipIcon.Warning);
-        }
+        new("off", modelLabels["off"], Color.FromArgb(0xE8, 0xB8, 0x4B), true),
+        new("v1.2", modelLabels["v1.2"], Color.FromArgb(0x2E, 0xC4, 0x89), ModelExists("v1.2")),
+        new("v1.3", modelLabels["v1.3"], Color.FromArgb(0xF2, 0x7B, 0xA9), ModelExists("v1.3")),
+        new("v1.4", modelLabels["v1.4"], Color.FromArgb(0x4F, 0xA8, 0xE8), ModelExists("v1.4")),
     };
-
-    var miQuit = new ToolStripMenuItem("退出(&Q)");
-    miQuit.Click += (_, _) => running = false;
-
-    menu.Items.AddRange(new ToolStripItem[]
+    TrayMenuState CurrentTrayState()
     {
-        miOpen, miModeHead, new ToolStripSeparator(), miAuto, new ToolStripSeparator(), miQuit
-    });
+        string current;
+        lock (engineLock) current = mode;
+        if (!modelLabels.ContainsKey(current)) current = "off";
+        return new TrayMenuState(current, modelLabels[current], Volatile.Read(ref paused) != 0,
+            GetAutostart(), modeEntries);
+    }
+
+    using var menu = new TrayMenu(CurrentTrayState);
+    menu.OpenPanelRequested += ShowPanel;
+    menu.PauseRequested += () =>
+    {
+        var error = SetPaused(Volatile.Read(ref paused) == 0);
+        if (error != "") icon.ShowBalloonTip(2000, "VoiceAec", error, ToolTipIcon.Warning);
+    };
+    menu.ModeRequested += requested =>
+    {
+        var error = SwitchModel(requested);
+        icon.ShowBalloonTip(2000, "VoiceAec",
+            error == "" ? $"已切换：{modelLabels[requested]}" : $"切换失败：{error}", ToolTipIcon.Info);
+    };
+    menu.AutostartRequested += enabled =>
+    {
+        try { SetAutostart(enabled); }
+        catch (Exception ex) { icon.ShowBalloonTip(2000, "VoiceAec", $"设置失败：{ex.Message}", ToolTipIcon.Warning); }
+    };
+    menu.QuitRequested += () => shutdown.Cancel();
     menu.Opening += (_, _) =>
     {
-        string cur; lock (engineLock) cur = mode;
-        foreach (ToolStripMenuItem mi in miModeHead.DropDownItems) mi.Checked = mi.Name == cur;
-        miAuto.Checked = GetAutostart();
-        icon.Text = $"VoiceAec · {modelLabels[cur]}";
+        string current;
+        lock (engineLock) current = mode;
+        icon.Text = Volatile.Read(ref paused) != 0 ? "VoiceAec · 已暂停并静音" : $"VoiceAec · {modelLabels[current]}";
     };
     icon.ContextMenuStrip = menu;
     icon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowPanel(); };
@@ -795,7 +1020,8 @@ var trayThread = new Thread(() =>
     var quitTimer = new System.Windows.Forms.Timer { Interval = 400 };
     quitTimer.Tick += (_, _) =>
     {
-        if (running) return;
+        if (instance.Activation.WaitOne(0)) ShowPanel();
+        if (!shutdown.IsCancellationRequested) return;
         quitTimer.Stop();
         exiting = true;
         try { panelForm?.Close(); } catch { }
@@ -812,14 +1038,15 @@ trayThread.Start();
 Console.WriteLine($"  [http]    http://localhost:{actualPort}/");
 // 面板由托盘线程的原生窗口（WebView2）承载，不再拉起系统浏览器
 Console.WriteLine("== 语音软件选 CABLE Output；窗口关闭后程序在系统托盘继续运行，右键托盘图标可退出 ==");
-while (running) Thread.Sleep(200);
+shutdown.Token.WaitHandle.WaitOne();
 
 Console.WriteLine("stopping...");
 try { listener.Stop(); } catch { }
-micCap.StopRecording(); refCap.StopRecording(); ref2Cap?.StopRecording();
-try { waveOut.Stop(); } catch { }
-micCap.Dispose(); refCap.Dispose(); ref2Cap?.Dispose(); waveOut.Dispose();
+SetPaused(true);
+proc.Join();
+trayThread.Join(3000);
 lock (engineLock) { engine?.Dispose(); engine = null; }
+DisposeAudio(micDevice); DisposeAudio(refDevice); DisposeAudio(ref2Device); DisposeAudio(outDevice);
 return 0;
 
 // 16k mono float -> 48k stereo 16-bit, linear interpolation, exact 3x ratio.
@@ -828,6 +1055,8 @@ internal sealed class CableFeedProvider(SampleRing ring, Action onUnderrun) : IW
     private const int InHop = 256;
     private const int InHopBytes = InHop * 4;
     private readonly Queue<byte> _pending = new();
+    private readonly byte[] _inBytes = new byte[InHopBytes];
+    private readonly float[] _inFloats = new float[InHop];
     private float _prevIn;
     private bool _hasPrev;
 
@@ -838,8 +1067,7 @@ internal sealed class CableFeedProvider(SampleRing ring, Action onUnderrun) : IW
         var need = count;
         while (_pending.Count < need)
         {
-            var inBytes = new byte[InHopBytes];
-            var got = ring.Read(inBytes, 0, InHopBytes);
+            var got = ring.Read(_inBytes, 0, InHopBytes);
             if (got == 0)
             {
                 onUnderrun();
@@ -851,12 +1079,11 @@ internal sealed class CableFeedProvider(SampleRing ring, Action onUnderrun) : IW
                 if (_pending.Count == 0) return 0;
                 break;
             }
-            var inFloats = new float[got / 4];
-            Buffer.BlockCopy(inBytes, 0, inFloats, 0, got);
-            for (var i = 0; i < inFloats.Length; i++)
+            Buffer.BlockCopy(_inBytes, 0, _inFloats, 0, got);
+            for (var i = 0; i < got / 4; i++)
             {
-                var a = _hasPrev ? _prevIn : inFloats[i];
-                var b = inFloats[i];
+                var a = _hasPrev ? _prevIn : _inFloats[i];
+                var b = _inFloats[i];
                 AppendSample(a, b);
                 _prevIn = b;
                 _hasPrev = true;
@@ -878,37 +1105,5 @@ internal sealed class CableFeedProvider(SampleRing ring, Action onUnderrun) : IW
             _pending.Enqueue(lo); _pending.Enqueue(hi);
             _pending.Enqueue(lo); _pending.Enqueue(hi);
         }
-    }
-}
-
-// 托盘支持：隐藏控制台窗口 + 程序化生成托盘图标（马卡龙绿圆底 + 白色均衡器条）
-internal static class TraySupport
-{
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr GetConsoleWindow();
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-    public static void HideConsole()
-    {
-        var h = GetConsoleWindow();
-        if (h != IntPtr.Zero) ShowWindow(h, 0 /* SW_HIDE */);
-    }
-
-    public static Icon MakeIcon()
-    {
-        using var bmp = new Bitmap(32, 32);
-        using var g = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        using var bg = new LinearGradientBrush(
-            new Rectangle(0, 0, 32, 32),
-            Color.FromArgb(134, 222, 196), Color.FromArgb(86, 184, 155), 45f);
-        g.FillEllipse(bg, 1, 1, 30, 30);
-        // 均衡器五条白杠：中间高、两侧低
-        var bars = new (int x, int top, int bottom)[] { (7, 14, 21), (11, 10, 23), (15, 7, 25), (19, 10, 23), (23, 14, 21) };
-        foreach (var (x, top, bottom) in bars)
-            g.FillRectangle(Brushes.White, x, top, 3, bottom - top);
-        return Icon.FromHandle(bmp.GetHicon());
     }
 }

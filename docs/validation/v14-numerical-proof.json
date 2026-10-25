@@ -1,0 +1,10 @@
+{
+  "legacy": {
+    "exitCode": 1,
+    "stdout": "PASS: 50000 gain/covariance cases against long-double algebra; old formula left 5108 saturated residuals\nFAIL: float libm vs double libm: max diff 0.275099039, violations 13461 / 16000, shift 0 / 0\n"
+  },
+  "fixed": {
+    "exitCode": 0,
+    "stdout": "PASS: 50000 gain/covariance cases against long-double algebra; old formula left 5108 saturated residuals\nPASS: float libm vs double libm: max diff 1.257658e-05, violations 0 / 16000, shift 0 / 0\n"
+  }
+}

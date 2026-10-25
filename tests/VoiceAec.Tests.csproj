@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <Compile Include="..\SampleRing.cs" Link="SampleRing.cs" />
+    <Compile Include="..\RuntimeSupport.cs" Link="RuntimeSupport.cs" />
+    <Compile Include="..\ObsPluginInstaller.cs" Link="ObsPluginInstaller.cs" />
+  </ItemGroup>
+</Project>

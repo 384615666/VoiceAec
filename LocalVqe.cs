@@ -48,13 +48,14 @@ internal static class LocalVqe
 
     public sealed class Context : IDisposable
     {
-        public readonly IntPtr Handle;
+        private IntPtr handle;
+        public IntPtr Handle => handle;
         public readonly int SampleRate;
         public readonly int Hop;
 
         private Context(IntPtr h)
         {
-            Handle = h;
+            handle = h;
             SampleRate = localvqe_sample_rate(h);
             Hop = localvqe_hop_length(h);
         }
@@ -64,10 +65,15 @@ internal static class LocalVqe
             var opts = localvqe_options_new();
             if (opts == IntPtr.Zero)
                 throw new Exception("localvqe_options_new failed");
-            localvqe_options_set_model_path(opts, modelPath);
-            if (threads > 0) localvqe_options_set_threads(opts, threads);
-            var h = localvqe_new_with_options(opts);
-            localvqe_options_free(opts);
+            IntPtr h;
+            try
+            {
+                if (localvqe_options_set_model_path(opts, modelPath) != 0 ||
+                    localvqe_options_set_threads(opts, threads) != 0)
+                    throw new ArgumentException("无效的模型路径或线程数");
+                h = localvqe_new_with_options(opts);
+            }
+            finally { localvqe_options_free(opts); }
             if (h == IntPtr.Zero)
                 throw new Exception($"localvqe_new failed for '{modelPath}' (threads={threads})");
             return new Context(h);
@@ -90,7 +96,8 @@ internal static class LocalVqe
 
         public void Dispose()
         {
-            if (Handle != IntPtr.Zero) localvqe_free(Handle);
+            var old = Interlocked.Exchange(ref handle, IntPtr.Zero);
+            if (old != IntPtr.Zero) localvqe_free(old);
             GC.SuppressFinalize(this);
         }
     }
