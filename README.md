@@ -1,6 +1,10 @@
 # VoiceAec · 回声消除麦克风
 
-本地实时回声消除(AEC)桌面小工具:把麦克风信号与音箱参考回采一起送入 [LocalVQE](https://github.com/384615666/obs-localvqe-windows) 神经网络模型,消除对方听到的游戏/媒体回声后,输出到 VB-CABLE 虚拟声卡。QQ / Oopz 等语音软件选择 **CABLE Output** 作为麦克风即可获得干净的语音,游戏声音照常外放。
+本地实时回声消除(AEC)桌面小工具:把麦克风信号与音箱参考回采一起送入 [LocalVQE](https://github.com/localai-org/LocalVQE) 神经网络模型,消除对方听到的游戏/媒体回声后,输出到 VB-CABLE 虚拟声卡。QQ / Oopz 等语音软件选择 **CABLE Output** 作为麦克风即可获得干净的语音,游戏声音照常外放。
+
+## 开源许可
+
+应用代码以 [MIT](LICENSE) 授权,发布包内第三方组件(推理引擎/模型/ggml/运行库等)见 [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md)。
 
 ## 下载即用
 
@@ -121,5 +125,5 @@ v0.4.0 的原生修复保存为 [native/LocalVQE-windows.patch](native/LocalVQE-
 
 ## 已知限制
 
-- 摄像头麦克风同一时刻只能被一个程序独占(与 OBS 互斥;共存方案见 obs-localvqe-windows 仓库的 repoint 脚本思路)
+- 摄像头麦克风同一时刻只能被一个程序独占(与 OBS 互斥;两者需要共用麦克风时可参考上游 LocalVQE 仓库的 repoint 思路)
 - QQ 对 CABLE Output 报"加载失败"是 QQ 侧对虚拟设备的打开方式问题(音频链路本身已验证正常)

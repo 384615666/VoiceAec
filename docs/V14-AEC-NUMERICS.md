@@ -51,4 +51,4 @@
 - 尚未在另一操作系统复测，也没有用真实录音重新评估 ERLE、音质或长期稳定性；
   数学函数扰动测试不能替代这些验证。
 
-实验记录：`artifacts/v14-numerical-proof.json`、`artifacts/ctest-v14-fixed.log`。
+实验记录：[docs/validation/v14-numerical-proof.json](validation/v14-numerical-proof.json)、[docs/validation/ctest-v14-fixed.log](validation/ctest-v14-fixed.log)。
