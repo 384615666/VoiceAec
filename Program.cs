@@ -4,6 +4,8 @@ using System.Security.Cryptography;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -110,6 +112,29 @@ if (argsList.Contains("--list"))
         Console.WriteLine($"  {d.FriendlyName}");
     return 0;
 }
+
+// ── 局域网面板:只枚举私有 IPv4,优先 192.168.x.x ─────────────────────
+var lanAddresses = new List<IPAddress>();
+try
+{
+    foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+    {
+        if (nic.OperationalStatus != OperationalStatus.Up) continue;
+        if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel) continue;
+        foreach (var unicast in nic.GetIPProperties().UnicastAddresses)
+        {
+            var address = unicast.Address;
+            if (address.AddressFamily == AddressFamily.InterNetwork && LocalApiPolicy.IsPrivate(address))
+                lanAddresses.Add(address);
+        }
+    }
+}
+catch (Exception ex) { Console.Error.WriteLine($"[lan] enumerate: {ex.Message}"); }
+lanAddresses = lanAddresses.Distinct().ToList();
+var primaryLan = lanAddresses
+    .OrderBy(a => a.GetAddressBytes()[0] == 192 ? 0 : a.GetAddressBytes()[0] == 10 ? 1 : 2)
+    .FirstOrDefault();
+var lanEnabled = !argsList.Contains("--no-lan") && primaryLan != null;
 
 // Acquire before loading models or opening audio devices. A second launch
 // only wakes the primary UI, and cannot mix a second signal into VB-CABLE.
@@ -528,6 +553,8 @@ proc.Start();
 var jsonOpts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 var startAt = DateTime.UtcNow;
 var self = Process.GetCurrentProcess();
+var actualPort = port;
+var lanAvailable = false;
 var rateGate = new object();
 long lastHops = 0; DateTime lastRateAt = DateTime.UtcNow; double hopsPerSec = 0;
 double lastCpuMs = self.TotalProcessorTime.TotalMilliseconds; DateTime lastCpuAt = DateTime.UtcNow; double cpuPercent = 0;
@@ -593,6 +620,8 @@ object BuildStatus()
         models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
         autostart = GetAutostart(),
         cableMissing,
+        lanAvailable,
+        lanUrl = lanAvailable && primaryLan != null ? $"http://{primaryLan}:{actualPort}/" : "",
         hint = cableMissing
             ? "还差一步：没有找到 VB-CABLE 虚拟声卡。点上方「一键安装虚拟声卡」，装完重启电脑，语音软件里就能选到 CABLE Output。"
             : Volatile.Read(ref paused) != 0
@@ -602,35 +631,33 @@ object BuildStatus()
 }
 
 HttpListener? listener = null;
-var actualPort = port;
-for (var p = port; p < port + 10 && listener == null; p++)
+void TryBind(IEnumerable<string> prefixes, int candidate)
 {
-    try
-    {
-        var l = new HttpListener();
-        l.Prefixes.Add($"http://localhost:{p}/");
-        l.Start();
-        listener = l;
-        actualPort = p;
-    }
-    catch { }
-}
-if (listener == null)
-{
-    for (var p = port; p < port + 10 && listener == null; p++)
+    if (listener != null) return;
+    foreach (var prefix in prefixes)
     {
         try
         {
             var l = new HttpListener();
-            l.Prefixes.Add($"http://127.0.0.1:{p}/");
+            l.Prefixes.Add(prefix);
             l.Start();
             listener = l;
-            actualPort = p;
+            actualPort = candidate;
+            return;
         }
         catch { }
     }
 }
+for (var p = port; p < port + 10 && listener == null; p++)
+    TryBind(lanEnabled ? new[] { $"http://+:{p}/" } : new[] { $"http://localhost:{p}/", $"http://127.0.0.1:{p}/" }, p);
+// The wildcard reservation may be missing (portable copy without the URL ACL):
+// keep the panel usable on this PC instead of failing to start.
+if (listener == null && lanEnabled)
+    for (var p = port; p < port + 10 && listener == null; p++)
+        TryBind(new[] { $"http://localhost:{p}/", $"http://127.0.0.1:{p}/" }, p);
 if (listener == null) throw new Exception("cannot bind HTTP listener (8765-8774)");
+lanAvailable = lanEnabled && listener.Prefixes.Any(x => x.Contains("+:"));
+if (lanEnabled && !lanAvailable) Console.WriteLine("[lan] wildcard bind denied; panel is loopback-only");
 
 var indexHtml = Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html");
 var apiToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
@@ -712,7 +739,8 @@ var httpThread = new Thread(() =>
                 ctx.Response.Headers["Content-Security-Policy"] = "frame-ancestors 'none'";
                 var allowed = LocalApiPolicy.Allows(ctx.Request.Headers["Host"] ?? "",
                     ctx.Request.Headers["Origin"], ctx.Request.Headers["Sec-Fetch-Site"],
-                    ctx.Request.RemoteEndPoint?.Address, actualPort);
+                    ctx.Request.RemoteEndPoint?.Address, actualPort,
+                    lanAvailable ? lanAddresses : null);
                 if (!allowed || (path.StartsWith("/api/", StringComparison.Ordinal) &&
                     !LocalApiPolicy.TokenMatches(ctx.Request.Headers["X-VoiceAec-Token"], apiToken)))
                 {

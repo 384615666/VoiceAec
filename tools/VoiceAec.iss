@@ -134,23 +134,52 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
+  HelperPath: string;
+  Helper: string;
+  HelperArgs: string;
 begin
-  if (CurStep = ssPostInstall) and WizardIsTaskSelected('vbcable') and VbCableAvailable then
+  if CurStep <> ssPostInstall then exit;
+
+  // One elevation for both jobs: the http.sys URL reservation / firewall rule
+  // that make the panel reachable on the home LAN, and (optionally) the
+  // unmodified VB-CABLE setup.
+  HelperPath := ExpandConstant('{tmp}\voiceaec-postinstall.cmd');
+  Helper :=
+    '@echo off' + #13#10 +
+    'for %%P in (8765 8766 8767 8768 8769 8770 8771 8772 8773 8774) do netsh http add urlacl url=http://+:%%P/ user="%USERDOMAIN%\%USERNAME%" >nul 2>&1' + #13#10 +
+    'netsh advfirewall firewall delete rule name="VoiceAec Panel" >nul 2>&1' + #13#10 +
+    'netsh advfirewall firewall add rule name="VoiceAec Panel" dir=in action=allow program="' +
+      ExpandConstant('{app}\VoiceAec.exe') + '" protocol=TCP localport=8765-8774 profile=private >nul 2>&1' + #13#10 +
+    'if /I "%~1"=="cable" (' + #13#10 +
+    '  "' + ExpandConstant('{app}\vendor\VBCABLE\VBCABLE_Setup_x64.exe') + '" -i -h' + #13#10 +
+    '  exit /b %errorlevel%' + #13#10 +
+    ')' + #13#10 +
+    'exit /b 0' + #13#10;
+  if SaveStringToFile(HelperPath, Helper, False) then
+    Log('voiceaec: helper written to ' + HelperPath)
+  else
+    Log('voiceaec: helper write FAILED ' + HelperPath);
+
+  HelperArgs := '';
+  if WizardIsTaskSelected('vbcable') and VbCableAvailable then HelperArgs := 'cable';
+  if not ShellExec('runas', ExpandConstant('{cmd}'),
+    '/c "' + HelperPath + '" ' + HelperArgs, ExpandConstant('{tmp}'),
+    SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
-    // Run VB-Audio's own, unmodified setup elevated. "-i -h" installs silently;
-    // SW_SHOWNORMAL keeps the official window usable if a switch is rejected.
-    if ShellExec('runas', ExpandConstant('{app}\vendor\VBCABLE\VBCABLE_Setup_x64.exe'),
-      '-i -h', ExpandConstant('{app}\vendor\VBCABLE'), SW_SHOWNORMAL,
-      ewWaitUntilTerminated, ResultCode) then
-    begin
-      VbCableRan := True;
-      if ResultCode <> 0 then
-        MsgBox('VB-CABLE 安装程序返回代码 ' + IntToStr(ResultCode) +
-          '。可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
-    end
-    else
-      MsgBox('未能启动 VB-CABLE 安装程序（可能取消了管理员授权）。' +
-        '可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
+    if not WizardSilent then
+      MsgBox('未获得管理员授权：局域网访问未开启，虚拟声卡也未安装。' + #13#10 +
+        '可以稍后以管理员身份重新运行安装程序，或在 VoiceAec 面板点「一键安装虚拟声卡」。',
+        mbInformation, MB_OK);
+    Log('voiceaec: ShellExec(runas) failed');
+    exit;
+  end;
+  Log('voiceaec: helper exit code ' + IntToStr(ResultCode));
+  if HelperArgs = 'cable' then
+  begin
+    VbCableRan := True;
+    if (ResultCode <> 0) and (not WizardSilent) then
+      MsgBox('VB-CABLE 安装程序返回代码 ' + IntToStr(ResultCode) +
+        '。可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
   end;
 end;
 

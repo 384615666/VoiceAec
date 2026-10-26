@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Principal;
 using NAudio.CoreAudioApi;
@@ -31,16 +32,38 @@ internal sealed class SingleInstanceGuard : IDisposable
 
 internal static class LocalApiPolicy
 {
+    // Loopback is always allowed. When the panel is exposed on the home LAN,
+    // private IPv4 peers are allowed too, but only for this machine's own
+    // addresses: a foreign Host/Origin still means DNS rebinding or a
+    // cross-site request and is rejected.
     public static bool Allows(string host, string? origin, string? fetchSite,
-        IPAddress? remote, int port)
+        IPAddress? remote, int port, IReadOnlyList<IPAddress>? lanAddresses = null)
     {
-        if (remote == null || !IPAddress.IsLoopback(remote)) return false;
-        if (!host.Equals($"localhost:{port}", StringComparison.OrdinalIgnoreCase) && host != $"127.0.0.1:{port}") return false;
+        if (remote == null) return false;
+        var loopback = IPAddress.IsLoopback(remote);
+        var lan = lanAddresses is { Count: > 0 } && IsPrivate(remote);
+        if (!loopback && !lan) return false;
+
+        var hostOk = host.Equals($"localhost:{port}", StringComparison.OrdinalIgnoreCase)
+            || host.Equals($"127.0.0.1:{port}", StringComparison.OrdinalIgnoreCase)
+            || (lanAddresses != null && lanAddresses.Any(a => host.Equals($"{a}:{port}", StringComparison.OrdinalIgnoreCase)));
+        if (!hostOk) return false;
         if (fetchSite is "cross-site") return false;
         if (string.IsNullOrEmpty(origin)) return true;
-        return Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-            uri.Scheme == "http" && uri.Port == port &&
-            (uri.Host == "localhost" || uri.Host == "127.0.0.1");
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+            uri.Scheme != "http" || uri.Port != port) return false;
+        if (uri.Host is "localhost" or "127.0.0.1") return true;
+        return lanAddresses != null &&
+            lanAddresses.Any(a => uri.Host.Equals(a.ToString(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static bool IsPrivate(IPAddress address)
+    {
+        if (address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return false;
+        var b = address.GetAddressBytes();
+        return b[0] == 10
+            || (b[0] == 172 && b[1] >= 16 && b[1] <= 31)
+            || (b[0] == 192 && b[1] == 168);
     }
 
     public static bool TokenMatches(string? supplied, string expected) =>

@@ -41,7 +41,18 @@ Check(!LocalApiPolicy.Allows("localhost:8765", "https://evil.example", "cross-si
 Check(!LocalApiPolicy.Allows("localhost:8765", "null", null, IPAddress.Loopback, 8765),
     "opaque origin rejected");
 Check(!LocalApiPolicy.Allows("localhost:8765", null, null, IPAddress.Parse("192.168.1.1"), 8765),
-    "non-loopback peer rejected");
+    "non-loopback peer rejected without LAN mode");
+var lan = new[] { IPAddress.Parse("192.168.1.10") };
+Check(LocalApiPolicy.Allows("192.168.1.10:8765", "http://192.168.1.10:8765", "same-origin",
+        IPAddress.Parse("192.168.1.50"), 8765, lan),
+    "LAN panel accepted for this machine's address");
+Check(!LocalApiPolicy.Allows("evil.example:8765", null, null, IPAddress.Parse("192.168.1.50"), 8765, lan),
+    "LAN rebinding host rejected");
+Check(!LocalApiPolicy.Allows("192.168.1.10:8765", "http://evil.example", "cross-site",
+        IPAddress.Parse("192.168.1.50"), 8765, lan),
+    "LAN cross-site origin rejected");
+Check(!LocalApiPolicy.Allows("192.168.1.10:8765", null, null, IPAddress.Parse("8.8.8.8"), 8765, lan),
+    "public peer rejected even with LAN mode");
 Check(!LocalApiPolicy.TokenMatches(null, "secret") && !LocalApiPolicy.TokenMatches("wrong", "secret") &&
     LocalApiPolicy.TokenMatches("secret", "secret"), "API session token required");
 

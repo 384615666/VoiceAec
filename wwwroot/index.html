@@ -2446,6 +2446,43 @@
 
   /* ── Toast ───────────────────────────────────────────────── */
 
+  .about-lan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px dashed rgba(46, 196, 137, .38);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(231, 250, 241, .72), rgba(237, 247, 254, .72));
+  }
+
+  .about-lan-label {
+    color: var(--green-deep);
+    font-size: 10.5px;
+    font-weight: 800;
+  }
+
+  .about-lan-url {
+    color: var(--blue-deep);
+    font-size: 11px;
+    font-weight: 800;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .about-lan-url:hover {
+    text-decoration: underline;
+  }
+
+  .about-lan-hint {
+    flex: 1 1 100%;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
   .about-dialog .about-logo {
     width: 44px;
     height: 44px;
@@ -3496,6 +3533,11 @@
     <button class="obs-close" id="aboutClose" type="button">关闭</button>
   </div>
   <p class="about-version">版本 <strong id="aboutVersion">—</strong><span class="about-mid">·</span>MIT 开源许可</p>
+  <div class="about-lan" id="aboutLan" hidden>
+    <span class="about-lan-label">局域网访问</span>
+    <a class="about-lan-url" id="aboutLanUrl" href="#" target="_blank" rel="noopener"></a>
+    <span class="about-lan-hint" id="aboutLanHint">同一 Wi-Fi 下的手机 / 平板可直接打开，无需密码</span>
+  </div>
   <p>把麦克风与音箱参考回采一起送入神经网络模型，消除对方听到的游戏与媒体回声，再输出到 VB-CABLE 虚拟声卡；游戏声音照常外放。内置 OBS 音频滤镜一键安装。</p>
   <div class="about-links">
     <a href="https://github.com/384615666/VoiceAec" target="_blank" rel="noopener">GitHub 仓库</a>
@@ -3583,7 +3625,7 @@
     cableBanner: $('cableBanner'), cableInstall: $('cableInstall'), cableNote: $('cableNote'),
     cableRecheck: $('cableRecheck'),
     aboutDialog: $('aboutDialog'), aboutClose: $('aboutClose'), aboutLogo: $('aboutLogo'),
-    aboutVersion: $('aboutVersion'),
+    aboutVersion: $('aboutVersion'), aboutLan: $('aboutLan'), aboutLanUrl: $('aboutLanUrl'), aboutLanHint: $('aboutLanHint'),
     modeBadge: $('modeBadge'),
     modeBadgeText: $('modeBadgeText'),
     autostartField: $('autostartField'),
@@ -4792,6 +4834,7 @@
   function applyStatus(data) {
     markOnline();
     if (data.version) setText(els.aboutVersion, 'v' + data.version);
+    updateLanAddress(data);
     updateModelState(data.models);
 
     if (!state.localPending && MODES.includes(data.mode)) {
@@ -4807,6 +4850,14 @@
     updateCableBanner(data.cableMissing);
     refreshControls();
     maybeRetryDevices();
+  }
+
+  function updateLanAddress(data) {
+    const available = data.lanAvailable === true && typeof data.lanUrl === 'string' && data.lanUrl;
+    els.aboutLan.hidden = !available;
+    if (!available) return;
+    setText(els.aboutLanUrl, data.lanUrl);
+    els.aboutLanUrl.href = data.lanUrl;
   }
 
   function updateCableBanner(missing) {
