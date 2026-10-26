@@ -16,6 +16,26 @@ using VoiceAec;
 
 if (args.Contains("--obs-plugin-action")) return ObsPluginManager.RunHelper(args);
 
+// A GUI-subsystem executable never gets a console window; --console/--list
+// attach to the caller's console (or allocate one) and re-open the streams.
+if (args.Contains("--console") || args.Contains("--list"))
+{
+    if (GetConsoleWindow() == IntPtr.Zero && !AttachConsole(0xFFFFFFFF)) AllocConsole();
+    var stdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
+    Console.SetOut(stdout);
+    var stderr = new StreamWriter(Console.OpenStandardError()) { AutoFlush = true };
+    Console.SetError(stderr);
+}
+
+[DllImport("kernel32.dll")]
+static extern IntPtr GetConsoleWindow();
+
+[DllImport("kernel32.dll")]
+static extern bool AttachConsole(uint processId);
+
+[DllImport("kernel32.dll")]
+static extern bool AllocConsole();
+
 // Set process DPI awareness before either the tray or WebView creates HWNDs.
 Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 Application.EnableVisualStyles();
