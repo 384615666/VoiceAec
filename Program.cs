@@ -1020,7 +1020,9 @@ catch (Exception ex) { Console.Error.WriteLine($"[startup] {ex.Message}"); }
 var trayThread = new Thread(() =>
 {
     Console.WriteLine("[panel] tray thread started");
-    var panelUrl = listener.Prefixes.First();
+    // The wildcard prefix used for LAN access (http://+:port/) is not a
+    // navigable URL; the panel itself always loads over loopback.
+    var panelUrl = $"http://localhost:{actualPort}/";
     var exiting = false;
     Form? panelForm = null;
     Microsoft.Web.WebView2.WinForms.WebView2? panelWebView = null;
