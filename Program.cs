@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Net;
@@ -26,7 +28,22 @@ string Arg(string name, string fallback)
 // ── 设备配置持久化:命令行 > voiceaec.json > 智能默认 ────────────────
 var portableCfgPath = Path.Combine(AppContext.BaseDirectory, "voiceaec.json");
 var fallbackCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "voiceaec.json");
-var cfgPath = File.Exists(fallbackCfgPath) ? fallbackCfgPath : portableCfgPath;
+static bool CanWriteDirectory(string directory)
+{
+    try
+    {
+        Directory.CreateDirectory(directory);
+        var probe = Path.Combine(directory, ".voiceaec-write-" + Guid.NewGuid().ToString("N"));
+        using (File.Create(probe)) { }
+        File.Delete(probe);
+        return true;
+    }
+    catch { return false; }
+}
+// A per-machine install under Program Files cannot store settings next to the
+// exe; fall back to LocalAppData so both install shapes behave the same.
+var cfgPath = File.Exists(fallbackCfgPath) ? fallbackCfgPath
+    : CanWriteDirectory(AppContext.BaseDirectory) ? portableCfgPath : fallbackCfgPath;
 var cfgLock = new object();
 Dictionary<string, string> LoadCfg()
 {
@@ -164,11 +181,23 @@ if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
     try { ref2Device = FindAny(ref2Sub); }   // ref2 可为播放设备回采或另一只麦克风(噪声参考)
     catch { Console.WriteLine("  (ref2 not found, single-ref)"); }
 }
-var outDevice = Find(DataFlow.Render, outSub);
+MMDevice outDevice;
+var cableMissing = false;
+try
+{
+    outDevice = Find(DataFlow.Render, outSub);
+}
+catch (Exception) when (outSub.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+{
+    // The default target is VB-CABLE. Without it the app must still start and
+    // tell the user what is missing instead of dying in a hidden console.
+    cableMissing = true;
+    outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+}
 cfg["mic"] = micDevice.FriendlyName;   // 固化本次解析结果,后续系统默认变化不影响
 cfg["ref"] = refDevice.FriendlyName;
 cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
-cfg["out"] = outDevice.FriendlyName;
+if (!cableMissing) cfg["out"] = outDevice.FriendlyName;   // keep CABLE as the target for the next launch
 SaveCfg();
 
 // ── engine / mode management ─────────────────────────────────────────
@@ -563,7 +592,10 @@ object BuildStatus()
         },
         models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
         autostart = GetAutostart(),
-        hint = Volatile.Read(ref paused) != 0
+        cableMissing,
+        hint = cableMissing
+            ? "还差一步：没有找到 VB-CABLE 虚拟声卡。点上方「一键安装虚拟声卡」，装完重启电脑，语音软件里就能选到 CABLE Output。"
+            : Volatile.Read(ref paused) != 0
             ? "已暂停：现在不采集也不输出声音，点右上角「恢复处理与输出」就能继续。"
             : $"打开 QQ 或游戏语音，把「麦克风」选成 CABLE Output；声音继续从「{ShortName(refName)}」播放，就能一边外放一边消除回声。"
     };
@@ -603,6 +635,68 @@ if (listener == null) throw new Exception("cannot bind HTTP listener (8765-8774)
 var indexHtml = Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html");
 var apiToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 var obsPlugins = new ObsPluginManager();
+
+// ── VB-CABLE helper: an unmodified official package, verified by hash ───
+const string VbCableUrl = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip";
+const string VbCableSha256 = "B950E39F01AF1D04EA623C8F6D8EB9B6EA5C477C637295FABF20631C85116BFB";
+var vbCableLock = new object();
+var vbCableCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "VbCable");
+
+string EnsureVbCableSetup()
+{
+    var bundled = Path.Combine(AppContext.BaseDirectory, "vendor", "VBCABLE", "VBCABLE_Setup_x64.exe");
+    if (File.Exists(bundled)) return bundled;
+
+    var setup = Path.Combine(vbCableCache, "VBCABLE_Setup_x64.exe");
+    if (File.Exists(setup)) return setup;
+
+    Directory.CreateDirectory(vbCableCache);
+    var zip = Path.Combine(vbCableCache, "VBCABLE_Driver_Pack45.zip");
+    using (var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) })
+        File.WriteAllBytes(zip, client.GetByteArrayAsync(VbCableUrl).GetAwaiter().GetResult());
+    var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(zip)));
+    if (!hash.Equals(VbCableSha256, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException("下载的 VB-CABLE 安装包校验失败，已停止安装。");
+    ZipFile.ExtractToDirectory(zip, vbCableCache, overwriteFiles: true);
+    if (!File.Exists(setup)) throw new InvalidOperationException("VB-CABLE 安装文件不完整。");
+    return setup;
+}
+
+(bool Ok, string Message, bool Reboot) InstallVbCable()
+{
+    lock (vbCableLock)
+    {
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10)) return (false, "仅支持 Windows 10 及以上。", false);
+        try
+        {
+            var setup = EnsureVbCableSetup();
+            using var process = Process.Start(new ProcessStartInfo(setup)
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                Arguments = "-i -h",
+                WorkingDirectory = Path.GetDirectoryName(setup)!,
+            });
+            if (process == null) return (false, "无法启动 VB-CABLE 安装程序。", false);
+            if (!process.WaitForExit(180_000))
+            {
+                return (false, "VB-CABLE 安装超时，请到官网手动安装。", false);
+            }
+            return process.ExitCode is 0 or 3010
+                ? (true, "虚拟声卡已安装。请重启电脑，重启后会自动找到 CABLE Output。", true)
+                : (false, $"VB-CABLE 安装程序返回代码 {process.ExitCode}，请到官网手动安装。", false);
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            return (false, "已取消管理员授权，虚拟声卡没有安装。", false);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[vbcable] {ex}");
+            return (false, $"安装失败：{ex.Message}", false);
+        }
+    }
+}
 
 var httpThread = new Thread(() =>
 {
@@ -785,6 +879,16 @@ var httpThread = new Thread(() =>
                             ctx.Response.ContentType = "application/json; charset=utf-8";
                             ctx.Response.OutputStream.Write(bytes);
                         }
+                        break;
+                    }
+                    case "/api/vbcable/install":
+                    {
+                        var (ok, message, reboot) = InstallVbCable();
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                            new { ok, message, reboot }, jsonOpts);
+                        ctx.Response.StatusCode = ok ? 200 : 500;
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        ctx.Response.OutputStream.Write(bytes);
                         break;
                     }
                     case "/api/sound-settings":

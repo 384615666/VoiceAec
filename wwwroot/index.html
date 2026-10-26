@@ -1711,6 +1711,148 @@
     outline-offset: 2px;
   }
 
+  /* ── 虚拟声卡引导 ─────────────────────────────────────────── */
+
+  .cable-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 6px 0 2px;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(232, 184, 75, .55);
+    border-radius: 16px;
+    background: linear-gradient(135deg, #FFF9E9, #FFF2F4 58%, #F1FBFF);
+    box-shadow: 0 10px 24px rgba(232, 184, 75, .14);
+  }
+
+  .cable-banner[hidden] {
+    display: none;
+  }
+
+  .cable-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: #9A7B24;
+    background: linear-gradient(135deg, #FFF6D9, #FFEDD9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+  }
+
+  .cable-icon .icon {
+    width: 19px;
+    height: 19px;
+    stroke-width: 1.9;
+  }
+
+  .cable-copy {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+
+  .cable-copy strong {
+    display: block;
+    color: #8A5E00;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+  }
+
+  .cable-copy p {
+    margin: 3px 0 0;
+    color: var(--ink-soft);
+    font-size: 10.5px;
+    line-height: 1.55;
+  }
+
+  .cable-copy .cable-note {
+    color: var(--green-deep);
+    font-weight: 700;
+  }
+
+  .cable-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+  }
+
+  .cable-install {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 15px;
+    border: 1px solid rgba(232, 184, 75, .5);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #F6C24A, #F2A83C);
+    color: #4A3500;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(232, 184, 75, .28);
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+  }
+
+  .cable-install:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(232, 184, 75, .34);
+    filter: brightness(1.03);
+  }
+
+  .cable-install:active:not(:disabled) {
+    transform: translateY(0) scale(.99);
+  }
+
+  .cable-install:disabled {
+    cursor: progress;
+    opacity: .72;
+    box-shadow: none;
+  }
+
+  .cable-install:focus-visible,
+  .cable-link:focus-visible,
+  .cable-recheck:focus-visible {
+    outline: 2px solid rgba(232, 184, 75, .55);
+    outline-offset: 2px;
+  }
+
+  .cable-link,
+  .cable-recheck {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid rgba(142, 124, 224, .2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .8);
+    color: var(--violet-deep);
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+  }
+
+  .cable-link:hover,
+  .cable-recheck:hover:not(:disabled) {
+    background: #FFFFFF;
+    border-color: rgba(142, 124, 224, .34);
+    transform: translateY(-1px);
+  }
+
+  .cable-recheck:disabled {
+    cursor: progress;
+    opacity: .6;
+  }
+
   /* ── OBS 插件设置 ─────────────────────────────────────────── */
 
   .obs-dialog {
@@ -2765,6 +2907,22 @@
     </div>
   </header>
 
+  <section class="cable-banner" id="cableBanner" aria-live="polite" hidden>
+    <span class="cable-icon" aria-hidden="true">
+      <svg class="icon"><use href="#i-speaker"></use></svg>
+    </span>
+    <div class="cable-copy">
+      <strong>还差一步：安装虚拟声卡</strong>
+      <p>VoiceAec 需要 VB-CABLE 把处理后的声音送给 QQ / 游戏。它由 VB-Audio 免费提供（捐赠软件），安装需要管理员权限，装完请重启电脑。</p>
+      <p class="cable-note" id="cableNote" hidden></p>
+    </div>
+    <div class="cable-actions">
+      <button class="cable-install" id="cableInstall" type="button">一键安装虚拟声卡</button>
+      <a class="cable-link" id="cableDownload" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">官网下载</a>
+      <button class="cable-recheck" id="cableRecheck" type="button">重新检测</button>
+    </div>
+  </section>
+
   <section class="levels" aria-label="实时音频电平">
 
     <div class="level-grid" id="levelGrid">
@@ -3396,6 +3554,7 @@
   const SWITCH_TIMEOUT_MS = 10000;
   const AUTOSTART_TIMEOUT_MS = 6000;
   const DEVICE_TIMEOUT_MS = 15000;
+  const VB_CABLE_TIMEOUT_MS = 240000;
   const DEVICE_RETRY_MS = 10000;
   const DEVICE_KEYS = ['mic', 'ref', 'out'];
   const REF2_KEY = 'ref2';
@@ -3414,6 +3573,8 @@
     obsState: $('obsPluginState'), obsTarget: $('obsPluginTarget'), obsInstall: $('obsPluginInstall'),
     obsUninstall: $('obsPluginUninstall'), obsRefresh: $('obsPluginRefresh'),
     brandAbout: $('brandAbout'), brandIcon: $('brandIcon'), soundSettings: $('soundSettings'),
+    cableBanner: $('cableBanner'), cableInstall: $('cableInstall'), cableNote: $('cableNote'),
+    cableRecheck: $('cableRecheck'),
     aboutDialog: $('aboutDialog'), aboutClose: $('aboutClose'), aboutLogo: $('aboutLogo'),
     aboutVersion: $('aboutVersion'),
     modeBadge: $('modeBadge'),
@@ -3549,6 +3710,7 @@
     paused: false,
     pausePending: false,
     panelVisible: !document.hidden,
+    cableBusy: false,
     pollTimer: 0,
     obsTimer: 0,
     obsFetching: false,
@@ -4635,8 +4797,42 @@
     updateStats(data);
     updateHint(data.hint);
     updateAutostartState(data.autostart);
+    updateCableBanner(data.cableMissing);
     refreshControls();
     maybeRetryDevices();
+  }
+
+  function updateCableBanner(missing) {
+    const show = missing === true;
+    els.cableBanner.hidden = !show;
+    if (show) els.cableInstall.disabled = state.cableBusy;
+  }
+
+  async function installVbCable() {
+    if (state.cableBusy) return;
+    state.cableBusy = true;
+    const label = els.cableInstall.textContent;
+    els.cableInstall.disabled = true;
+    els.cableRecheck.disabled = true;
+    els.cableInstall.textContent = '正在安装…';
+    try {
+      const response = await fetchWithTimeout('/api/vbcable/install', {
+        method: 'POST', headers: { Accept: 'application/json' }
+      }, VB_CABLE_TIMEOUT_MS);
+      const data = await response.json();
+      showToast(data.message || (data.ok ? '安装完成，请重启电脑。' : '安装未完成'), data.ok ? 'success' : 'error');
+      if (data.ok) {
+        els.cableNote.hidden = false;
+        setText(els.cableNote, '已安装完成，重启电脑后虚拟声卡会自动出现。');
+      }
+    } catch (error) {
+      showToast(`安装未完成：${error.message || '请到官网手动安装'}`, 'error');
+    } finally {
+      state.cableBusy = false;
+      els.cableInstall.disabled = false;
+      els.cableRecheck.disabled = false;
+      els.cableInstall.textContent = label;
+    }
   }
 
   async function openSoundSettings() {
@@ -4987,6 +5183,8 @@
   els.aboutClose.addEventListener('click', () => els.aboutDialog.close());
   if (els.aboutLogo && els.brandIcon) els.aboutLogo.src = els.brandIcon.src;
   els.soundSettings.addEventListener('click', () => { void openSoundSettings(); });
+  els.cableInstall.addEventListener('click', () => { void installVbCable(); });
+  els.cableRecheck.addEventListener('click', () => { void pollStatus(); });
   window.addEventListener('voiceaec:about', () => els.aboutDialog.showModal());
 
   function setPanelVisible(visible) {

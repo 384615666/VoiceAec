@@ -61,6 +61,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
+Name: "vbcable"; Description: "安装 VB-CABLE 虚拟声卡（推荐；VB-Audio 捐赠软件 www.vb-cable.com，装完需重启）"; GroupDescription: "必需组件:"; Flags: checkedonce; Check: VbCableAvailable
 
 [Files]
 ; Runtime, models, panel and the OBS plugin payload. A machine-specific
@@ -81,6 +82,42 @@ Type: files; Name: "{app}\voiceaec.json"
 Type: files; Name: "{app}\*.log"
 
 [Code]
+var
+  VbCableRan: Boolean;
+
+function VbCableAvailable: Boolean;
+begin
+  Result := FileExists('{#SourceDir}\vendor\VBCABLE\VBCABLE_Setup_x64.exe');
+end;
+
+function NeedRestart(): Boolean;
+begin
+  Result := VbCableRan;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssPostInstall) and WizardIsTaskSelected('vbcable') and VbCableAvailable then
+  begin
+    // Run VB-Audio's own, unmodified setup elevated. "-i -h" installs silently;
+    // SW_SHOWNORMAL keeps the official window usable if a switch is rejected.
+    if ShellExec('runas', ExpandConstant('{app}\vendor\VBCABLE\VBCABLE_Setup_x64.exe'),
+      '-i -h', ExpandConstant('{app}\vendor\VBCABLE'), SW_SHOWNORMAL,
+      ewWaitUntilTerminated, ResultCode) then
+    begin
+      VbCableRan := True;
+      if ResultCode <> 0 then
+        MsgBox('VB-CABLE 安装程序返回代码 ' + IntToStr(ResultCode) +
+          '。可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
+    end
+    else
+      MsgBox('未能启动 VB-CABLE 安装程序（可能取消了管理员授权）。' +
+        '可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
