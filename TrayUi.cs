@@ -40,6 +40,7 @@ internal enum TrayGlyph
     Autostart,
     Exit,
     Dot,
+    Info,
 }
 
 internal static class TrayFonts
@@ -264,6 +265,11 @@ internal static class TrayDrawing
                     });
                     g.FillPath(brush, arrow);
                 }
+                break;
+            case TrayGlyph.Info:
+                g.DrawEllipse(pen, 3.2f, 3.2f, 11.6f, 11.6f);
+                g.FillEllipse(brush, 8.15f, 6.1f, 1.7f, 1.7f);
+                g.DrawLine(pen, 9.0f, 9.2f, 9.0f, 13.2f);
                 break;
             case TrayGlyph.Dot:
                 using (var halo = new SolidBrush(Color.White))
@@ -608,6 +614,7 @@ internal sealed class TrayMenu : ContextMenuStrip
     public event Action<string>? ModeRequested;
     public event Action<bool>? AutostartRequested;
     public event Action? QuitRequested;
+    public event Action? AboutRequested;
 
     public TrayMenu(Func<TrayMenuState> stateSource) : base()
     {
@@ -649,6 +656,10 @@ internal sealed class TrayMenu : ContextMenuStrip
         autostartItem.ShowSwitch = true;
         autostartItem.Click += (_, _) => AutostartRequested?.Invoke(!autostartItem.SwitchOn);
         Items.Add(autostartItem);
+
+        var about = Row("关于 VoiceAec", TrayGlyph.Info, TrayPalette.Violet);
+        about.Click += (_, _) => AboutRequested?.Invoke();
+        Items.Add(about);
 
         Items.Add(Separator());
 

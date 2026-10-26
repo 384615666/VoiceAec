@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>VoiceAec</AssemblyName>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <RootNamespace>VoiceAec</RootNamespace>
     <Product>VoiceAec</Product>
     <AssemblyTitle>VoiceAec · 回声消除麦克风</AssemblyTitle>

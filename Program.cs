@@ -532,9 +532,11 @@ object BuildStatus()
     {
         micName = currentMic; refName = currentRef; ref2Name = currentRef2; outName = currentOut;
     }
+    var appVersion = Assembly.GetEntryAssembly()!.GetName().Version?.ToString(3) ?? "dev";
     return new
     {
         ok = true,
+        version = appVersion,
         mode = curMode,
         switching = Volatile.Read(ref switching),
         paused = Volatile.Read(ref paused) != 0,
@@ -893,6 +895,20 @@ var trayThread = new Thread(() =>
         catch (Exception ex) { Console.Error.WriteLine($"[panel] visibility: {ex.Message}"); }
     }
 
+    async Task OpenAboutAsync()
+    {
+        try
+        {
+            for (var i = 0; i < 30 && panelWebView?.CoreWebView2 == null; i++)
+                await Task.Delay(100);
+            var core = panelWebView?.CoreWebView2;
+            if (core == null) return;
+            await Task.Delay(250);   // let ShowPanel resume a suspended WebView2 first
+            await core.ExecuteScriptAsync("window.dispatchEvent(new Event('voiceaec:about'))");
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"[panel] about: {ex.Message}"); }
+    }
+
     void ShowPanel()
     {
         Console.WriteLine("[panel] showing control panel");
@@ -932,6 +948,14 @@ var trayThread = new Thread(() =>
                     wv.ZoomFactor = 1.0;
                     wv.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                     wv.CoreWebView2.Settings.IsZoomControlEnabled = false;
+                    wv.CoreWebView2.NewWindowRequested += (_, e2) =>
+                    {
+                        // About-page links (target=_blank) go to the default browser.
+                        e2.Handled = true;
+                        if (e2.Uri?.StartsWith("https://", StringComparison.Ordinal) != true) return;
+                        try { Process.Start(new ProcessStartInfo(e2.Uri) { UseShellExecute = true }); }
+                        catch (Exception ex) { Console.Error.WriteLine($"[panel] open link: {ex.Message}"); }
+                    };
                     wv.CoreWebView2.WebMessageReceived += (_, e2) =>
                     {
                         if (e2.TryGetWebMessageAsString() == "close-panel")
@@ -1005,6 +1029,11 @@ var trayThread = new Thread(() =>
         catch (Exception ex) { icon.ShowBalloonTip(2000, "VoiceAec", $"设置失败：{ex.Message}", ToolTipIcon.Warning); }
     };
     menu.QuitRequested += () => shutdown.Cancel();
+    menu.AboutRequested += () =>
+    {
+        ShowPanel();
+        _ = OpenAboutAsync();
+    };
     menu.Opening += (_, _) =>
     {
         string current;
