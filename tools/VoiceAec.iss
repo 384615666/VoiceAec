@@ -39,7 +39,7 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 UsePreviousAppDir=yes
 UsePreviousLanguage=yes
-UsePreviousTasks=yes
+UsePreviousTasks=no
 OutputDir={#OutputDir}
 OutputBaseFilename=VoiceAec-v{#AppVersion}-setup-x64
 SetupIconFile=..\assets\VoiceAec.ico
@@ -48,6 +48,8 @@ UninstallDisplayName={#AppName}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile=installer\wizard-side-100.bmp,installer\wizard-side-125.bmp,installer\wizard-side-150.bmp,installer\wizard-side-200.bmp
+WizardSmallImageFile=installer\wizard-small-100.bmp,installer\wizard-small-125.bmp,installer\wizard-small-150.bmp,installer\wizard-small-200.bmp
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 CloseApplications=no
@@ -60,8 +62,8 @@ Name: "chinesesimplified"; MessagesFile: "languages\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
-Name: "vbcable"; Description: "安装 VB-CABLE 虚拟声卡（推荐；VB-Audio 捐赠软件 www.vb-cable.com，装完需重启）"; GroupDescription: "必需组件:"; Flags: checkedonce; Check: VbCableAvailable
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "vbcable"; Description: "安装 VB-CABLE 虚拟声卡（必装，装完需重启）"; GroupDescription: "必需组件:"; Check: VbCableAvailable
 
 [Files]
 ; Runtime, models, panel and the OBS plugin payload. A machine-specific
@@ -84,6 +86,23 @@ Type: files; Name: "{app}\*.log"
 [Code]
 var
   VbCableRan: Boolean;
+  VbCableNote: TNewStaticText;
+
+procedure InitializeWizard;
+begin
+  VbCableNote := TNewStaticText.Create(WizardForm);
+  VbCableNote.Parent := WizardForm.TasksList.Parent;
+  VbCableNote.Left := WizardForm.TasksList.Left;
+  VbCableNote.Width := VbCableNote.Parent.ClientWidth - VbCableNote.Left - ScaleX(12);
+  VbCableNote.Height := ScaleY(66);
+  VbCableNote.Top := WizardForm.TasksList.Top + WizardForm.TasksList.Height - ScaleY(82);
+  VbCableNote.WordWrap := True;
+  VbCableNote.Font.Color := $00746B7E;
+  VbCableNote.Caption :=
+    'VB-CABLE 由 VB-Audio 免费提供（donationware，欢迎赞助）。' + #13#10 +
+    '来源 www.vb-cable.com；VoiceAec 仅分发未经修改的官方安装包，' + #13#10 +
+    '卸载 VoiceAec 不会移除该驱动。';
+end;
 
 function VbCableAvailable: Boolean;
 begin
@@ -93,6 +112,23 @@ end;
 function NeedRestart(): Boolean;
 begin
   Result := VbCableRan;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpFinished then
+  begin
+    if VbCableRan then
+      WizardForm.FinishedLabel.Caption :=
+        'VoiceAec 已安装完成。' + #13#10#13#10 +
+        '虚拟声卡已安装，请重启电脑；重启后才能在外放的同时消除回声，并在语音软件里选中 CABLE Output。' + #13#10#13#10 +
+        '卸载：开始菜单 → VoiceAec → 卸载 VoiceAec，或 Windows「设置 → 应用」。'
+    else
+      WizardForm.FinishedLabel.Caption :=
+        'VoiceAec 已安装完成。' + #13#10#13#10 +
+        '未安装虚拟声卡也能启动，但语音软件里选不到 CABLE Output；可稍后在面板顶部点「一键安装虚拟声卡」。' + #13#10#13#10 +
+        '卸载：开始菜单 → VoiceAec → 卸载 VoiceAec，或 Windows「设置 → 应用」。';
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
