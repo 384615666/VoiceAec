@@ -117,7 +117,7 @@ if (trayMode) noBrowser = true;
 if (!keepConsole && !argsList.Contains("--list"))
     TraySupport.HideConsole();
 
-Console.WriteLine("VoiceAec · 回声消除麦克风");
+Console.WriteLine("VoiceAec");
 Console.WriteLine($"  mic:{micSub}  ref:{refSub} + {ref2Sub}  out:{outSub}  threads:{threads}  mode:{startMode}");
 
 var enumerator = new MMDeviceEnumerator();
@@ -563,7 +563,9 @@ object BuildStatus()
         },
         models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
         autostart = GetAutostart(),
-        hint = Volatile.Read(ref paused) != 0 ? "已暂停并静音：采集、推理和输出均已停止，点击恢复后沿用当前设备与模式。" : $"语音软件里把麦克风选成 CABLE Output；游戏和语音都从「{ShortName(refName)}」播放效果最佳——参考回采正在监听它"
+        hint = Volatile.Read(ref paused) != 0
+            ? "已暂停：现在不采集也不输出声音，点右上角「恢复处理与输出」就能继续。"
+            : $"打开 QQ 或游戏语音，把「麦克风」选成 CABLE Output；声音继续从「{ShortName(refName)}」播放，就能一边外放一边消除回声。"
     };
 }
 
@@ -785,6 +787,26 @@ var httpThread = new Thread(() =>
                         }
                         break;
                     }
+                    case "/api/sound-settings":
+                    {
+                        var ok = true;
+                        string error = "";
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo("ms-settings:sound") { UseShellExecute = true });
+                        }
+                        catch (Exception ex)
+                        {
+                            ok = false;
+                            error = ex.Message;
+                        }
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                            ok ? (object)new { ok } : new { ok, error }, jsonOpts);
+                        ctx.Response.StatusCode = ok ? 200 : 500;
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        ctx.Response.OutputStream.Write(bytes);
+                        break;
+                    }
                     case "/api/quit":
                     {
                         var bytes = "{\"ok\":true}"u8.ToArray();
@@ -916,7 +938,7 @@ var trayThread = new Thread(() =>
         {
             panelForm = new Form
             {
-                Text = "VoiceAec · 回声消除麦克风",
+                Text = "VoiceAec",
                 StartPosition = FormStartPosition.CenterScreen,
                 ClientSize = new Size(1280, 800),
                 MinimumSize = new Size(960, 640),
@@ -989,7 +1011,7 @@ var trayThread = new Thread(() =>
     using var icon = new NotifyIcon
     {
         Icon = trayIcon,
-        Text = "VoiceAec · 回声消除麦克风",
+        Text = "VoiceAec",
         Visible = true,
     };
     Console.WriteLine("[panel] tray icon ready");
