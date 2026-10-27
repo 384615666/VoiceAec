@@ -172,7 +172,7 @@ var port = int.Parse(Arg("--port", "8765"));
 var noBrowser = argsList.Contains("--nobrowser");
 var trayMode = argsList.Contains("--tray");     // 后台托盘运行：隐藏控制台 + 不开浏览器
 var keepConsole = argsList.Contains("--console"); // 调试：保留控制台窗口
-var paused = argsList.Contains("--start-paused") ? 1 : 0;
+var paused = argsList.Contains("--start-paused") || cfg.GetValueOrDefault("paused") == "1" ? 1 : 0;
 using var shutdown = new CancellationTokenSource();
 using var audioEnabled = new ManualResetEventSlim(paused == 0);
 if (trayMode) noBrowser = true;
@@ -219,31 +219,81 @@ MMDevice? FindAny(string substring)
     return caps.Count > 0 ? caps[0] : throw new Exception($"no active device matching '{substring}'");
 }
 
-var micDevice = Find(DataFlow.Capture, micSub);
-var refDevice = FindAny(refSub);   // 主参考也允许麦克风(如近讲麦场景);默认仍是播放设备
+var micConfigured = HasArg("--mic") || cfg.ContainsKey("mic");
+var refConfigured = HasArg("--ref") || cfg.ContainsKey("ref");
+var outConfigured = HasArg("--out") || cfg.ContainsKey("out");
+var deviceNotices = new List<string>();
+
+MMDevice micDevice;
+var micFallback = false;
+try { micDevice = Find(DataFlow.Capture, micSub); }
+catch (Exception)
+{
+    micFallback = true;
+    micDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+    if (micConfigured)
+        deviceNotices.Add($"麦克风「{ShortName(micSub)}」不在了，已临时改用「{ShortName(micDevice.FriendlyName)}」；插回后重启即可恢复。");
+}
+
+MMDevice refDevice;
+var refFallback = false;
+try { refDevice = FindAny(refSub); }   // 主参考也允许麦克风(如近讲麦场景);默认仍是播放设备
+catch (Exception)
+{
+    refFallback = true;
+    refDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+    if (refConfigured)
+        deviceNotices.Add($"参考回采「{ShortName(refSub)}」不在了，已临时改用「{ShortName(refDevice.FriendlyName)}」；插回后重启即可恢复。");
+}
+
 MMDevice? ref2Device = null;
 if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
 {
     try { ref2Device = FindAny(ref2Sub); }   // ref2 可为播放设备回采或另一只麦克风(噪声参考)
     catch { Console.WriteLine("  (ref2 not found, single-ref)"); }
 }
+
 MMDevice outDevice;
 var cableMissing = false;
+var outFallback = false;
 try
 {
     outDevice = Find(DataFlow.Render, outSub);
 }
-catch (Exception) when (outSub.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+catch (Exception)
 {
-    // The default target is VB-CABLE. Without it the app must still start and
-    // tell the user what is missing instead of dying in a hidden console.
-    cableMissing = true;
-    outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+    if (outSub.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+    {
+        // VB-CABLE may expose a slightly different FriendlyName after an
+        // update; match the device family before declaring it missing.
+        try
+        {
+            outDevice = Find(DataFlow.Render, "CABLE");
+            outSub = outDevice.FriendlyName;
+        }
+        catch
+        {
+            cableMissing = true;
+            outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        }
+    }
+    else
+    {
+        outFallback = true;
+        outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        if (outConfigured)
+            deviceNotices.Add($"输出设备「{ShortName(outSub)}」不在了，已临时改用「{ShortName(outDevice.FriendlyName)}」。");
+    }
 }
-cfg["mic"] = micDevice.FriendlyName;   // 固化本次解析结果,后续系统默认变化不影响
-cfg["ref"] = refDevice.FriendlyName;
-cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
-if (!cableMissing) cfg["out"] = outDevice.FriendlyName;   // keep CABLE as the target for the next launch
+
+var deviceNotice = string.Join(" ", deviceNotices);
+// Keep the user's saved choice when a device is only temporarily missing, so
+// plugging it back in (or restarting) restores it automatically.
+if (!micFallback) cfg["mic"] = micDevice.FriendlyName;
+if (!refFallback) cfg["ref"] = refDevice.FriendlyName;
+if (ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase) || ref2Device != null)
+    cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
+if (!cableMissing && !outFallback) cfg["out"] = outDevice.FriendlyName;
 SaveCfg();
 
 // ── engine / mode management ─────────────────────────────────────────
@@ -259,11 +309,13 @@ var modeSwitchLock = new object();
 
 bool ModelExists(string m) => m == "off" || ModelPath(m) != null;
 
-void PersistMode(string requested)
+void PersistKey(string key, string value)
 {
-    lock (cfgLock) cfg["model"] = requested;
+    lock (cfgLock) cfg[key] = value;
     SaveCfg();
 }
+
+void PersistMode(string requested) => PersistKey("model", requested);
 
 string SwitchModel(string requested, bool persist = true)
 {
@@ -386,7 +438,7 @@ void ClearAudioBuffers()
     Interlocked.Exchange(ref refActiveTick, 0);
 }
 
-string SetPaused(bool value)
+string SetPaused(bool value, bool persist = true)
 {
     lock (devSwitchLock)
     {
@@ -401,6 +453,7 @@ string SetPaused(bool value)
             DisposeAudio(refCap); refCap = null;
             DisposeAudio(ref2Cap); ref2Cap = null;
             ClearAudioBuffers();
+            if (persist) PersistKey("paused", "1");
             return "";
         }
 
@@ -419,6 +472,7 @@ string SetPaused(bool value)
             micCap = newMic; refCap = newRef; ref2Cap = newRef2; waveOut = newOutput;
             Volatile.Write(ref paused, 0);
             audioEnabled.Set();
+            if (persist) PersistKey("paused", "0");
             return "";
         }
         catch (Exception ex)
@@ -660,6 +714,8 @@ object BuildStatus()
             ? "还差一步：没有找到 VB-CABLE 虚拟声卡。点上方「一键安装虚拟声卡」，装完重启电脑，语音软件里就能选到 CABLE Output。"
             : Volatile.Read(ref paused) != 0
             ? "已暂停：现在不采集也不输出声音，点右上角「恢复处理与输出」就能继续。"
+            : deviceNotice.Length > 0
+            ? deviceNotice
             : $"打开 QQ 或游戏语音，把「麦克风」选成 CABLE Output；声音继续从「{ShortName(refName)}」播放，就能一边外放一边消除回声。"
     };
 }
@@ -1061,6 +1117,31 @@ var trayThread = new Thread(() =>
     Form? panelForm = null;
     Microsoft.Web.WebView2.WinForms.WebView2? panelWebView = null;
 
+    Rectangle? savedWindow = null;
+    var savedWindowValue = cfg.GetValueOrDefault("window", "");
+    if (!string.IsNullOrEmpty(savedWindowValue))
+    {
+        var parts = savedWindowValue.Split(',');
+        if (parts.Length == 4 &&
+            int.TryParse(parts[0], out var wx) && int.TryParse(parts[1], out var wy) &&
+            int.TryParse(parts[2], out var ww) && int.TryParse(parts[3], out var wh) &&
+            ww >= 640 && wh >= 480)
+        {
+            var candidate = new Rectangle(wx, wy, ww, wh);
+            if (Screen.AllScreens.Any(s => s.WorkingArea.IntersectsWith(candidate)))
+                savedWindow = candidate;
+        }
+    }
+
+    void SaveWindow()
+    {
+        var form = panelForm;
+        if (form == null || form.IsDisposed) return;
+        var bounds = form.WindowState == FormWindowState.Maximized ? form.RestoreBounds : form.Bounds;
+        if (bounds.Width < 640 || bounds.Height < 480) return;
+        PersistKey("window", $"{bounds.X},{bounds.Y},{bounds.Width},{bounds.Height}");
+    }
+
     async void UpdatePanelVisibility()
     {
         var view = panelWebView;
@@ -1107,7 +1188,7 @@ var trayThread = new Thread(() =>
             panelForm = new Form
             {
                 Text = "VoiceAec",
-                StartPosition = FormStartPosition.CenterScreen,
+                StartPosition = savedWindow.HasValue ? FormStartPosition.Manual : FormStartPosition.CenterScreen,
                 ClientSize = new Size(1280, 800),
                 MinimumSize = new Size(960, 640),
                 Icon = TraySupport.AppIcon(64),
@@ -1115,6 +1196,7 @@ var trayThread = new Thread(() =>
                 AutoScaleDimensions = new SizeF(96, 96),
                 AutoScaleMode = AutoScaleMode.Dpi,
             };
+            if (savedWindow.HasValue) panelForm.Bounds = savedWindow.Value;
             Console.WriteLine("[panel] form created");
             var wv = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
             Console.WriteLine("[panel] webview control created");
@@ -1125,6 +1207,7 @@ var trayThread = new Thread(() =>
             panelForm.FormClosing += (_, e) =>
             {
                 if (exiting) return;
+                SaveWindow();
                 e.Cancel = true;                 // 点 X = 缩到系统托盘继续运行
                 panelForm.Hide();
             };
@@ -1149,7 +1232,7 @@ var trayThread = new Thread(() =>
                     wv.CoreWebView2.WebMessageReceived += (_, e2) =>
                     {
                         if (e2.TryGetWebMessageAsString() == "close-panel")
-                            panelForm.BeginInvoke(() => panelForm.Hide());
+                            panelForm.BeginInvoke(() => { SaveWindow(); panelForm.Hide(); });
                     };
                     wv.CoreWebView2.Navigate(panelUrl);
                     wv.CoreWebView2.NavigationCompleted += (_, _) => UpdatePanelVisibility();
@@ -1242,6 +1325,7 @@ var trayThread = new Thread(() =>
         if (instance.Activation.WaitOne(0)) ShowPanel();
         if (!shutdown.IsCancellationRequested) return;
         quitTimer.Stop();
+        SaveWindow();
         exiting = true;
         try { panelForm?.Close(); } catch { }
         icon.Visible = false;
@@ -1261,7 +1345,7 @@ shutdown.Token.WaitHandle.WaitOne();
 
 Console.WriteLine("stopping...");
 try { listener.Stop(); } catch { }
-SetPaused(true);
+SetPaused(true, persist: false);
 proc.Join();
 trayThread.Join(3000);
 lock (engineLock) { engine?.Dispose(); engine = null; }
