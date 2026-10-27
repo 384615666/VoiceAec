@@ -97,7 +97,7 @@
     <nav class="nav-menu" id="navMenu" aria-label="主导航">
       <a href="#features">功能</a>
       <a href="#scenes">场景</a>
-      <a href="#app">界面</a>
+      <a href="#demo">体验</a>
       <a href="#download">下载</a>
       <a href="#faq">常见问题</a>
       <a href="manual.html">使用手册</a>
@@ -156,19 +156,33 @@
       <div class="hero-art">
         <div class="hero-halo" aria-hidden="true"></div>
         <div class="hero-orbit" aria-hidden="true"></div>
-        <div class="hero-window">
-          <img src="images/panel-main.png" alt="VoiceAec v0.4.7 主界面：顶部运行状态，麦克风、参考回采、输出三张电平卡，四种处理模式和底部运行统计" width="1280" height="830" loading="eager" fetchpriority="high" decoding="async">
+        <div class="hero-preview" role="img" aria-label="VoiceAec 控制面板预览：运行中，麦克风、参考回采、输出三路电平，当前均衡模式">
+          <div class="hp-top">
+            <span class="hp-brand"><img src="images/icon-256.png" alt="" width="28" height="28"> <strong>VoiceAec</strong></span>
+            <span class="hp-status"><i aria-hidden="true"></i>运行中</span>
+            <span class="hp-mode">均衡模式</span>
+          </div>
+          <div class="hp-levels">
+            <div class="hp-level hp-mint">
+              <span class="hp-name">麦克风</span>
+              <b>-61.7<small>dB</small></b>
+              <span class="hp-track" aria-hidden="true"><i style="width:68%"></i></span>
+            </div>
+            <div class="hp-level hp-berry">
+              <span class="hp-name">参考回采</span>
+              <b>-32.4<small>dB</small></b>
+              <span class="hp-track" aria-hidden="true"><i style="width:46%"></i></span>
+            </div>
+            <div class="hp-level hp-blue">
+              <span class="hp-name">输出</span>
+              <b>-24.8<small>dB</small></b>
+              <span class="hp-track" aria-hidden="true"><i style="width:55%"></i></span>
+            </div>
+          </div>
+          <div class="hp-foot"><span>本地实时处理</span><span>输出 → CABLE Input</span></div>
         </div>
 
         <span class="float-chip chip-live"><span class="live-dot" aria-hidden="true"></span>本地实时处理</span>
-        <span class="float-chip chip-out">
-          <svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg>
-          输出 → CABLE Input
-        </span>
-        <span class="float-chip chip-tray">
-          <svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg>
-          关窗仍在后台
-        </span>
 
       </div>
     </div>
@@ -191,6 +205,165 @@
           <span class="trust-icon tone-blue"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></span>
           <div><strong>VB-CABLE 一键装</strong><span>虚拟声卡，安装版默认包含</span></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTERACTIVE DEMO -->
+  <section class="section demo-section" id="demo" aria-labelledby="demoTitle">
+    <div class="wrap">
+      <div class="section-head demo-head" data-reveal>
+        <div>
+          <p class="eyebrow">交互原型</p>
+          <h2 id="demoTitle">先点一下，<br>看看控制面板怎么用。</h2>
+        </div>
+        <p class="lead">不用安装，也不用连接音频设备。下面是一个可点击的前端原型：切模式、暂停、开关自启、换设备都会有反馈；真实音频处理请下载 Windows 版。</p>
+      </div>
+
+      <div class="demo-shell" data-reveal>
+        <div class="demo-topline">
+          <span class="demo-badge"><span class="demo-live-dot"></span>交互原型 · 不处理真实音频</span>
+          <a class="demo-manual-link" href="manual.html">看真实界面截图 <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+
+        <div class="demo-panel" id="demoPanel" role="group" aria-label="VoiceAec 控制面板交互原型">
+          <div class="demo-topbar">
+            <div class="demo-brand">
+              <img src="images/icon-256.png" alt="" width="34" height="34" loading="lazy">
+              <div><strong>VoiceAec</strong><span>本地实时音频控制台</span></div>
+            </div>
+
+            <div class="demo-status" id="demoStatus">
+              <span class="demo-status-dot" aria-hidden="true"></span>
+              <span id="demoStatusText">运行中 · 00:12</span>
+            </div>
+            <div class="demo-cpu"><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg><span>CPU <b id="demoCpu">1.4%</b></span></div>
+
+            <div class="demo-actions">
+              <button class="demo-obs" id="demoObs" type="button">OBS 插件</button>
+              <label class="demo-switch" for="demoRef2">
+                <input type="checkbox" id="demoRef2">
+                <span class="demo-switch-track" aria-hidden="true"></span>
+                第二参考
+              </label>
+              <label class="demo-switch" for="demoAutostart">
+                <input type="checkbox" id="demoAutostart" checked>
+                <span class="demo-switch-track" aria-hidden="true"></span>
+                开机自启
+              </label>
+              <span class="demo-mode-badge">当前模式 <b id="demoModeBadge">均衡模式</b></span>
+              <button class="demo-pause" id="demoPause" type="button" aria-pressed="false">暂停并静音</button>
+            </div>
+          </div>
+
+          <div class="demo-levels" id="demoLevels">
+            <article class="demo-level demo-tone-mint" data-demo-level="mic">
+              <div class="demo-level-head">
+                <span class="demo-level-icon"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></span>
+                <div class="demo-level-title"><strong>麦克风</strong><span class="demo-level-pill">输入</span></div>
+                <b class="demo-db" id="demoMicDb">-61.7<span>dB</span></b>
+              </div>
+              <div class="demo-device-wrap">
+                <select class="demo-device" aria-label="选择麦克风设备">
+                  <option>Microphone (USB Audio)</option>
+                  <option>Webcam Microphone</option>
+                  <option>CABLE Output (VB-CABLE)</option>
+                </select>
+              </div>
+              <div class="demo-meter" id="demoMicMeter" aria-hidden="true"></div>
+              <div class="demo-level-foot"><span>缓冲 8 ms</span><span>峰值 -58.8 dB</span></div>
+            </article>
+
+            <article class="demo-level demo-tone-berry" data-demo-level="ref">
+              <div class="demo-level-head">
+                <span class="demo-level-icon"><svg class="icon" aria-hidden="true"><use href="#i-speaker"/></svg></span>
+                <div class="demo-level-title"><strong>参考回采</strong><span class="demo-level-pill">播放中</span></div>
+                <b class="demo-db" id="demoRefDb">-32.4<span>dB</span></b>
+              </div>
+              <div class="demo-device-wrap">
+                <select class="demo-device" aria-label="选择参考回采设备">
+                  <option>耳机 (USB Audio)</option>
+                  <option>扬声器 (Realtek Audio)</option>
+                  <option>CABLE Input (VB-CABLE)</option>
+                </select>
+              </div>
+              <div class="demo-meter" id="demoRefMeter" aria-hidden="true"></div>
+              <div class="demo-level-foot"><span>缓冲 0 ms</span><span>峰值 -28.1 dB</span></div>
+            </article>
+
+            <article class="demo-level demo-tone-blue" data-demo-level="out">
+              <div class="demo-level-head">
+                <span class="demo-level-icon"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></span>
+                <div class="demo-level-title"><strong>输出</strong><span class="demo-level-pill">CABLE</span></div>
+                <b class="demo-db" id="demoOutDb">-24.8<span>dB</span></b>
+              </div>
+              <div class="demo-device-wrap">
+                <select class="demo-device" aria-label="选择输出设备">
+                  <option>CABLE Input (VB-Audio Virtual Cable)</option>
+                  <option>耳机 (USB Audio)</option>
+                </select>
+              </div>
+              <div class="demo-meter" id="demoOutMeter" aria-hidden="true"></div>
+              <div class="demo-level-foot"><span>缓冲 16 ms</span><span>峰值 -20.5 dB</span></div>
+            </article>
+
+            <article class="demo-level demo-tone-violet" data-demo-level="ref2" id="demoRef2Card" hidden>
+              <div class="demo-level-head">
+                <span class="demo-level-icon"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></span>
+                <div class="demo-level-title"><strong>第二参考</strong><span class="demo-level-pill">可选</span></div>
+                <b class="demo-db" id="demoRef2Db">-∞<span>dB</span></b>
+              </div>
+              <div class="demo-device-wrap">
+                <select class="demo-device" aria-label="选择第二参考设备">
+                  <option>靠近噪声源的麦克风</option>
+                  <option>另一个播放设备</option>
+                </select>
+              </div>
+              <div class="demo-meter" id="demoRef2Meter" aria-hidden="true"></div>
+              <div class="demo-level-foot"><span>缓冲 0 ms</span><span>未选择时关闭</span></div>
+            </article>
+          </div>
+
+          <div class="demo-modes">
+            <div class="demo-subhead"><strong>处理模式</strong><span>点击卡片切换</span></div>
+            <div class="demo-mode-grid" id="demoModeGrid">
+              <button class="demo-mode" type="button" data-mode="off" aria-pressed="false">
+                <span class="demo-mode-dot" style="--dot:#e8b84b"></span><strong>关闭（直通）</strong>
+                <small>原声转发，最省资源</small>
+              </button>
+              <button class="demo-mode is-active" type="button" data-mode="v1.2" aria-pressed="true">
+                <span class="demo-mode-dot" style="--dot:var(--mint)"></span><strong>均衡模式</strong>
+                <small>推荐 · 日常外放</small>
+              </button>
+              <button class="demo-mode" type="button" data-mode="v1.3" aria-pressed="false">
+                <span class="demo-mode-dot" style="--dot:var(--berry)"></span><strong>强力模式</strong>
+                <small>大音量 / 嘈杂环境</small>
+              </button>
+              <button class="demo-mode" type="button" data-mode="v1.4" aria-pressed="false">
+                <span class="demo-mode-dot" style="--dot:var(--blue)"></span><strong>纯回声消除</strong>
+                <small>近场 / 房间回音</small>
+              </button>
+            </div>
+          </div>
+
+          <div class="demo-stats">
+            <div><span>处理时长</span><b id="demoUptime">00:12</b></div>
+            <div><span>累计推理</span><b id="demoHops">742</b><em>跳</em></div>
+            <div><span>每秒推理</span><b id="demoRate">62.5</b><em>跳/秒</em></div>
+            <div><span>参考静默</span><b id="demoSilent">12</b><em>跳</em></div>
+            <div><span>输出补零</span><b id="demoUnderruns">8</b><em>次</em></div>
+            <div><span>降级直通</span><b id="demoFallback">0</b><em>次</em></div>
+          </div>
+        </div>
+
+        <div class="demo-foot">
+          <p>按钮和开关只在这个页面里生效，不会读取麦克风、不会写入系统设置。完整功能请下载 Windows 版。</p>
+          <div class="demo-foot-actions">
+            <a class="btn btn-primary btn-sm" href="#download">下载 Windows 版</a>
+            <a class="text-link" href="manual.html">查看使用手册 <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+          </div>
+        </div>
+        <div class="demo-toast" id="demoToast" role="status" aria-live="polite"></div>
       </div>
     </div>
   </section>
@@ -371,151 +544,6 @@
             <span class="obs-node"><svg class="icon"><use href="#i-film"/></svg>直播 / 录制</span>
           </div>
         </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- APP TOUR -->
-  <section class="section app dark-band" id="app">
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <div>
-          <p class="eyebrow">界面</p>
-          <h2>一屏之内，把声音看明白。</h2>
-        </div>
-        <p class="lead">三张电平卡告诉你声音从哪来、去了哪；模式、统计和<span class="nowrap">后台开关</span>都在手边。</p>
-      </div>
-
-      <div class="tour-tabs" role="tablist" aria-label="产品界面预览">
-        <button class="tour-tab" id="tab-panel" type="button" role="tab" aria-selected="true" aria-controls="panel-panel" tabindex="0">
-          <span class="tour-num">01</span>主面板
-        </button>
-        <button class="tour-tab" id="tab-devices" type="button" role="tab" aria-selected="false" aria-controls="panel-devices" tabindex="-1">
-          <span class="tour-num">02</span>设备切换
-        </button>
-        <button class="tour-tab" id="tab-paused" type="button" role="tab" aria-selected="false" aria-controls="panel-paused" tabindex="-1">
-          <span class="tour-num">03</span>暂停状态
-        </button>
-        <button class="tour-tab" id="tab-obs" type="button" role="tab" aria-selected="false" aria-controls="panel-obs" tabindex="-1">
-          <span class="tour-num">04</span>OBS 插件
-        </button>
-        <button class="tour-tab" id="tab-about" type="button" role="tab" aria-selected="false" aria-controls="panel-about" tabindex="-1">
-          <span class="tour-num">05</span>关于与局域网
-        </button>
-      </div>
-
-      <div class="tour-panels">
-        <div class="tour-panel" id="panel-panel" role="tabpanel" aria-labelledby="tab-panel" tabindex="0">
-          <div class="tour-panel-grid">
-            <figure class="tour-figure">
-              <div class="tour-shot">
-                <img src="images/panel-main.png" alt="VoiceAec 主面板：三张电平卡、四种处理模式和六项运行统计" width="1280" height="830" loading="lazy" decoding="async">
-              </div>
-              <figcaption>主面板 · v0.4.7 实际界面</figcaption>
-            </figure>
-            <div class="tour-meta">
-              <span class="tour-tag">主面板</span>
-              <h3>从输入到输出，一眼看完</h3>
-              <p>三张电平卡分别对应麦克风、参考回采和输出。参考回采是“扬声器正在放什么”，它是回声消除的依据。</p>
-              <ul class="tour-points">
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>麦克风、参考回采、输出三张电平卡</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>四种模式热切换，绿色是当前模式</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>底部统计：每秒推理正常约 62.5 跳</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="tour-panel" id="panel-devices" role="tabpanel" aria-labelledby="tab-devices" tabindex="0" hidden>
-          <div class="tour-panel-grid">
-            <figure class="tour-figure">
-              <div class="tour-shot">
-                <img src="images/device-menu-crop.png" alt="麦克风设备下拉菜单：当前设备打勾，右侧显示可选设备数量" width="820" height="550" loading="lazy" decoding="async">
-              </div>
-              <figcaption>设备菜单 · 当前设备打勾</figcaption>
-            </figure>
-            <div class="tour-meta">
-              <span class="tour-tag">设备切换</span>
-              <h3>换设备，不用重启引擎</h3>
-              <p>点设备名打开下拉，当前设备有勾。无需重启音频引擎，即可切换设备；选择还会保存下来，下次启动沿用。</p>
-              <ul class="tour-points">
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>麦克风、参考回采、输出都能单独换</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>切换立即生效，不重启音频引擎</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>选择持久保存在配置里</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="tour-panel" id="panel-paused" role="tabpanel" aria-labelledby="tab-paused" tabindex="0" hidden>
-          <div class="tour-panel-grid">
-            <figure class="tour-figure">
-              <div class="tour-shot">
-                <img src="images/panel-paused.png" alt="VoiceAec 暂停状态：顶栏显示已暂停并静音，按钮变为恢复处理与输出，电平停止" width="1280" height="830" loading="lazy" decoding="async">
-              </div>
-              <figcaption>暂停状态 · 顶栏变为琥珀色</figcaption>
-            </figure>
-            <div class="tour-meta">
-              <span class="tour-tag">暂停状态</span>
-              <h3>暂停并静音，不是退出</h3>
-              <p>顶栏变成琥珀色，采集、推理和输出都停下。恢复时沿用原来的设备和模式，并重置模型状态。</p>
-              <ul class="tour-points">
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>临时离开、省资源时用</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>恢复按钮就在顶栏右侧</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>暂停不持久化，重启后按原设置运行</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="tour-panel" id="panel-obs" role="tabpanel" aria-labelledby="tab-obs" tabindex="0" hidden>
-          <div class="tour-panel-grid">
-            <figure class="tour-figure">
-              <div class="tour-shot">
-                <img src="images/dialog-obs-crop.png" alt="OBS 插件管理弹窗：已由 VoiceAec 安装 0.4.0，提供更新、卸载与刷新状态" width="740" height="430" loading="lazy" decoding="async">
-              </div>
-              <figcaption>OBS 插件管理 · 插件版本 0.4.0</figcaption>
-            </figure>
-            <div class="tour-meta">
-              <span class="tour-tag">OBS 插件</span>
-              <h3>给 OBS 的麦克风加一层 AEC</h3>
-              <p>先完全退出 OBS，再一键安装。装完重启 OBS，在麦克风的音频滤镜里添加 VoiceAec，并选择参考音频源。</p>
-              <ul class="tour-points">
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>支持普通安装版 OBS 64 位</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>滤镜里要选 Reference source</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>不要和桌面端同时处理同一只麦克风</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div class="tour-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about" tabindex="0" hidden>
-          <div class="tour-panel-grid">
-            <figure class="tour-figure">
-              <div class="tour-shot">
-                <img src="images/dialog-about-crop.png" alt="VoiceAec 关于面板：版本 v0.4.7、局域网访问地址与开源链接，图中地址已脱敏" width="640" height="465" loading="lazy" decoding="async">
-              </div>
-              <figcaption>关于面板 · 局域网地址已脱敏</figcaption>
-            </figure>
-            <div class="tour-meta">
-              <span class="tour-tag">关于与局域网</span>
-              <h3>版本、地址和许可，都放在这里</h3>
-              <p>点面板左上角品牌区，或托盘菜单“关于 VoiceAec”。手机、平板打开局域网地址，就能看到同一个面板。</p>
-              <ul class="tour-points">
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>版本号、开源许可与第三方声明</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>局域网面板没有登录密码，只在可信网络使用</li>
-                <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>手机是桌面布局，建议横屏或平板</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <noscript><p class="tour-noscript">界面标签切换需要 JavaScript。完整截图与操作步骤也可以直接看<a href="manual.html">使用手册</a>。</p></noscript>
-
-      <div class="tour-foot">
-        <p>截图来自 v0.4.7 实际界面，系统缩放不同可能略有差异。</p>
-        <a class="dark-link" href="manual.html">查看完整操作说明<svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
       </div>
     </div>
   </section>
@@ -712,18 +740,19 @@
             <li><span class="check-mark"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>只弹一次 UAC（管理员授权），用于虚拟声卡与局域网面板</li>
             <li><span class="check-mark"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></span>桌面快捷方式，可在 Windows 设置里标准卸载</li>
           </ul>
-          <div class="download-actions">
-            <a class="btn btn-primary btn-lg" href="https://github.com/384615666/VoiceAec/releases/download/v0.4.7/VoiceAec-v0.4.7-setup-x64.exe" target="_blank" rel="noopener">
-              下载安装版
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <span class="download-note">装完记得重启，CABLE 设备才会出现。</span>
+          <div class="download-bottom">
+            <div class="download-actions">
+              <a class="btn btn-primary btn-lg" href="https://github.com/384615666/VoiceAec/releases/download/v0.4.7/VoiceAec-v0.4.7-setup-x64.exe" target="_blank" rel="noopener">
+                下载安装版
+                <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+              </a>
+              <span class="download-note">装完记得重启，CABLE 设备才会出现。</span>
+            </div>
+            <code class="file-name">VoiceAec-v0.4.7-setup-x64.exe</code>
           </div>
-          <code class="file-name">VoiceAec-v0.4.7-setup-x64.exe</code>
         </article>
 
-        <div class="download-side">
-          <article class="download-portable" data-reveal>
+        <article class="download-portable" data-reveal>
             <div class="portable-head">
               <span class="download-badge badge-blue">便携</span>
               <span class="portable-platform"><svg class="icon icon-fill" aria-hidden="true"><use href="#i-windows"/></svg>64 位</span>
@@ -735,15 +764,23 @@
               <li>配置保存在 exe 旁的 voiceaec.json</li>
               <li>内置官方 VB-CABLE 安装包，面板可一键安装</li>
               <li>局域网面板可能需要手动授权</li>
+              <li>不写开始菜单和卸载项，换电脑时复制文件夹即可</li>
             </ul>
-            <a class="btn btn-soft download-secondary" href="https://github.com/384615666/VoiceAec/releases/download/v0.4.7/VoiceAec-v0.4.7-win-x64.zip" target="_blank" rel="noopener">
-              下载便携版
-              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
-            </a>
-            <code class="file-name">VoiceAec-v0.4.7-win-x64.zip</code>
+            <div class="portable-folder">
+              <span class="portable-folder-icon"><svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg></span>
+              <div><strong>解压后的文件夹</strong><span>VoiceAec.exe · models · voiceaec.json</span></div>
+            </div>
+            <div class="download-bottom">
+              <a class="btn btn-soft download-secondary" href="https://github.com/384615666/VoiceAec/releases/download/v0.4.7/VoiceAec-v0.4.7-win-x64.zip" target="_blank" rel="noopener">
+                下载便携版
+                <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+              </a>
+              <code class="file-name">VoiceAec-v0.4.7-win-x64.zip</code>
+            </div>
           </article>
+        </div>
 
-          <div class="req-card" data-reveal>
+        <div class="req-card req-wide" data-reveal>
             <h3><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg>系统要求</h3>
             <ul>
               <li><span>系统</span><b>Windows 10 / 11 64 位</b></li>
@@ -752,9 +789,7 @@
               <li><span>虚拟声卡</span><b>VB-CABLE（随包提供）</b></li>
             </ul>
             <p>不支持 32 位系统、macOS 或 Linux。两种版本功能一致，不要同时运行。</p>
-          </div>
         </div>
-      </div>
 
       <p class="fine-print download-fallback">如果直接下载没有反应，可以前往 <a href="https://github.com/384615666/VoiceAec/releases/tag/v0.4.7" target="_blank" rel="noopener">v0.4.7 Release 页</a> 手动选择安装版或便携版。</p>
 
@@ -992,7 +1027,7 @@
         <nav class="footer-col" aria-label="页脚产品导航">
           <p class="footer-col-title">产品</p>
           <a href="#features">功能</a>
-          <a href="#app">界面巡览</a>
+          <a href="#demo">交互原型</a>
           <a href="#modes">处理模式</a>
           <a href="#scenes">使用场景</a>
           <a href="#download">下载</a>

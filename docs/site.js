@@ -253,3 +253,173 @@
     });
   });
 })();
+
+/* Interactive control-panel prototype. It simulates UI state only. */
+(() => {
+  "use strict";
+
+  const panel = document.getElementById("demoPanel");
+  if (!panel) return;
+
+  const $ = (id) => document.getElementById(id);
+  const modeLabels = {
+    off: "关闭（直通）",
+    "v1.2": "均衡模式",
+    "v1.3": "强力模式",
+    "v1.4": "纯回声消除",
+  };
+
+  const state = {
+    paused: false,
+    seconds: 12,
+    hops: 742,
+    silent: 12,
+    underruns: 8,
+    fallback: 0,
+    cpu: 1.4,
+  };
+
+  const levels = [
+    { key: "mic", meter: "demoMicMeter", db: "demoMicDb", base: -60, span: 7 },
+    { key: "ref", meter: "demoRefMeter", db: "demoRefDb", base: -34, span: 6 },
+    { key: "out", meter: "demoOutMeter", db: "demoOutDb", base: -31, span: 6 },
+    { key: "ref2", meter: "demoRef2Meter", db: "demoRef2Db", base: -30, span: 6 },
+  ].map((item) => {
+    const meter = $(item.meter);
+    const bars = [];
+    if (meter) {
+      for (let i = 0; i < 18; i += 1) {
+        const bar = document.createElement("i");
+        meter.appendChild(bar);
+        bars.push(bar);
+      }
+    }
+    return { ...item, bars, dbEl: $(item.db) };
+  });
+
+  const formatTime = (seconds) =>
+    `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+
+  const setDb = (el, value) => {
+    if (!el) return;
+    el.textContent = value;
+    const unit = document.createElement("span");
+    unit.textContent = "dB";
+    el.appendChild(unit);
+  };
+
+  let toastTimer = 0;
+  const toast = (message) => {
+    const el = $("demoToast");
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("is-visible");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => el.classList.remove("is-visible"), 2200);
+  };
+
+  const renderLevels = () => {
+    const paused = state.paused;
+    levels.forEach((level) => {
+      if (level.key === "ref2" && $("demoRef2Card")?.hidden) return;
+      level.bars.forEach((bar, index) => {
+        const wave = Math.sin((Date.now() / 260) + index * 0.7) * 0.5 + 0.5;
+        const intensity = paused ? 0.04 : 0.22 + wave * 0.55 + Math.random() * 0.18;
+        bar.style.height = `${Math.round(8 + intensity * 80)}%`;
+        bar.classList.toggle("on", !paused && intensity > 0.3);
+      });
+      if (paused) {
+        setDb(level.dbEl, "−∞");
+      } else {
+        setDb(level.dbEl, (level.base + Math.random() * level.span).toFixed(1));
+      }
+    });
+  };
+
+  const updateStats = () => {
+    $("demoUptime").textContent = formatTime(state.seconds);
+    $("demoHops").textContent = state.hops.toLocaleString("en-US");
+    $("demoRate").textContent = state.paused ? "—" : "62.5";
+    $("demoSilent").textContent = state.silent.toLocaleString("en-US");
+    $("demoUnderruns").textContent = String(state.underruns);
+    $("demoFallback").textContent = String(state.fallback);
+    $("demoCpu").textContent = `${state.cpu.toFixed(1)}%`;
+    $("demoStatusText").textContent = state.paused
+      ? `已暂停 · 静音 · ${formatTime(state.seconds)}`
+      : `运行中 · ${formatTime(state.seconds)}`;
+  };
+
+  const tick = () => {
+    if (state.paused) return;
+    state.seconds += 1;
+    state.hops += 62 + (Math.random() > 0.5 ? 1 : 0);
+    if (Math.random() > 0.82) state.silent += 1;
+    state.cpu = 1.2 + Math.random() * 0.9;
+    updateStats();
+    renderLevels();
+  };
+
+  let timer = window.setInterval(tick, 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      window.clearInterval(timer);
+      timer = 0;
+    } else if (!timer) {
+      timer = window.setInterval(tick, 1000);
+    }
+  });
+
+  const setPaused = (paused) => {
+    state.paused = paused;
+    panel.classList.toggle("is-paused", paused);
+    const button = $("demoPause");
+    button.textContent = paused ? "恢复处理与输出" : "暂停并静音";
+    button.setAttribute("aria-pressed", String(paused));
+    updateStats();
+    renderLevels();
+    toast(paused ? "已暂停：原型不会处理音频" : "已恢复：继续模拟面板");
+  };
+
+  $("demoPause")?.addEventListener("click", () => setPaused(!state.paused));
+
+  document.querySelectorAll(".demo-mode").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.mode;
+      if (!mode || !modeLabels[mode]) return;
+      document.querySelectorAll(".demo-mode").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      $("demoModeBadge").textContent = modeLabels[mode];
+      toast(`已切换到${modeLabels[mode]}（原型）`);
+    });
+  });
+
+  $("demoRef2")?.addEventListener("change", (event) => {
+    const enabled = event.target.checked;
+    const card = $("demoRef2Card");
+    const grid = $("demoLevels");
+    if (card) card.hidden = !enabled;
+    grid?.classList.toggle("is-four-up", enabled);
+    renderLevels();
+    toast(enabled ? "第二参考已开启（原型）" : "第二参考已关闭（原型）");
+  });
+
+  $("demoAutostart")?.addEventListener("change", (event) => {
+    toast(event.target.checked ? "开机自启已开启（原型）" : "开机自启已关闭（原型）");
+  });
+
+  $("demoObs")?.addEventListener("click", () => {
+    toast("OBS 插件安装只在 Windows 桌面版可用");
+  });
+
+  document.querySelectorAll(".demo-device").forEach((select) => {
+    select.addEventListener("change", () => {
+      toast(`已选择 ${select.value}（原型）`);
+    });
+  });
+
+  updateStats();
+  renderLevels();
+})();
