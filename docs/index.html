@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>VoiceAec · 外放打游戏，对方只听得到你</title>
-  <meta name="description" content="VoiceAec 是 Windows 上的本地实时回声消除工具。麦克风和扬声器回采进入本机神经网络，游戏声音照常外放，QQ、Oopz 与游戏语音里主要留下你的人声。免费开源，v0.4.7。">
+  <title>VoiceAec · 外放打游戏，语音更清楚</title>
+  <meta name="description" content="VoiceAec 在 Windows 本机减少麦克风收进的游戏声和扬声器回声。游戏照常外放，队友更清楚地听到你说话。免费开源，v0.4.7。">
   <meta name="theme-color" content="#fff9f5">
   <meta name="color-scheme" content="light">
   <link rel="canonical" href="https://384615666.github.io/VoiceAec/">
@@ -14,7 +14,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="VoiceAec">
   <meta property="og:locale" content="zh_CN">
-  <meta property="og:title" content="VoiceAec · 外放打游戏，对方只听得到你">
+  <meta property="og:title" content="VoiceAec · 外放打游戏，语音更清楚">
   <meta property="og:description" content="本机神经网络实时消除扬声器回声。游戏声音照常外放，语音里主要是你的声音。Windows 10/11 · v0.4.7 · MIT 开源。">
   <meta property="og:image" content="https://384615666.github.io/VoiceAec/images/og-cover-site.png">
   <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
   <meta property="og:image:alt" content="VoiceAec 本地实时回声消除">
   <meta property="og:url" content="https://384615666.github.io/VoiceAec/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="VoiceAec · 外放打游戏，对方只听得到你">
+  <meta name="twitter:title" content="VoiceAec · 外放打游戏，语音更清楚">
   <meta name="twitter:description" content="本机神经网络实时消除扬声器回声。游戏声音照常外放，语音里主要是你的声音。">
   <meta name="twitter:image" content="https://384615666.github.io/VoiceAec/images/og-cover-site.png">
 
@@ -133,9 +133,9 @@
         <p class="eyebrow hero-eyebrow"><span class="live-dot" aria-hidden="true"></span>Windows 10/11 · v0.4.7 · 本地处理</p>
         <h1>
           <span class="h1-line">外放打游戏，</span>
-          <span class="h1-line h1-accent">对方只听得到你<span class="h1-period">。</span></span>
+          <span class="h1-line h1-accent">语音更清楚<span class="h1-period">。</span></span>
         </h1>
-        <p class="hero-lead">VoiceAec 用本机神经网络把扬声器回声从麦克风里消掉。游戏声音照常外放，语音里主要是你的声音。</p>
+        <p class="hero-lead">VoiceAec 帮你减少麦克风收进的游戏声和扬声器回声。游戏照常外放，队友也能更清楚地听到你说话。</p>
         <div class="hero-actions">
           <a class="btn btn-primary btn-lg" href="#download">
             <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
@@ -160,7 +160,7 @@
           <img src="images/panel-main.png" alt="VoiceAec v0.4.7 主界面：顶部运行状态，麦克风、参考回采、输出三张电平卡，四种处理模式和底部运行统计" width="1280" height="830" loading="eager" fetchpriority="high" decoding="async">
         </div>
 
-        <span class="float-chip chip-live"><span class="live-dot" aria-hidden="true"></span>实时 · 约 62.5 跳/秒</span>
+        <span class="float-chip chip-live"><span class="live-dot" aria-hidden="true"></span>本地实时处理</span>
         <span class="float-chip chip-out">
           <svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg>
           输出 → CABLE Input
@@ -170,26 +170,6 @@
           关窗仍在后台
         </span>
 
-        <div class="hero-live" aria-hidden="true">
-          <div class="hero-live-top">
-            <span class="hero-live-title"><span class="live-dot"></span>实时处理中</span>
-            <span class="hero-live-unit">16 ms / 跳</span>
-          </div>
-          <div class="hero-levels">
-            <div class="hero-level level-mint">
-              <span>麦克风</span>
-              <div class="level-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            </div>
-            <div class="hero-level level-blue">
-              <span>参考回采</span>
-              <div class="level-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            </div>
-            <div class="hero-level level-berry">
-              <span>输出</span>
-              <div class="level-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -220,7 +200,7 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">01 · 为什么</p>
+          <p class="eyebrow">为什么</p>
           <h2>不戴耳机，<br>也不必让队友听你的游戏。</h2>
         </div>
         <p class="lead">扬声器放出来的声音，会绕一圈被麦克风收回去。VoiceAec 在这条回路上加了一层本机处理。</p>
@@ -288,8 +268,8 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">02 · 能力</p>
-          <h2>不只是滤镜，<br>是一条完整的本机音频链路。</h2>
+          <p class="eyebrow">能力</p>
+          <h2>从麦克风到语音软件，<br>全程本地处理。</h2>
         </div>
         <p class="lead">从麦克风采集、神经网络推理到虚拟声卡输出，整条链路都在你自己的电脑上完成。</p>
       </div>
@@ -321,7 +301,7 @@
             <span class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></span>
             <span class="feature-tag">四种模式</span>
           </div>
-          <h3>点一下，立刻换挡</h3>
+          <h3>随时切换处理模式</h3>
           <p>从直通到强力，处理强度和 CPU 占用自己选，不需要重启引擎。</p>
           <ul class="mini-modes">
             <li><span class="mini-dot dot-amber"></span>关闭直通<small>OFF</small></li>
@@ -400,7 +380,7 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">03 · 界面</p>
+          <p class="eyebrow">界面</p>
           <h2>一屏之内，把声音看明白。</h2>
         </div>
         <p class="lead">三张电平卡告诉你声音从哪来、去了哪；模式、统计和<span class="nowrap">后台开关</span>都在手边。</p>
@@ -457,7 +437,7 @@
             <div class="tour-meta">
               <span class="tour-tag">设备切换</span>
               <h3>换设备，不用重启引擎</h3>
-              <p>点设备名打开下拉，当前设备有勾。选中后立刻生效，声音不会中断；选择还会保存下来，下次启动沿用。</p>
+              <p>点设备名打开下拉，当前设备有勾。无需重启音频引擎，即可切换设备；选择还会保存下来，下次启动沿用。</p>
               <ul class="tour-points">
                 <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>麦克风、参考回采、输出都能单独换</li>
                 <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>切换立即生效，不重启音频引擎</li>
@@ -545,8 +525,8 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">04 · 模式</p>
-          <h2>四种模式，<br>别一上来就开最强。</h2>
+          <p class="eyebrow">模式</p>
+          <h2>四种模式，<br>按场景选择。</h2>
         </div>
         <p class="lead">日常先用均衡 v1.2。对方还听到回声，再换强力；人声被削，就回均衡。戴耳机直接选关闭直通。</p>
       </div>
@@ -577,7 +557,7 @@
                 <th scope="col">
                   <span class="mode-kicker"><span class="mode-dot"></span>v1.4 · 近场</span>
                   <span class="mode-title">纯回声消除</span>
-                  <span class="mode-sub">只消回声，不碰人声</span>
+                  <span class="mode-sub">以回声消除为主</span>
                 </th>
               </tr>
             </thead>
@@ -599,24 +579,9 @@
               <tr>
                 <th scope="row">程序 CPU</th>
                 <td>最低</td>
-                <td><b>约 3%</b><span class="tiny-label">测试机</span></td>
-                <td><b>约 7%</b><span class="tiny-label">测试机</span></td>
+                <td><b>较低</b></td>
+                <td><b>中等</b></td>
                 <td><b>低</b></td>
-              </tr>
-              <tr>
-                <th scope="row">消除强度</th>
-                <td>
-                  <span class="meter"><span class="meter-bars"><i></i><i></i><i></i><i></i><i></i></span><b>0 / 5</b></span>
-                </td>
-                <td>
-                  <span class="meter"><span class="meter-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><b>4 / 5</b></span>
-                </td>
-                <td>
-                  <span class="meter"><span class="meter-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><b>5 / 5</b></span>
-                </td>
-                <td>
-                  <span class="meter"><span class="meter-bars"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span><b>2 / 5</b></span>
-                </td>
               </tr>
               <tr>
                 <th scope="row">代价</th>
@@ -640,7 +605,7 @@
         </div>
       </div>
 
-      <p class="fine-print" data-reveal>模式只在本次运行内有效，重启后回到均衡 v1.2。想固定启动模式，可在快捷方式目标末尾加 <code>--model v1.3</code>。CPU 数字为程序占用、按整机折算，来自原测试机，实际会因电脑而异。回声消除（AEC）需要缓冲，几十毫秒级延迟属于正常范围。</p>
+      <p class="fine-print" data-reveal>模式只在本次运行内有效，重启后回到均衡 v1.2。想固定启动模式，可在快捷方式目标末尾加 <code>--model v1.3</code>。CPU 占用只统计 VoiceAec 进程，实际数字会因电脑、后台程序和模式而异。回声消除（AEC）需要缓冲，几十毫秒级延迟属于正常范围。</p>
     </div>
   </section>
 
@@ -649,10 +614,10 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">05 · 场景</p>
-          <h2>四张桌子，四套配方。</h2>
+          <p class="eyebrow">场景</p>
+          <h2>按你的使用场景设置。</h2>
         </div>
-        <p class="lead">不用背参数，找到最像你的场景，照抄就行。</p>
+        <p class="lead">不用背参数，找到最接近的场景即可。</p>
       </div>
 
       <div class="scene-grid">
@@ -725,7 +690,7 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <div>
-          <p class="eyebrow">06 · 下载</p>
+          <p class="eyebrow">下载</p>
           <h2>下载 VoiceAec v0.4.7</h2>
         </div>
         <p class="lead">Windows 10/11 64 位，自包含安装包，免 .NET 运行时。免费开源，不需要注册。</p>
@@ -828,7 +793,7 @@
   <section class="section faq-section" id="faq">
     <div class="wrap faq-layout">
       <div class="faq-intro" data-reveal>
-        <p class="eyebrow">07 · 常见问题</p>
+        <p class="eyebrow">常见问题</p>
         <h2>先看这几个问题。</h2>
         <p class="lead">如果这里没有你的情况，完整手册里有按症状排的排障步骤。</p>
         <div class="faq-actions">
@@ -929,7 +894,7 @@
     <div class="wrap">
       <div class="open-panel" data-reveal>
         <div class="open-copy">
-          <p class="eyebrow">08 · 开源与隐私</p>
+          <p class="eyebrow">开源与隐私</p>
           <h2>音频不出本机，<br>代码可以自己看。</h2>
           <p class="open-lead">VoiceAec 不提供账号，也不上传音频。麦克风和参考回采只在本机内存里处理，最后写进本机的虚拟声卡。</p>
           <div class="privacy-badges">
@@ -951,8 +916,8 @@
           <div class="license-head">
             <span class="license-icon"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg></span>
             <div>
-              <strong>用料清单</strong>
-              <span>每一层都可以查</span>
+              <strong>开源组件与许可</strong>
+              <span>主要组件与许可</span>
             </div>
           </div>
           <ul class="license-list">
@@ -987,7 +952,7 @@
     <div class="wrap">
       <div class="cta-panel" data-reveal>
         <div class="cta-copy">
-          <p class="eyebrow">09 · 开始</p>
+          <p class="eyebrow">开始</p>
           <h2>游戏声留给音箱，<br>人声留给队友。</h2>
           <p>下载后一路下一步，重启一次；把语音软件的麦克风改成 CABLE Output，就能照常外放开黑。</p>
         </div>
@@ -1020,7 +985,7 @@
             <span>本地实时回声消除</span>
           </div>
         </div>
-        <p class="footer-tagline">Windows 上的本地实时回声消除。外放打游戏，语音里主要是你的声音。</p>
+        <p class="footer-tagline">Windows 上的本地实时回声消除。外放打游戏，语音更清楚。</p>
       </div>
 
       <div class="footer-cols">
