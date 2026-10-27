@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoiceAec 使用手册 · 安装、设备、模式与排障</title>
+  <meta name="description" content="VoiceAec 图文使用手册：安装、设备选择、处理模式、托盘与后台、OBS 插件、局域网访问和常见问题。对应 v0.4.7。">
+  <meta name="theme-color" content="#fff9f5">
+  <link rel="canonical" href="https://384615666.github.io/VoiceAec/manual.html">
+  <link rel="icon" type="image/png" href="images/icon-256.png">
+  <link rel="apple-touch-icon" href="images/icon-256.png">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="VoiceAec 使用手册 · 安装、设备、模式与排障">
+  <meta property="og:description" content="外放打游戏、开语音，对方不再听到你的回声。安装、设备、模式、托盘、OBS 与排障，一份写给第一次使用的人的图文说明。">
+  <meta property="og:image" content="https://384615666.github.io/VoiceAec/images/og-cover.png">
+  <meta property="og:url" content="https://384615666.github.io/VoiceAec/manual.html">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="stylesheet" href="manual.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">跳到正文</a>
+<div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 12h2l2-7 3 14 3-10 2 6 2-3h2l2 4h2"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0V8Z"/><path d="M12 17v5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="i-tray" viewBox="0 0 24 24"><path d="M4 4h16v11H4z"/><path d="M2 15h20v5H2z"/><path d="M8 9h8"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 9h5M2 15h5M17 9h5M17 15h5"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></symbol>
+  <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.5 10 4v7H3zM11 3.8 21 2v9H11zM3 12h7v7l-7-1.5zM11 12h10v9l-10-1.2z"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3-1.9 5.1L5 10l5.1 1.9L12 17l1.9-5.1L19 10l-5.1-1.9Z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l4-4"/><path d="M3 12h2M19 12h2M12 3v2M12 19v2"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="4"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 14v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"/><path d="M3 14v5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top" aria-label="VoiceAec 使用手册，回到顶部">
+      <img src="images/icon-256.png" alt="VoiceAec 猫咪麦克风图标" width="38" height="38">
+      <span class="brand-text">
+        <strong>VoiceAec</strong>
+        <small>使用手册</small>
+      </span>
+      <span class="version">v0.4.7</span>
+    </a>
+
+    <nav class="nav-links" id="navLinks" aria-label="页面目录">
+      <a class="nav-link" href="#quickstart">快速上手</a>
+      <a class="nav-link" href="#install">安装</a>
+      <a class="nav-link" href="#devices">选设备</a>
+      <a class="nav-link" href="#modes">选模式</a>
+      <a class="nav-link" href="#tray">托盘</a>
+      <a class="nav-link" href="#obs">OBS</a>
+      <a class="nav-link" href="#advanced">进阶</a>
+      <a class="nav-link" href="#faq">排障</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a class="btn btn-ghost btn-small" href="https://github.com/384615666/VoiceAec" target="_blank" rel="noopener">
+        <svg class="icon fill" aria-hidden="true"><use href="#i-github"/></svg>
+        GitHub
+      </a>
+      <button class="nav-toggle" type="button" aria-label="打开页面目录" aria-controls="navLinks" aria-expanded="false">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="dot"></span>VoiceAec · 图文使用手册</span>
+          <h1>外放打游戏，<br><span class="accent">对方只听得到你</span>。</h1>
+          <p class="lead">
+            VoiceAec 在本机把扬声器的回声从麦克风里消掉，再把干净人声送进 QQ、Oopz 或游戏语音。
+            游戏声音照常外放，不用戴耳机。这份手册按第一次使用的顺序写：准备、安装、选设备、选模式、排障。
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/384615666/VoiceAec/releases/latest" target="_blank" rel="noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+              下载最新版
+            </a>
+            <a class="btn btn-ghost" href="#quickstart">
+              <svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>
+              5 分钟上手
+            </a>
+          </div>
+          <div class="hero-meta">
+            <span><svg class="icon" aria-hidden="true"><use href="#i-windows"/></svg>Windows 10 / 11 64 位</span>
+            <span><svg class="icon fill" aria-hidden="true"><use href="#i-shield"/></svg>完全本地处理</span>
+            <span><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>对应 v0.4.7 · MIT</span>
+          </div>
+        </div>
+
+        <div class="hero-art">
+          <div class="hero-shot">
+            <img src="images/panel-main.png" alt="VoiceAec 主界面：顶栏、麦克风/参考回采/输出三张电平卡、四种处理模式和运行统计" width="1280" height="830" data-zoom data-caption="VoiceAec 主界面（v0.4.7）" fetchpriority="high">
+          </div>
+          <span class="chip chip-1"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg>每秒约 62.5 跳 · 实时</span>
+          <span class="chip chip-2"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg>输出到 CABLE Input</span>
+          <span class="chip chip-3"><svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg>关闭窗口仍在后台</span>
+        </div>
+      </div>
+
+      <div class="hero-foot">
+        <span><strong>不需要</strong> 注册账号</span>
+        <span><strong>不需要</strong> 买独立声卡</span>
+        <span><strong>不会</strong> 上传音频</span>
+        <span><strong>开源</strong> MIT · 第三方组件已声明</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="section" id="quickstart">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>00 · 先看结论</span>
+        <h2>如果只读一段，读这里</h2>
+        <p class="lead">安装、接线、开用。三件事做对，VoiceAec 就能正常工作；其余章节都是解释和排障。</p>
+      </div>
+
+      <div class="quick-links" aria-label="快速跳转">
+        <a class="quick-link" href="#install"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>怎么安装</a>
+        <a class="quick-link" href="#devices"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg>设备怎么选</a>
+        <a class="quick-link" href="#modes"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg>模式怎么选</a>
+        <a class="quick-link" href="#tray"><svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg>怎么退出</a>
+        <a class="quick-link" href="#obs"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg>OBS 插件</a>
+        <a class="quick-link" href="#faq"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>遇到问题</a>
+      </div>
+
+      <div class="grid grid-3 mt-20">
+        <article class="card step-card tone-mint" data-step="1">
+          <span class="step-tag">装</span>
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></div>
+          <h3>一路“下一步”，装完重启</h3>
+          <p>下载安装版，保留默认勾选的 <strong>VB-CABLE 虚拟声卡</strong>；装完重启电脑。VoiceAec 本体不需要管理员权限，安装过程中会弹一次 UAC（虚拟声卡 + 局域网面板）。</p>
+          <p class="small">不想装安装版？便携版解压即用，见“安装”一节。</p>
+        </article>
+
+        <article class="card step-card tone-blue" data-step="2">
+          <span class="step-tag">选</span>
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></div>
+          <h3>认准 CABLE 的两端</h3>
+          <p><strong>VoiceAec 输出</strong>选 <code>CABLE&nbsp;Input</code>；<strong>QQ / 游戏语音的麦克风</strong>选 <code>CABLE&nbsp;Output</code>；<strong>参考回采</strong>选你实际放声音的耳机或音箱。</p>
+          <p class="small">两个 CABLE 选反，是最常见的错误。</p>
+        </article>
+
+        <article class="card step-card tone-berry" data-step="3">
+          <span class="step-tag">用</span>
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></div>
+          <h3>先用“均衡模式”</h3>
+          <p>看到顶栏显示<strong>运行中</strong>、三张电平卡会跳动，就可以开语音了。对方还听到回声再换强力模式。</p>
+          <p class="small">窗口右上角 X 只是收起；退出要到托盘右键。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>01 · 原理</span>
+        <h2>声音是怎么走的</h2>
+        <p class="lead">把 VoiceAec 想成一根“智能音频线”：一头接麦克风和扬声器，另一头接虚拟声卡。虚拟声卡再冒充麦克风，喂给语音软件。</p>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow" role="img" aria-label="麦克风和扬声器回采进入 VoiceAec，处理后的声音写入 CABLE Input，语音软件从 CABLE Output 读取为麦克风">
+          <div class="flow-col">
+            <div class="flow-node">
+              <span class="icon-box tone-mint"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></span>
+              <span><strong>麦克风</strong><small>你和房间里的声音</small></span>
+            </div>
+            <div class="flow-node">
+              <span class="icon-box tone-berry"><svg class="icon" aria-hidden="true"><use href="#i-speaker"/></svg></span>
+              <span><strong>扬声器回采</strong><small>耳机 / 音箱正在放的声音</small></span>
+            </div>
+          </div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node core">
+            <span class="icon-box" style="background:rgba(255,255,255,.18);color:#fff"><svg class="icon" aria-hidden="true"><use href="#i-spark"/></svg></span>
+            <span><strong>VoiceAec</strong><small>本机神经网络消回声</small></span>
+          </div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node cable">
+            <span class="icon-box tone-blue"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></span>
+            <span><strong>CABLE Input</strong><small>虚拟声卡的播放端</small></span>
+          </div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node virtual">
+            <span class="icon-box tone-violet"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></span>
+            <span><strong>CABLE Output</strong><small>语音软件选它当麦克风</small></span>
+          </div>
+        </div>
+
+        <div class="flow-note">
+          <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+          <span><strong>CABLE Input 和 CABLE Output 是同一根虚拟声卡的两端。</strong>CABLE Input 是“写进去”，CABLE Output 是“读出来”。VoiceAec 写 Input，语音软件读 Output；写反或读反都不会有声音。</span>
+        </div>
+      </div>
+
+      <div class="grid grid-2 mt-16">
+        <div class="callout tip">
+          <svg class="icon" aria-hidden="true"><use href="#i-bulb"/></svg>
+          <span><strong>一句话记住：</strong>VoiceAec 负责把处理后的声音放进 CABLE Input；QQ / 游戏语音从 CABLE Output 把它当麦克风拿走。</span>
+        </div>
+        <div class="callout warn">
+          <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+          <span><strong>别把游戏的播放设备改成 CABLE Input。</strong>游戏/音乐仍然从你的耳机或音箱播放；只有“语音软件的麦克风”才走 CABLE Output。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PREPARE -->
+  <section class="section" id="prepare">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>02 · 准备</span>
+        <h2>开始前，确认这 4 样</h2>
+        <p class="lead">都是常见环境，不需要额外买硬件。缺哪一项，后面都会给出对应的解决办法。</p>
+      </div>
+
+      <div class="grid grid-4">
+        <article class="card tone-blue">
+          <div class="icon-box"><svg class="icon fill" aria-hidden="true"><use href="#i-windows"/></svg></div>
+          <h3>Windows 10 / 11 64 位</h3>
+          <p>安装包自带 .NET 运行时和全部模型，不用另装开发环境。</p>
+          <p class="small">不支持 32 位系统；不支持 macOS / Linux。</p>
+        </article>
+
+        <article class="card tone-mint">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg></div>
+          <h3>WebView2 运行时</h3>
+          <p>用来显示控制面板。Windows 10/11 一般已经自带。</p>
+          <p class="small">如果面板白屏或提示 WebView2 加载失败，再装 Evergreen 运行时。</p>
+        </article>
+
+        <article class="card tone-violet">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></div>
+          <h3>VB-CABLE 虚拟声卡</h3>
+          <p>VB-Audio 提供的免费虚拟声卡。安装版默认帮你装，装完需要重启。</p>
+          <p class="small">卸载 VoiceAec 不会卸载它；它也可以给 OBS、直播等其他软件用。</p>
+        </article>
+
+        <article class="card tone-berry">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></div>
+          <h3>麦克风 + 耳机/音箱</h3>
+          <p>能正常收音、正常出声即可。USB 麦克风、领夹麦、摄像头麦克风都可以。</p>
+          <p class="small">蓝牙耳机的麦克风常切到低音质通话模式；能有线就优先有线。</p>
+        </article>
+      </div>
+
+      <div class="callout info mt-20">
+        <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <span><strong>关于管理员权限：</strong>VoiceAec 本体是“每用户安装”，装到当前用户目录，不需要管理员。只有安装 VB-CABLE、配置局域网面板这两件事会弹 UAC。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="section" id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>03 · 安装</span>
+        <h2>装好 VoiceAec 和虚拟声卡</h2>
+        <p class="lead">推荐安装版：默认勾选虚拟声卡、桌面快捷方式，升级和卸载都走 Windows 标准流程。想放 U 盘或不想写注册表，用便携版。</p>
+      </div>
+
+      <div class="split">
+        <div class="split-copy">
+          <div class="pill-row">
+            <span class="pill tone-mint">推荐</span>
+            <span class="pill tone-blue">每用户安装</span>
+            <span class="pill tone-violet">自带 VB-CABLE</span>
+          </div>
+          <h3 class="mt-12" style="font-size:22px;margin-bottom:10px">安装版：一路“下一步”</h3>
+          <ol class="steps">
+            <li>
+              <strong>下载安装包</strong>
+              <p>从 <a href="https://github.com/384615666/VoiceAec/releases/latest" target="_blank" rel="noopener">GitHub Releases</a> 下载 <code>VoiceAec-v0.4.7-setup-x64.exe</code>。不要从网盘或第三方下载站拿。</p>
+            </li>
+            <li>
+              <strong>选择语言</strong>
+              <p>双击安装包，语言选“简体中文”，点“确定”。</p>
+            </li>
+            <li>
+              <strong>欢迎页 → 附加任务</strong>
+              <p>欢迎页点“下一步”。附加任务页保持两个默认勾选：<strong>创建桌面快捷方式</strong> 和 <strong>安装 VB-CABLE 虚拟声卡</strong>，然后点“下一步”。</p>
+            </li>
+            <li>
+              <strong>准备页 → 安装</strong>
+              <p>点“安装”。弹出 UAC 时选“是”，用于安装虚拟声卡和配置局域网面板。拒绝也能装完 VoiceAec，只是这两项要稍后补。</p>
+            </li>
+            <li>
+              <strong>完成页：先重启</strong>
+              <p>如果装了 VB-CABLE，先重启电脑。重启后“播放设备”里会出现 <code>CABLE&nbsp;Input</code>，“录音设备”里会出现 <code>CABLE&nbsp;Output</code>。</p>
+            </li>
+          </ol>
+
+          <div class="callout warn mt-16">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <span><strong>SmartScreen / 杀毒提示：</strong>安装包没有购买商业代码签名，Windows 可能提示“未知发布者”。先核对 Releases 页的文件名和 SHA256（见<a href="#advanced">进阶 · 校验下载</a>）；确认无误再选择“更多信息 → 仍要运行”。</span>
+          </div>
+          <div class="callout info mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
+            <span><strong>升级：</strong>直接运行新安装包。安装器会自动结束旧实例，设备选择保留，不需要先手动卸载。</span>
+          </div>
+        </div>
+
+        <div class="split-media">
+          <figure class="figure">
+            <div class="shot">
+              <img src="images/install-welcome.png" alt="VoiceAec v0.4.7 安装向导欢迎页" width="798" height="615" loading="lazy" data-zoom data-caption="安装向导欢迎页（v0.4.7）">
+            </div>
+            <figcaption class="caption">欢迎页会显示版本号；本图是 <strong>v0.4.7</strong>。</figcaption>
+          </figure>
+          <figure class="figure">
+            <div class="shot">
+              <img src="images/install-tasks.png" alt="安装附加任务页：创建桌面快捷方式和安装 VB-CABLE 虚拟声卡默认勾选" width="814" height="623" loading="lazy" data-zoom data-caption="附加任务页：两个勾选都建议保留">
+            </div>
+            <figcaption class="caption">保持默认勾选。虚拟声卡装完必须重启才会出现 CABLE 设备。</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="grid grid-2 mt-24">
+        <article class="card">
+          <div class="pill-row">
+            <span class="pill tone-blue">便携版</span>
+            <span class="pill tone-amber">适合 U 盘 / 绿色使用</span>
+          </div>
+          <h3 class="mt-12">解压即用，不写安装记录</h3>
+          <p>从 Releases 下载 <code>VoiceAec-v0.4.7-win-x64.zip</code>，右键“全部解压”，双击里面的 <code>VoiceAec.exe</code>。不要直接在压缩包里运行。</p>
+          <ul class="small mt-8" style="padding-left:18px;line-height:1.8">
+            <li>配置写在 exe 旁的 <code>voiceaec.json</code>；目录不可写时回退到 <code>%LocalAppData%\VoiceAec\voiceaec.json</code>。</li>
+            <li>没装 VB-CABLE 时，面板顶部会出现引导条，可一键安装（需要管理员）。</li>
+            <li>局域网面板需要 URL ACL 和防火墙规则；便携版可能需要手动配置，不需要就加 <code>--no-lan</code>。</li>
+            <li>移动文件夹后，重新打开“开机自启”开关即可修正启动路径。</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <div class="pill-row">
+            <span class="pill tone-mint">装完先做</span>
+          </div>
+          <h3 class="mt-12">别急着开语音，先看三张卡</h3>
+          <p>打开 VoiceAec，确认顶栏显示 <strong>运行中</strong>，并且麦克风、参考回采、输出三张电平卡都有正常反应。参考回采如果一直“静默”，先别开语音，去<a href="#devices">选设备</a>。</p>
+          <div class="callout info mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+            <span><strong>不要同时运行安装版和便携版。</strong>单实例机制会互相激活，音频也容易混在一起。</span>
+          </div>
+          <p class="small mt-12">卸载：Windows“设置 → 应用 → 安装的应用”→ VoiceAec → 卸载；或开始菜单 → VoiceAec → 卸载 VoiceAec。卸载 VoiceAec 不会移除 VB-CABLE。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FIRST RUN -->
+  <section class="section" id="first-run">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>04 · 第一次启动</span>
+        <h2>3 步，让对方听到干净人声</h2>
+        <p class="lead">第一次启动会自动选择：系统默认通信麦克风、默认播放设备（参考回采）、CABLE Input（输出）。大多数电脑开箱即用；不对再手动换。</p>
+      </div>
+
+      <div class="grid grid-3">
+        <article class="card tone-mint">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-gauge"/></svg></div>
+          <h3>1. 看顶栏</h3>
+          <p>左侧应该显示“运行中 · 计时”，中间有 CPU 占用，右侧显示当前模式。如果显示“已暂停”，点右上角“恢复处理与输出”。</p>
+        </article>
+        <article class="card tone-blue">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-wave"/></svg></div>
+          <h3>2. 做两个小测试</h3>
+          <p>对着麦克风说话：麦克风电平应跳动。播放一首歌：参考回采应从“静默”变成“播放中”并跳动。然后说话时，输出电平也应跳动。</p>
+        </article>
+        <article class="card tone-violet">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-headphones"/></svg></div>
+          <h3>3. 改语音软件</h3>
+          <p>QQ / Oopz / 游戏语音里：麦克风选 <code>CABLE&nbsp;Output</code>；扬声器保持你的耳机或音箱，不要选 CABLE Input。</p>
+        </article>
+      </div>
+
+      <figure class="figure mt-24">
+        <div class="shot annotated">
+          <img src="images/panel-main.png" alt="VoiceAec 主界面，标出顶栏、电平卡、处理模式、运行统计和底栏提示五个区域" width="1280" height="830" loading="lazy" data-zoom data-caption="主界面五个区域：顶栏、电平三卡、处理模式、运行统计、底栏提示">
+          <span class="hotspot" style="left:26%;top:9.5%" aria-hidden="true">1</span>
+          <span class="hotspot" style="left:50%;top:25%" aria-hidden="true">2</span>
+          <span class="hotspot" style="left:50%;top:56.5%" aria-hidden="true">3</span>
+          <span class="hotspot" style="left:25%;top:81.5%" aria-hidden="true">4</span>
+          <span class="hotspot" style="left:82%;top:96.5%" aria-hidden="true">5</span>
+        </div>
+        <figcaption class="caption">点图片可以放大。五个区域分别是：</figcaption>
+      </figure>
+
+      <div class="legend">
+        <div class="legend-item"><span class="legend-num">1</span><div><strong>顶栏</strong><span>运行状态、CPU、OBS 插件、第二参考、开机自启、当前模式、暂停/恢复。</span></div></div>
+        <div class="legend-item"><span class="legend-num">2</span><div><strong>电平三卡</strong><span>麦克风、参考回采、输出。点设备名可切换；右边是 dB 和峰值。</span></div></div>
+        <div class="legend-item"><span class="legend-num">3</span><div><strong>处理模式</strong><span>四张卡片，点一下立即切换；绿色“使用中”是当前模式。</span></div></div>
+        <div class="legend-item"><span class="legend-num">4</span><div><strong>运行统计</strong><span>处理时长、推理跳数、每秒推理、参考静默、补零、降级直通。</span></div></div>
+        <div class="legend-item"><span class="legend-num">5</span><div><strong>底栏提示</strong><span>一句话提示当前该做什么；右侧可打开 Windows 系统声音设置。</span></div></div>
+      </div>
+
+      <div class="grid grid-2 mt-24">
+        <article class="card">
+          <h3>30 秒自检</h3>
+          <ul class="checklist">
+            <li class="check-item"><span class="check-mark">✓</span><span>顶栏显示“运行中”，CPU 有数字，不是“已暂停”。</span></li>
+            <li class="check-item"><span class="check-mark">✓</span><span>对着麦克风说话，麦克风电平会跳。</span></li>
+            <li class="check-item"><span class="check-mark">✓</span><span>播放音乐，参考回采会跳，状态不是一直“静默”。</span></li>
+            <li class="check-item"><span class="check-mark">✓</span><span>说话时输出电平会跳。</span></li>
+            <li class="check-item"><span class="check-mark">✓</span><span>语音软件麦克风 = CABLE Output。</span></li>
+            <li class="check-item"><span class="check-mark">✓</span><span>语音软件扬声器 = 你的耳机/音箱，不是 CABLE Input。</span></li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>参考回采为什么最重要？</h3>
+          <p>回声消除需要知道“扬声器刚才放了什么”。参考回采就是这段参考信号。参考选错、设备静音或一直没声音，AEC 就不知道要消什么，对方仍会听到回声。</p>
+          <div class="callout warn mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <span><strong>头号问题：</strong>参考回采一直显示“静默”。放音乐时它必须跳动；不跳就去<a href="#devices">选设备</a>，把它改成你实际放声音的耳机或音箱。</span>
+          </div>
+          <p class="small mt-12">戴耳机时没有外放回声，其实可以退出 VoiceAec，把语音软件麦克风改回真实麦克风；见<a href="#scenes">场景配方</a>。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEVICES -->
+  <section class="section" id="devices">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>05 · 选设备</span>
+        <h2>四个位置，各选各的</h2>
+        <p class="lead">VoiceAec 面板上有三个设备下拉，语音软件里还有一个麦克风设置。四个位置各司其职，不要互相顶替。</p>
+      </div>
+
+      <figure class="figure">
+        <div class="shot">
+          <img src="images/crop-levels.png" alt="VoiceAec 电平三卡：麦克风、参考回采、输出，每张卡都有设备下拉和电平条" width="1264" height="146" loading="lazy" data-zoom data-caption="电平三卡：点设备名右侧的下拉箭头切换">
+        </div>
+        <figcaption class="caption">点设备名右侧的箭头切换；切换立即生效，不会重启引擎。</figcaption>
+      </figure>
+
+      <div class="grid grid-4 mt-20">
+        <article class="card device-card tone-mint">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg></div>
+          <h3>麦克风</h3>
+          <p>选你说话用的那只麦克风。</p>
+          <div class="device-line"><b>判断对了</b><span>对着说话，电平跳动，峰值不长期顶到 0 dB。</span></div>
+          <div class="device-line"><b>常见错</b><span>选了 CABLE Output（把自己的输出又收回来）或选到已拔掉的设备。</span></div>
+        </article>
+
+        <article class="card device-card tone-berry">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-speaker"/></svg></div>
+          <h3>参考回采</h3>
+          <p>选你实际放声音的耳机或音箱，不是麦克风。</p>
+          <div class="device-line"><b>判断对了</b><span>播放音乐时电平跳动，状态从“静默”变成“播放中”。</span></div>
+          <div class="device-line"><b>常见错</b><span>选成没在用的设备、静音设备，或选成 CABLE Input。</span></div>
+        </article>
+
+        <article class="card device-card tone-blue">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg></div>
+          <h3>输出</h3>
+          <p>必须是 <code>CABLE&nbsp;Input</code>（VB-Audio Virtual Cable）。</p>
+          <div class="device-line"><b>判断对了</b><span>说话时输出电平跳动，语音软件能收到声音。</span></div>
+          <div class="device-line"><b>常见错</b><span>选了耳机/音箱，处理后的声音没有进虚拟声卡。</span></div>
+        </article>
+
+        <article class="card device-card tone-violet">
+          <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-headphones"/></svg></div>
+          <h3>语音软件</h3>
+          <p>QQ / Oopz / 游戏语音：麦克风选 <code>CABLE&nbsp;Output</code>；扬声器保持耳机/音箱。</p>
+          <div class="device-line"><b>判断对了</b><span>对方能听到你，且听不到你的游戏声/音乐声。</span></div>
+          <div class="device-line"><b>常见错</b><span>麦克风还是默认麦克风；或扬声器选了 CABLE Input。</span></div>
+        </article>
+      </div>
+
+      <div class="table-wrap mt-20">
+        <table class="cable-table">
+          <thead>
+            <tr><th>位置</th><th>应该选</th><th>选错的后果</th></tr>
+          </thead>
+          <tbody>
+            <tr class="is-key"><td>VoiceAec 输出</td><td><code>CABLE&nbsp;Input</code></td><td>语音软件收不到处理后的声音</td></tr>
+            <tr class="is-key"><td>QQ / 游戏语音 麦克风</td><td><code>CABLE&nbsp;Output</code></td><td>对方听到原始麦克风，回声还在</td></tr>
+            <tr><td>游戏 / 音乐 播放</td><td>耳机 / 音箱</td><td>声音进了虚拟声卡，你自己听不见</td></tr>
+            <tr><td>VoiceAec 参考回采</td><td>耳机 / 音箱</td><td>AEC 没有参考信号，消不掉回声</td></tr>
+            <tr class="is-danger"><td>语音软件 扬声器</td><td>耳机 / 音箱</td><td>选了 CABLE Input 会形成回环/啸叫</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <figure class="figure mt-20">
+        <div class="shot shot-narrow">
+          <img src="images/device-menu-crop.png" alt="VoiceAec 麦克风设备菜单：当前设备打勾，菜单标题显示 3 个可选" width="820" height="550" loading="lazy" data-zoom data-caption="点设备名打开菜单：当前设备打勾，右侧显示可选数量">
+        </div>
+        <figcaption class="caption">点设备名打开这个菜单；当前设备有勾，点选后立即生效，不会重启引擎。</figcaption>
+      </figure>
+
+      <div class="callout danger mt-16">
+        <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+        <span><strong>两个 CABLE 千万别选反：</strong>VoiceAec 的“输出”是 CABLE <strong>Input</strong>；语音软件的“麦克风”是 CABLE <strong>Output</strong>。记不住就看上面的表，或看<a href="#how">声音流向图</a>。</span>
+      </div>
+
+      <details class="adv mt-24">
+        <summary>可选：第二参考（网吧 / 宿舍里旁人说话）</summary>
+        <div class="adv-body">
+          <p>第二参考是给 AEC 的“额外噪声参考”：把第二只麦克风放在旁人/噪声源附近，帮助消掉其他人的说话声；也可以选第二个播放设备。它属于进阶功能，不是必开。</p>
+          <ol class="steps mt-12">
+            <li><strong>打开开关</strong><p>顶栏“开启第二参考”。电平区会多出第四张卡。</p></li>
+            <li><strong>选择设备</strong><p>点“点击选择设备”，选贴近噪声源的第二只麦克风；也可以选第二个播放设备。参考面板会显示 12 个可选设备。</p></li>
+            <li><strong>配合强力模式</strong><p>建议用 v1.3 强力模式；如果发现自己的声音被削，换回 v1.2 或关掉第二参考。</p></li>
+          </ol>
+          <figure class="figure mt-16">
+            <div class="shot">
+              <img src="images/panel-ref2-menu.png" alt="VoiceAec 开启第二参考后，第二参考卡片的设备菜单展开，列出播放设备" width="1280" height="830" loading="lazy" data-zoom data-caption="第二参考的菜单：可选播放设备，也可选另一只麦克风">
+            </div>
+            <figcaption class="caption">第二参考菜单：向下滚动还能选另一只麦克风；不想用了，关掉顶部开关即可。</figcaption>
+          </figure>
+          <div class="callout info mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+            <span>第二参考是“锦上添花”，不是“越多越好”。没有旁人噪声时开着它，可能白白削掉一点人声。</span>
+          </div>
+        </div>
+      </details>
+
+      <div class="callout info mt-16">
+        <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <span><strong>设备名太长：</strong>鼠标悬停可以看到完整名称。选择会保存到 <code>voiceaec.json</code>；下次启动沿用，不会每次重新猜。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODES -->
+  <section class="section" id="modes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>06 · 选模式</span>
+        <h2>四种模式，按场景选</h2>
+        <p class="lead">模式决定用哪个模型、CPU 用多少、消得多干净。日常从“均衡模式”开始；不够再往上加，不要一上来就最强。</p>
+      </div>
+
+      <figure class="figure">
+        <div class="shot">
+          <img src="images/crop-modes.png" alt="VoiceAec 四种处理模式卡片：关闭直通、均衡模式、强力模式、纯回声消除模式" width="1264" height="260" loading="lazy" data-zoom data-caption="四张模式卡：点卡片立即切换，绿色“使用中”是当前模式">
+        </div>
+        <figcaption class="caption">点卡片立即切换；托盘右键“处理模式”也能切。</figcaption>
+      </figure>
+
+      <div class="grid grid-4 mt-20">
+        <article class="card mode-card tone-amber">
+          <div class="mode-top">
+            <h3 class="mode-name">关闭（直通）</h3>
+            <span class="pill tone-amber">OFF</span>
+          </div>
+          <p class="mode-key">不做处理</p>
+          <p>麦克风原样转发。戴耳机聊天时最省电；外放时对方会听到你音箱里的声音。</p>
+          <ul class="mode-facts">
+            <li><span>适合</span><b>戴耳机 / 音乐监听</b></li>
+            <li><span>消除强度</span><b>0 / 5</b></li>
+            <li><span>程序 CPU</span><b>最低</b></li>
+            <li><span>代价</span><b>外放串音全传对方</b></li>
+          </ul>
+        </article>
+
+        <article class="card mode-card tone-mint">
+          <div class="mode-top">
+            <h3 class="mode-name">均衡模式</h3>
+            <span class="pill tone-mint">推荐默认</span>
+          </div>
+          <p class="mode-key">v1.2 · 约 130 万参数</p>
+          <p>消得干净、人声自然。日常外放开黑首选，也是第一次使用的默认模式。</p>
+          <ul class="mode-facts">
+            <li><span>适合</span><b>日常开黑 / 外放音箱</b></li>
+            <li><span>消除强度</span><b>4 / 5</b></li>
+            <li><span>程序 CPU</span><b>约 3%（测试机）</b></li>
+            <li><span>代价</span><b>很少，优先用它</b></li>
+          </ul>
+        </article>
+
+        <article class="card mode-card tone-berry">
+          <div class="mode-top">
+            <h3 class="mode-name">强力模式</h3>
+            <span class="pill tone-berry">最彻底</span>
+          </div>
+          <p class="mode-key">v1.3 · 约 480 万参数</p>
+          <p>消除力度最大，还会压低周围噪声。代价是偶尔轻微削掉人声，更适合嘈杂环境或大音量外放。</p>
+          <ul class="mode-facts">
+            <li><span>适合</span><b>网吧 / 大音量外放</b></li>
+            <li><span>消除强度</span><b>5 / 5</b></li>
+            <li><span>程序 CPU</span><b>约 7%（测试机）</b></li>
+            <li><span>代价</span><b>人声可能被轻微削</b></li>
+          </ul>
+        </article>
+
+        <article class="card mode-card tone-blue">
+          <div class="mode-top">
+            <h3 class="mode-name">纯回声消除</h3>
+            <span class="pill tone-blue">近场尝鲜</span>
+          </div>
+          <p class="mode-key">v1.4 · 约 20 万参数</p>
+          <p>只消回声、不碰人声，适合房间回音或近场麦克风。远距离麦克风实测效果有限，先试听再长期用。</p>
+          <ul class="mode-facts">
+            <li><span>适合</span><b>房间回音 / 近场</b></li>
+            <li><span>消除强度</span><b>2 / 5</b></li>
+            <li><span>程序 CPU</span><b>低（1/5）</b></li>
+            <li><span>代价</span><b>远麦效果有限</b></li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="callout tip mt-20">
+        <svg class="icon" aria-hidden="true"><use href="#i-bulb"/></svg>
+        <span><strong>怎么选：</strong>戴耳机 → 关闭直通；日常外放 → 均衡；对方还听到回声 → 强力；人声被削 → 回均衡；只想消房间回音/近场 → 纯回声。每次只改一个变量，改完让对方听一句再决定。</span>
+      </div>
+
+      <div class="callout warn mt-12">
+        <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <span><strong>模式选择不会写入配置：</strong>重启后回到均衡模式（v1.2）。想固定启动模式，在快捷方式“目标”末尾加 <code>--model v1.3</code>（见<a href="#advanced">进阶</a>）。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENES -->
+  <section class="section" id="scenes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>07 · 场景</span>
+        <h2>四种常见用法，照抄即可</h2>
+        <p class="lead">同样的软件，不同场景只需要改“模式”或“开关”。先找到最像你的那一条。</p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card scene-card tone-mint">
+          <div class="scene-top">
+            <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-gamepad"/></svg></div>
+            <h3>外放 + 游戏语音（最常见）</h3>
+          </div>
+          <p>游戏声音从音箱/耳机外放，语音软件用 CABLE Output 当麦克风，VoiceAec 消掉对方听到的游戏声。</p>
+          <ul class="scene-steps">
+            <li>VoiceAec 输出 = CABLE Input；参考回采 = 你实际放声音的音箱/耳机。</li>
+            <li>游戏/音乐播放设备保持音箱/耳机，不要改 CABLE。</li>
+            <li>语音软件麦克风 = CABLE Output；扬声器 = 音箱/耳机。</li>
+            <li>模式先用均衡 v1.2；对方还听到回声再试强力 v1.3。</li>
+            <li>音量别开到削波；麦克风离嘴近一点，AEC 效果更好。</li>
+          </ul>
+        </article>
+
+        <article class="card scene-card tone-blue">
+          <div class="scene-top">
+            <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-headphones"/></svg></div>
+            <h3>戴耳机聊天</h3>
+          </div>
+          <p>戴耳机时没有外放回声，其实不需要 AEC。想省资源，可以直接退出 VoiceAec，把语音软件麦克风改回真实麦克风。</p>
+          <ul class="scene-steps">
+            <li>如果仍想用 VoiceAec 当虚拟麦克风：模式选“关闭（直通）”或“均衡”。</li>
+            <li>参考回采仍然要选耳机，但参考信号会很小；不影响使用。</li>
+            <li>不要把语音软件扬声器选成 CABLE Input，否则自己听不见。</li>
+            <li>想彻底退出：托盘右键 → 退出 VoiceAec。</li>
+          </ul>
+        </article>
+
+        <article class="card scene-card tone-berry">
+          <div class="scene-top">
+            <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></div>
+            <h3>网吧 / 宿舍旁人说话</h3>
+          </div>
+          <p>除了你自己的回声，旁边人的说话声也会被麦克风收进去。第二参考可以把“旁人噪声”也作为参考，帮助压低。</p>
+          <ul class="scene-steps">
+            <li>顶栏打开“第二参考”，选贴近噪声源的第二只麦克风。</li>
+            <li>模式建议用强力 v1.3；第二参考是可选功能，不是必开。</li>
+            <li>如果自己的声音被削得明显，关掉第二参考或回均衡 v1.2。</li>
+            <li>不要把第二参考选成你自己的主麦克风，否则等于没有额外信息。</li>
+          </ul>
+        </article>
+
+        <article class="card scene-card tone-violet">
+          <div class="scene-top">
+            <div class="icon-box"><svg class="icon" aria-hidden="true"><use href="#i-film"/></svg></div>
+            <h3>OBS 录制 / 直播</h3>
+          </div>
+          <p>在 OBS 里给麦克风加 VoiceAec 音频滤镜，让录制/直播也用到 AEC。适合不想开桌面端，或已经把麦克风交给 OBS 的人。</p>
+          <ul class="scene-steps">
+            <li>先退出 OBS，在 VoiceAec 面板右下角“OBS 插件”里一键安装。</li>
+            <li>重启 OBS，在麦克风“滤镜 → 音频滤镜”添加 VoiceAec。</li>
+            <li>滤镜里把 Reference source 选成桌面音频/游戏音频源。</li>
+            <li>使用 OBS 滤镜时，暂停桌面端，避免同一路麦克风被处理两次。</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAY -->
+  <section class="section" id="tray">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>08 · 托盘</span>
+        <h2>关掉窗口，不等于退出</h2>
+        <p class="lead">VoiceAec 平时缩在系统托盘里继续处理音频。点窗口 X 只是把面板收起来，不会中断声音。</p>
+      </div>
+
+      <div class="split">
+        <div class="split-copy">
+          <h3 style="font-size:20px;margin:0 0 10px">托盘图标怎么用</h3>
+          <ul class="small" style="padding-left:20px;line-height:1.9">
+            <li><strong>左键单击</strong>：打开或聚焦控制面板。</li>
+            <li><strong>右键单击</strong>：打开菜单——打开控制面板 / 暂停并静音 / 处理模式 / 开机自启 / 关于 VoiceAec / 退出 VoiceAec。</li>
+            <li><strong>点窗口 X</strong>：隐藏面板，音频继续。</li>
+            <li><strong>再次双击桌面图标</strong>：只会激活已有面板，不会开第二个实例。</li>
+          </ul>
+
+          <div class="callout danger mt-16">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <span><strong>唯一的正常退出入口：</strong>托盘图标右键 → “退出 VoiceAec”。不要用任务管理器结束进程，除非面板/托盘都无响应，作为兜底。</span>
+          </div>
+
+          <div class="callout tip mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg>
+            <span><strong>想开机就静默运行：</strong>顶栏或托盘菜单打开“开机自启”。它写当前用户的 HKCU Run 项，以 <code>--tray</code> 静默启动，不弹面板，也不需要管理员。</span>
+          </div>
+        </div>
+
+        <div class="split-media">
+          <figure class="figure">
+            <div class="shot">
+              <img src="images/tray-menu-crop.png" alt="VoiceAec 托盘右键菜单：打开控制面板、暂停并静音、处理模式、开机自启、关于、退出" width="425" height="525" loading="lazy" data-zoom data-caption="托盘右键菜单">
+            </div>
+            <figcaption class="caption">右键菜单就是这些项；菜单会实时显示“运行中 / 已暂停”和当前模式。</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <h3 class="mt-24" style="font-size:20px">“暂停并静音”和“关闭（直通）”有什么区别？</h3>
+      <div class="table-wrap mt-12">
+        <table>
+          <thead>
+            <tr><th>对比</th><th>暂停并静音</th><th>关闭（直通）</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>采集麦克风</td><td>停止</td><td>继续</td></tr>
+            <tr><td>神经网络推理</td><td>停止</td><td>停止</td></tr>
+            <tr><td>输出到 CABLE</td><td>静音</td><td>麦克风原声</td></tr>
+            <tr><td>适合</td><td>临时离开、省资源、不想让对方听到</td><td>戴耳机、不需要回声消除</td></tr>
+            <tr><td>重启后</td><td>恢复运行</td><td>回到均衡模式</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figure class="figure mt-16">
+        <div class="shot">
+          <img src="images/panel-paused.png" alt="VoiceAec 暂停状态：顶栏显示已暂停静音，按钮变为恢复处理与输出，电平归零" width="1280" height="830" loading="lazy" data-zoom data-caption="暂停并静音后的界面">
+        </div>
+        <figcaption class="caption">暂停后顶栏变成琥珀色，右侧按钮变成“恢复处理与输出”；电平停止，输出静音。</figcaption>
+      </figure>
+
+      <p class="small mt-8">暂停不持久化：正常重启后仍按原来的设备和模式运行。恢复时会清空旧音频并重置模型状态。</p>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="section" id="stats">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>09 · 统计</span>
+        <h2>这些数字正常吗？</h2>
+        <p class="lead">底部的六张统计卡不是装饰。它们能告诉你“参考有没有信号、CPU 跟不跟得上、有没有偷偷降级”。</p>
+      </div>
+
+      <figure class="figure">
+        <div class="shot">
+          <img src="images/crop-stats.png" alt="VoiceAec 底部运行统计：处理时长、累计推理跳数、每秒推理、参考静默跳数、输出补零次数、降级直通次数" width="1264" height="106" loading="lazy" data-zoom data-caption="运行统计六卡">
+        </div>
+        <figcaption class="caption">正常情况下，每秒推理应接近 62.5；参考静默跳数应明显少于累计跳数。</figcaption>
+      </figure>
+
+      <div class="stat-grid mt-16">
+        <div class="stat">
+          <div class="stat-label"><span>处理时长</span><span class="stat-status ok">正常</span></div>
+          <p>从启动开始累计的实际处理时间。暂停时不增长。它不是延迟指标。</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>累计推理跳数</span><span class="stat-status ok">正常</span></div>
+          <p>每 16 毫秒处理一跳，数字持续增长。放一整天会很大，不是错误。</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>每秒推理</span><span class="stat-status ok">62.5 正常</span></div>
+          <p>正常约 62.5 跳/秒。低于 55 或高于 70 会变红；低于 55 通常说明 CPU 跟不上。</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>参考静默跳数</span><span class="stat-status watch">重点看</span></div>
+          <p>参考设备没有声音的跳数。<strong>放音乐时应明显少于累计跳数</strong>；两者相等，说明参考设备选错或一直静音。</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>输出补零次数</span><span class="stat-status watch">少量正常</span></div>
+          <p>启动、切换设备时少量补零正常。快速上涨通常意味着输出卡顿/欠载，声音可能断续。</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>降级直通次数</span><span class="stat-status ok">理想为 0</span></div>
+          <p>大于 0 表示 AEC 处理失败，声音被直通。先确认模型文件完整、CPU 不过载；持续增长就去看日志。</p>
+        </div>
+      </div>
+
+      <div class="callout info mt-16">
+        <svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg>
+        <span><strong>CPU 占用只统计 VoiceAec 进程</strong>，百分比按整机 CPU 折算（和任务管理器口径一致），不是“单核占用”。3% / 7% 是原测试机器的参考值；你的 CPU 核数、频率、后台程序都会影响实际数字。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- OBS -->
+  <section class="section" id="obs">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>10 · OBS</span>
+        <h2>在 OBS 里用 VoiceAec 滤镜</h2>
+        <p class="lead">如果你用 OBS 录制或直播，可以给麦克风加一个 VoiceAec 音频滤镜，让 OBS 直接拿到消过回声的声音。</p>
+      </div>
+
+      <div class="split">
+        <div class="split-copy">
+          <ol class="steps">
+            <li><strong>完全退出 OBS</strong><p>不是最小化，是退出程序。OBS 运行时安装器会拒绝安装/卸载，也不会自动帮你关。</p></li>
+            <li><strong>打开 VoiceAec 的 OBS 弹窗</strong><p>面板顶栏点“OBS 插件”。没装过会显示“一键安装到 OBS”；装过会显示“更新 / 重新安装”。</p></li>
+            <li><strong>允许管理员权限</strong><p>插件要写到 <code>%ProgramData%\obs-studio\plugins\obs-localvqe</code>。已有版本会先备份到 <code>%ProgramData%\VoiceAec\ObsPlugin\backups</code>。</p></li>
+            <li><strong>重启 OBS</strong><p>在麦克风的“滤镜 → 音频滤镜”里点 +，添加 <strong>VoiceAec</strong>。</p></li>
+            <li><strong>选择参考音频源</strong><p>滤镜属性里的 <strong>Reference source</strong> 选桌面音频或游戏音频源。不选就只做降噪/去混响，不做回声消除。插件界面可能是英文，认准 Reference source 这一项即可。</p></li>
+            <li><strong>暂停桌面端</strong><p>同一只麦克风不要同时被桌面端和 OBS 滤镜处理；用 OBS 时，托盘菜单“暂停并静音”。</p></li>
+          </ol>
+
+          <div class="callout info mt-16">
+            <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+            <span><strong>弹窗里的版本号是插件版本：</strong>截图显示“已由 VoiceAec 安装 · 0.4.0”，代表 OBS 插件版本 0.4.0，与桌面程序的 v0.4.7 是两个独立版本号。</span>
+          </div>
+          <div class="callout warn mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <span><strong>适用范围：</strong>普通安装版 OBS 64 位。OBS 便携版不扫描这个插件目录，当前一键安装不适用。卸载会移除本程序安装的文件；如果安装前已有插件，会恢复备份。</span>
+          </div>
+          <div class="callout tip mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-film"/></svg>
+            <span><strong>什么时候用插件、什么时候用桌面端：</strong>语音聊天用桌面端；录制/直播用 OBS 插件。两者不要同时处理同一只麦克风。</span>
+          </div>
+        </div>
+
+        <div class="split-media">
+          <figure class="figure">
+            <div class="shot">
+              <img src="images/dialog-obs-crop.png" alt="VoiceAec 的 OBS 插件管理弹窗：显示已安装、安装位置、更新/重新安装、一键卸载和刷新状态" width="740" height="430" loading="lazy" data-zoom data-caption="OBS 插件管理弹窗">
+            </div>
+            <figcaption class="caption">已装过会显示“更新 / 重新安装”和“一键卸载”；未装过显示“一键安装到 OBS”。</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAN -->
+  <section class="section" id="lan">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>11 · 局域网</span>
+        <h2>手机 / 平板也能看电平和切模式</h2>
+        <p class="lead">控制面板默认对同一 Wi-Fi 开放。手机浏览器打开「关于」里显示的地址，就是同一个面板，不需要装 App。</p>
+      </div>
+
+      <div class="split split-reverse">
+        <div class="split-copy">
+          <ol class="steps">
+            <li><strong>确认在同一 Wi-Fi</strong><p>手机/平板和电脑连同一个家庭路由器；访客 Wi-Fi 常开启“客户端隔离”，会打不开。</p></li>
+            <li><strong>打开「关于」</strong><p>点面板左上角 VoiceAec 品牌区，或托盘右键“关于 VoiceAec”。里面会显示 <code>http://192.168.x.x:8765/</code> 这样的地址。</p></li>
+            <li><strong>手机浏览器打开</strong><p>输入或点击这个地址。能看到同样的电平、模式、设备选择；没有登录密码。</p></li>
+          </ol>
+
+          <div class="callout danger mt-16">
+            <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+            <span><strong>安全提醒：</strong>局域网面板<strong>没有登录密码</strong>。任何能连到你家庭网络的人都能打开并调整设置。只在可信的家庭网络使用；不要把 8765 端口转发到公网，也不要在公共 Wi-Fi 长期开启。</span>
+          </div>
+          <div class="callout info mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-wifi"/></svg>
+            <span><strong>不想开局域网：</strong>在启动参数加 <code>--no-lan</code>，面板只监听本机。安装版会自动配置防火墙私有网络规则；便携版可能需要手动配置，或直接用 <code>--no-lan</code>。</span>
+          </div>
+          <div class="callout tip mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>
+            <span><strong>IP 变了：</strong>路由器 DHCP 可能换地址。每次以「关于」里当前显示的地址为准，不要收藏旧 IP。</span>
+          </div>
+          <div class="callout warn mt-12">
+            <svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg>
+            <span><strong>手机屏幕小：</strong>面板本身是桌面布局，手机上会横向滚动、字比较小。建议横屏或平板使用；看电平、切模式可以，复杂设置还是回电脑上做。</span>
+          </div>
+        </div>
+
+        <div class="split-media">
+          <figure class="figure">
+            <div class="shot">
+              <img src="images/dialog-about-crop.png" alt="VoiceAec 关于面板：版本 v0.4.7、局域网访问地址、GitHub 仓库、检查更新、第三方声明和卸载说明" width="640" height="465" loading="lazy" data-zoom data-caption="「关于」面板：版本、局域网地址、开源链接和卸载说明">
+            </div>
+            <figcaption class="caption">「关于」里能看到版本、局域网地址和卸载说明。图中地址已做脱敏处理。</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>12 · 排障</span>
+        <h2>常见问题</h2>
+        <p class="lead">按症状找。每条都给出“下一步做什么”，不用从头读。</p>
+      </div>
+
+      <div class="faq-group-title">声音与效果</div>
+      <div class="faq">
+        <details>
+          <summary>对方还是能听到游戏声 / 回声</summary>
+          <div class="answer">
+            <p>按顺序查这三件事，90% 的回声问题都在这里：</p>
+            <ul>
+              <li><strong>参考回采选对了吗？</strong>必须选你实际放声音的耳机/音箱。播放音乐时参考电平要跳，状态从“静默”变成“播放中”。</li>
+              <li><strong>语音软件扬声器选对了吗？</strong>保持耳机/音箱，不要选 CABLE Input；选 CABLE Input 会把声音送回虚拟声卡。</li>
+              <li><strong>模式够不够？</strong>均衡 v1.2 不够就试强力 v1.3；音量别开到削波，麦克风离嘴近一点。</li>
+            </ul>
+            <p>如果参考回采一直静默，AEC 没有参考信号，换什么模式都没用。先去<a href="#devices">选设备</a>。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>对方说我声音变小 / 断续 / 像机器人</summary>
+          <div class="answer">
+            <p>先看底部“每秒推理”：正常约 62.5 跳/秒，低于 55 会变红，通常是 CPU 跟不上。</p>
+            <ul>
+              <li>把模式从强力 v1.3 换回均衡 v1.2，或关掉第二参考。</li>
+              <li>关闭占用 CPU 的后台程序；笔记本插电、开高性能模式。</li>
+              <li>“输出补零次数”快速上涨说明输出卡顿；换一个输出设备/重启 VoiceAec 再试。</li>
+              <li>蓝牙耳机麦克风常切到低音质通话模式，尽量用有线/USB 麦克风。</li>
+              <li>麦克风增益别开太大，峰值长期顶到 0 dB 会削波。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>对方完全听不到我</summary>
+          <div class="answer">
+            <p>按链路从后往前查：</p>
+            <ul>
+              <li>语音软件麦克风是不是 <code>CABLE&nbsp;Output</code>？不是就改。</li>
+              <li>VoiceAec 输出是不是 <code>CABLE&nbsp;Input</code>？说话时输出电平有没有跳？</li>
+              <li>是不是点了“暂停并静音”？顶栏应显示“运行中”。</li>
+              <li>Windows 设置 → 隐私和安全性 → 麦克风：允许桌面应用访问麦克风。</li>
+              <li>麦克风是否被 OBS、相机或其他软件独占？先关掉那些程序再试。</li>
+              <li>VB-CABLE 是否装了并重启过？播放设备里有没有 CABLE Input？</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>有延迟 / 声音变调</summary>
+          <div class="answer">
+            <p>AEC 需要缓冲，几十毫秒级延迟是正常的，不适合专业实时乐器监听。语音聊天一般感觉不到。</p>
+            <p>如果声音变调或明显断续：检查 Windows 声音设置里 <code>CABLE&nbsp;Input</code> 和 <code>CABLE&nbsp;Output</code> 的格式，统一设成 <strong>48000 Hz</strong>；关闭占用音频设备的程序；换回均衡模式再试。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>第二参考没效果，反而削人声</summary>
+          <div class="answer">
+            <p>第二参考适合“旁边有人说话/噪声源固定”的场景，不是万能降噪。它需要第二只麦克风真的靠近噪声源，或者选第二个播放设备。</p>
+            <p>如果自己的声音被削：关掉第二参考，或把模式换回均衡 v1.2。没有旁人噪声时，不建议长期开着第二参考。</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="faq-group-title">安装与设备</div>
+      <div class="faq">
+        <details>
+          <summary>双击没反应 / 托盘没有图标</summary>
+          <div class="answer">
+            <p>最常见的原因是配置里记录的旧设备（例如拔掉的 USB 麦克风）已经不存在，程序启动时找不到就退出了。按这个顺序处理：</p>
+            <ul>
+              <li>先看任务管理器里有没有 VoiceAec；没有就是没启动。</li>
+              <li>先在托盘右键退出 VoiceAec，再删除安装目录的 <code>voiceaec.json</code>（安装版在 <code>%LocalAppData%\Programs\VoiceAec\</code>），或 <code>%LocalAppData%\VoiceAec\voiceaec.json</code>，再启动。程序会重新自动选设备。</li>
+              <li>也可以建一个快捷方式，目标写成 <code>VoiceAec.exe --mic "你的麦克风" --ref "你的扬声器"</code> 启动。</li>
+              <li>如果面板白屏但音频还在跑，见下一条 WebView2。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>装完没有 CABLE Input / CABLE Output</summary>
+          <div class="answer">
+            <p>虚拟声卡装完<strong>必须重启电脑</strong>，设备才会出现。</p>
+            <ul>
+              <li>重启后检查“播放设备”里有没有 CABLE Input、“录音设备”里有没有 CABLE Output。</li>
+              <li>没有就重新运行 VoiceAec 安装包，保留“安装 VB-CABLE”勾选；或打开 VoiceAec 面板顶部引导条，点“一键安装虚拟声卡”。</li>
+              <li>仍然没有：去 Windows 设备管理器看有没有未知设备，卸载后重装官方 VB-CABLE。</li>
+              <li>卸载 VoiceAec 不会移除 VB-CABLE，这是正常的。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>安装时取消了 UAC / 没装 VB-CABLE</summary>
+          <div class="answer">
+            <p>VoiceAec 本体已经装好，只是虚拟声卡和局域网配置没做。打开 VoiceAec，面板顶部会出现黄色引导条：点“一键安装虚拟声卡”，按提示允许管理员权限，装完重启。</p>
+            <p>局域网没配置也不影响本机使用；需要手机访问时，重新运行安装包并允许 UAC，或加 <code>--no-lan</code> 只用本机面板。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>换了麦克风 / 拔掉设备后打不开</summary>
+          <div class="answer">
+            <p>和“双击没反应”同一个原因：<code>voiceaec.json</code> 里记着旧设备名。先在托盘退出 VoiceAec，删除这个文件再启动，或使用 <code>--mic</code> / <code>--ref</code> 参数覆盖。设备名可以用 <code>VoiceAec.exe --list</code> 查看。</p>
+            <p>换设备后建议在面板里重新选一次，让配置更新到新设备。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>怎么升级 / 怎么卸载</summary>
+          <div class="answer">
+            <p><strong>升级：</strong>直接运行新版安装包，安装器会结束旧实例，设备配置保留。</p>
+            <p><strong>卸载：</strong>Windows“设置 → 应用 → 安装的应用”→ VoiceAec → 卸载；或开始菜单 → VoiceAec → 卸载 VoiceAec。卸载不会移除 VB-CABLE。安装目录里的 <code>voiceaec.json</code> 会被删除；如果曾回退到 <code>%LocalAppData%\VoiceAec\voiceaec.json</code>，这个文件可能保留，可手动删除。</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="faq-group-title">面板、托盘与启动</div>
+      <div class="faq">
+        <details>
+          <summary>面板白屏 / 提示 WebView2 加载失败</summary>
+          <div class="answer">
+            <p>音频处理仍在后台运行，只是面板显示不出来。装 Microsoft Edge WebView2 Runtime（Evergreen 版）后重启 VoiceAec。</p>
+            <p>如果仍然白屏：检查杀毒软件是否拦截了 WebView2 子进程；重启电脑；或卸载重装 VoiceAec。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>托盘图标找不到</summary>
+          <div class="answer">
+            <p>Windows 11 默认把新图标放进托盘溢出区。点任务栏右下角的 <strong>^</strong> 找猫咪麦克风图标；可以把它拖到任务栏常显。</p>
+            <p>也可以在“设置 → 个性化 → 任务栏 → 其他系统托盘图标”里把 VoiceAec 设为显示。如果托盘和任务管理器都没有进程，说明程序没启动，见“双击没反应”。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>为什么重启后模式又回到均衡？</summary>
+          <div class="answer">
+            <p>模式选择只在本次运行内有效，不写入 <code>voiceaec.json</code>；所以重启后回到推荐的均衡 v1.2。设备选择会保留。</p>
+            <p>想固定启动模式：右键桌面快捷方式 → 属性 → 目标，在末尾加 <code>--model v1.3</code>（或 <code>off</code> / <code>v1.4</code>）。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>开机自启没生效</summary>
+          <div class="answer">
+            <p>先看顶栏或托盘菜单里的“开机自启”开关是不是开着。它写的是当前用户的 HKCU Run 项，不需要管理员。</p>
+            <ul>
+              <li>如果刚移动过便携版文件夹，关掉再打开一次开关，让它记录新路径。</li>
+              <li>检查任务管理器“启动应用”里 VoiceAec 是否被禁用。</li>
+              <li>部分安全软件会拦截开机启动项，需要手动允许。</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="faq-group-title">OBS、局域网与安全</div>
+      <div class="faq">
+        <details>
+          <summary>OBS 插件安装失败 / OBS 正在运行</summary>
+          <div class="answer">
+            <p>先完全退出 OBS，再点“更新 / 重新安装”。安装器不会自动关 OBS，也不会在 OBS 运行时强行替换文件。</p>
+            <p>只支持普通安装版 OBS 64 位；OBS 便携版不扫描 <code>%ProgramData%\obs-studio\plugins\obs-localvqe</code>，当前一键安装不适用。需要管理员权限；拒绝 UAC 会失败。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>OBS 里加了滤镜，但没有效果</summary>
+          <div class="answer">
+            <p>检查三件事：</p>
+            <ul>
+              <li>滤镜是不是加在<strong>麦克风</strong>上，而不是扬声器/桌面音频上。</li>
+              <li>滤镜属性里的 <strong>Reference source</strong> 有没有选桌面音频/游戏音频源；不选就只做降噪/去混响。</li>
+              <li>桌面端是不是还在处理同一只麦克风？用 OBS 时在托盘菜单“暂停并静音”。</li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>手机 / 平板打不开局域网面板</summary>
+          <div class="answer">
+            <p>确认手机和电脑在同一个 Wi-Fi；用「关于」里当前显示的地址，不要用旧 IP。访客 Wi-Fi/公司网络可能开启客户端隔离，手机访问不到电脑。</p>
+            <p>检查 Windows 防火墙是否允许 VoiceAec 在“专用网络”通信。便携版可能没有自动配置 URL ACL/防火墙；可以改用安装版，或加 <code>--no-lan</code> 只用本机。不要把端口转发到公网。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>局域网面板安全吗？</summary>
+          <div class="answer">
+            <p>面板<strong>没有登录密码</strong>，只按私有网段（192.168/16、10/8、172.16/12）开放。它的设计场景是可信家庭网络；同一网络里的人能打开并改设置。</p>
+            <p>不要在公共 Wi-Fi、宿舍共享网络长期开启；不要做公网端口转发；不需要时加 <code>--no-lan</code>。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>QQ 提示 CABLE Output 加载失败</summary>
+          <div class="answer">
+            <p>这是 QQ 侧对虚拟设备的兼容问题，音频链路本身通常是正常的。可以尝试：在 QQ 语音设置里重新选择一次 CABLE Output；重启 QQ；或换用 Oopz、Discord、游戏自带语音验证。</p>
+            <p>如果其他语音软件正常、只有 QQ 不行，基本可以确定是 QQ 侧问题，等 QQ 更新或反馈给 QQ。</p>
+          </div>
+        </details>
+
+        <details>
+          <summary>杀毒软件 / SmartScreen 拦截安装包</summary>
+          <div class="answer">
+            <p>安装包没有购买商业代码签名，新项目容易被误报。先从 GitHub Releases 核对文件名和 SHA256（见<a href="#advanced">进阶 · 校验下载</a>），确认来源无误后再决定是否放行。</p>
+            <p>不要为了安装而整体关闭杀毒软件；最多把下载的安装包/安装目录加入信任。装完可以恢复防护。</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADVANCED -->
+  <section class="section" id="advanced">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>13 · 进阶</span>
+        <h2>命令行、配置与校验</h2>
+        <p class="lead">普通用户不用看。需要固定设备/模式、排查端口或核对下载时再用。</p>
+      </div>
+
+      <details class="adv" open>
+        <summary>命令行参数</summary>
+        <div class="adv-body">
+          <p>在快捷方式“目标”末尾加参数，或命令行运行 <code>VoiceAec.exe --参数</code>。</p>
+          <div class="table-wrap mt-12">
+            <table>
+              <thead><tr><th>参数</th><th>默认</th><th>说明</th></tr></thead>
+              <tbody>
+                <tr><td><code>--mic</code></td><td>系统默认通信麦克风</td><td>麦克风设备名（子串匹配），优先级高于配置文件。</td></tr>
+                <tr><td><code>--ref</code></td><td>系统默认播放设备</td><td>参考回采设备；也可以填麦克风（近讲场景）。</td></tr>
+                <tr><td><code>--ref2</code></td><td><code>none</code></td><td>第二参考；找不到会自动降级单参考。</td></tr>
+                <tr><td><code>--out</code></td><td><code>CABLE&nbsp;Input</code></td><td>输出设备；缺少 CABLE 时会回退并显示引导条。</td></tr>
+                <tr><td><code>--threads</code></td><td><code>2</code></td><td>推理线程数；不确定就保持默认。</td></tr>
+                <tr><td><code>--model</code></td><td><code>v1.2</code></td><td><code>off</code> / <code>v1.2</code> / <code>v1.3</code> / <code>v1.4</code>。</td></tr>
+                <tr><td><code>--port</code></td><td><code>8765</code></td><td>面板端口；占用时自动 +1，直到 8774。</td></tr>
+                <tr><td><code>--tray</code></td><td>—</td><td>静默托盘启动，不开面板；开机自启用的就是它。</td></tr>
+                <tr><td><code>--console</code></td><td>—</td><td>保留/新建日志控制台，排查时用。</td></tr>
+                <tr><td><code>--list</code></td><td>—</td><td>列出音频设备后退出，用来查设备全名。</td></tr>
+                <tr><td><code>--no-lan</code></td><td>—</td><td>只监听本机，不对局域网开放面板。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
+      <details class="adv">
+        <summary>配置文件 voiceaec.json</summary>
+        <div class="adv-body">
+          <p>保存设备选择。安装版在 <code>%LocalAppData%\Programs\VoiceAec\voiceaec.json</code>；便携版优先在 exe 旁，目录不可写时回退到 <code>%LocalAppData%\VoiceAec\voiceaec.json</code>。</p>
+          <div class="codeblock">{
+  "mic": "Microphone (USB Audio)",
+  "ref": "耳机 (USB Audio)",
+  "ref2": "none",
+  "out": "CABLE Input (VB-Audio Virtual Cable)"
+}</div>
+          <p>一般不用手改。换了设备/拔掉设备后如果启动不了，删除这个文件让程序重新自动选择，或改用 <code>--mic</code> / <code>--ref</code>。</p>
+        </div>
+      </details>
+
+      <details class="adv">
+        <summary>端口、日志与 HTTP API</summary>
+        <div class="adv-body">
+          <p>面板默认 <code>http://localhost:8765/</code>；端口占用会尝试 8765–8774。局域网地址在「关于」里显示。</p>
+          <p>默认不写日志文件。排查时用 <code>--console</code> 启动，会保留一个日志控制台；<code>--list</code> 可列出设备。</p>
+          <p>HTTP API 需要请求头 <code>X-VoiceAec-Token</code>，面板会自动携带。接口清单和开发说明见 <a href="https://github.com/384615666/VoiceAec" target="_blank" rel="noopener">README</a>。</p>
+        </div>
+      </details>
+
+      <details class="adv">
+        <summary>校验下载（v0.4.7）</summary>
+        <div class="adv-body">
+          <p>在 PowerShell 里运行 <code>Get-FileHash .\文件名 -Algorithm SHA256</code>，和下面比对。</p>
+          <p class="small mt-8"><strong>安装版</strong> VoiceAec-v0.4.7-setup-x64.exe</p>
+          <div class="hash mt-8">
+            <code>AFE22A2E9A0B73887F1613FCDFF79314F25E49DDDBCDE449DEFD53578E8FFC23D</code>
+            <button class="copy-btn" type="button" data-copy="AFE22A2E9A0B73887F1613FCDFF79314F25E49DDDBCDE449DEFD53578E8FFC23D">复制</button>
+          </div>
+          <p class="small mt-12"><strong>便携版</strong> VoiceAec-v0.4.7-win-x64.zip</p>
+          <div class="hash mt-8">
+            <code>6B48E35A74C38FCF133CFEFD32BE01FA0E74C2378E84C96FE8743F97DB0F65ED</code>
+            <button class="copy-btn" type="button" data-copy="6B48E35A74C38FCF133CFEFD32BE01FA0E74C2378E84C96FE8743F97DB0F65ED">复制</button>
+          </div>
+          <p class="small mt-12">SHA256 来自 v0.4.7 发布说明。如果下载的是更新版本，请以对应 Release 页的校验值为准。</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section class="section" id="privacy">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>14 · 隐私与许可</span>
+        <h2>本地处理，开源可查</h2>
+        <p class="lead">VoiceAec 不提供账号、不上传音频；所有音频处理都在你的电脑上完成。</p>
+      </div>
+
+      <div class="grid grid-3">
+        <article class="card privacy-card tone-mint">
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>音频不上传</h3>
+          <p>麦克风和参考回采只在本机内存里处理，输出到本机虚拟声卡。程序不需要登录，也没有云端账号。</p>
+        </article>
+        <article class="card privacy-card tone-blue">
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-wifi"/></svg>局域网有边界</h3>
+          <p>面板只接受私有网段访问，但没有登录密码。只在可信家庭网络开启；不需要时用 <code>--no-lan</code> 关掉。</p>
+        </article>
+        <article class="card privacy-card tone-violet">
+          <h3><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>开源许可</h3>
+          <p>应用代码 MIT；推理引擎 LocalVQE 为 Apache-2.0；ggml、NAudio、WebView2 等第三方组件见声明。VB-CABLE 是 VB-Audio 的捐赠软件。</p>
+        </article>
+      </div>
+
+      <div class="callout info mt-16">
+        <svg class="icon" aria-hidden="true"><use href="#i-link"/></svg>
+        <span>
+          <a href="https://github.com/384615666/VoiceAec" target="_blank" rel="noopener">GitHub 仓库</a> ·
+          <a href="https://github.com/384615666/VoiceAec/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> ·
+          <a href="https://github.com/384615666/VoiceAec/blob/main/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">第三方组件声明</a> ·
+          <a href="https://github.com/localai-org/LocalVQE" target="_blank" rel="noopener">LocalVQE</a> ·
+          <a href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">VB-CABLE 官网</a>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section class="section" id="help">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow"><span class="dot"></span>15 · 反馈</span>
+        <h2>还搞不定？</h2>
+        <p class="lead">先确认版本和症状，再去 Issues 搜索或提问。带上信息能少一轮来回。</p>
+      </div>
+
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>反馈时请带上</h3>
+          <ul class="small" style="padding-left:20px;line-height:1.9">
+            <li>VoiceAec 版本（「关于」里看，例如 v0.4.7）</li>
+            <li>Windows 版本（Win10 / Win11，64 位）</li>
+            <li>麦克风、参考回采、输出分别选了什么</li>
+            <li>当前模式和底部“每秒推理 / 参考静默 / 补零 / 降级直通”</li>
+            <li>复现步骤：点了什么、期望什么、实际什么</li>
+            <li>截图（注意遮住 IP、设备名等隐私信息）</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>去哪里反馈</h3>
+          <p>GitHub Issues 是公开的，提问前先搜一下有没有相同问题。</p>
+          <div class="hero-actions mt-12">
+            <a class="btn btn-primary" href="https://github.com/384615666/VoiceAec/issues" target="_blank" rel="noopener">
+              <svg class="icon fill" aria-hidden="true"><use href="#i-github"/></svg>
+              打开 Issues
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/384615666/VoiceAec/releases" target="_blank" rel="noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>
+              查看更新记录
+            </a>
+          </div>
+          <p class="small mt-12">本手册对应 v0.4.7。更新版本后界面可能略有差异，以实际界面为准。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <img src="images/icon-256.png" alt="VoiceAec 图标" width="42" height="42">
+      <div>
+        <strong>VoiceAec 使用手册</strong>
+        <p>外放打游戏，对方只听得到你。<br>对应 v0.4.7 · 更新于 2026-10-27</p>
+      </div>
+    </div>
+    <div class="footer-links">
+      <a href="./">官网首页</a>
+      <a href="https://github.com/384615666/VoiceAec" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/384615666/VoiceAec/releases/latest" target="_blank" rel="noopener">下载</a>
+      <a href="https://github.com/384615666/VoiceAec/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/384615666/VoiceAec/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      <a href="https://github.com/384615666/VoiceAec/blob/main/THIRD-PARTY-NOTICES.md" target="_blank" rel="noopener">第三方声明</a>
+    </div>
+    <p class="footer-note">本页面不是安装包。下载请到 GitHub Releases；安装包校验值见<a href="#advanced">进阶 · 校验下载</a>。VoiceAec 是独立开源项目，与 VB-Audio、OBS、腾讯、网易等无隶属关系。</p>
+  </div>
+</footer>
+
+<button class="to-top" type="button" aria-label="回到顶部">
+  <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>
+</button>
+
+<dialog class="lightbox" id="lightbox" aria-label="查看大图">
+  <div class="lightbox-frame">
+    <button class="lightbox-close" type="button" aria-label="关闭大图">
+      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+    <img id="lightboxImage" alt="">
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
+</dialog>
+
+<script src="manual.js"></script>
+</body>
+</html>

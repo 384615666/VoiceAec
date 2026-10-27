@@ -6,11 +6,12 @@
 
 应用代码以 [MIT](LICENSE) 授权,发布包内第三方组件(推理引擎/模型/ggml/运行库等)见 [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md)。
 
-## 使用手册
+## 官网与手册
 
-图文版(安装、设备、模式、托盘、OBS、局域网、排障):**[在线手册](https://384615666.github.io/VoiceAec/)**。也可以直接打开仓库里的 [docs/index.html](docs/index.html)。
+- **官网**: <https://384615666.github.io/VoiceAec/>
+- **图文使用手册**: <https://384615666.github.io/VoiceAec/manual.html>
 
-手册对应 v0.4.7;更新版本后界面可能略有差异。
+源码分别在 [docs/index.html](docs/index.html) 与 [docs/manual.html](docs/manual.html)。手册对应 v0.4.7;更新版本后界面可能略有差异。
 
 ## 下载即用
 
