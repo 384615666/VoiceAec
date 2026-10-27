@@ -222,7 +222,10 @@ MMDevice? FindAny(string substring)
 var micConfigured = HasArg("--mic") || cfg.ContainsKey("mic");
 var refConfigured = HasArg("--ref") || cfg.ContainsKey("ref");
 var outConfigured = HasArg("--out") || cfg.ContainsKey("out");
-var deviceNotices = new List<string>();
+var micNotice = "";
+var refNotice = "";
+var outNotice = "";
+var devicesNotice = "";
 
 MMDevice? TryDefaultDevice(DataFlow flow, Role role)
 {
@@ -242,7 +245,7 @@ catch (Exception)
     micFallback = true;
     micDevice = TryDefaultDevice(DataFlow.Capture, Role.Communications);
     if (micDevice != null && micConfigured)
-        deviceNotices.Add($"麦克风「{ShortName(micSub)}」不在了，已临时改用「{ShortName(micDevice.FriendlyName)}」；插回后重启即可恢复。");
+        micNotice = $"麦克风「{ShortName(micSub)}」不在了，已临时改用「{ShortName(micDevice.FriendlyName)}」；插回后重启即可恢复。";
 }
 
 MMDevice? refDevice;
@@ -253,7 +256,7 @@ catch (Exception)
     refFallback = true;
     refDevice = TryDefaultDevice(DataFlow.Render, Role.Console);
     if (refDevice != null && refConfigured)
-        deviceNotices.Add($"参考回采「{ShortName(refSub)}」不在了，已临时改用「{ShortName(refDevice.FriendlyName)}」；插回后重启即可恢复。");
+        refNotice = $"参考回采「{ShortName(refSub)}」不在了，已临时改用「{ShortName(refDevice.FriendlyName)}」；插回后重启即可恢复。";
 }
 
 MMDevice? ref2Device = null;
@@ -292,14 +295,13 @@ catch (Exception)
         outFallback = true;
         outDevice = TryDefaultDevice(DataFlow.Render, Role.Multimedia);
         if (outDevice != null && outConfigured)
-            deviceNotices.Add($"输出设备「{ShortName(outSub)}」不在了，已临时改用「{ShortName(outDevice.FriendlyName)}」。");
+            outNotice = $"输出设备「{ShortName(outSub)}」不在了，已临时改用「{ShortName(outDevice.FriendlyName)}」。";
     }
 }
 
 var devicesMissing = micDevice == null || refDevice == null || outDevice == null;
 if (devicesMissing)
-    deviceNotices.Add("没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。");
-var deviceNotice = string.Join(" ", deviceNotices);
+    devicesNotice = "没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。";
 
 // Persist only real devices; a temporary fallback keeps the user's original
 // choice so it comes back when the device does.
@@ -461,6 +463,21 @@ void ClearAudioBuffers()
     Interlocked.Exchange(ref refActiveTick, 0);
 }
 
+string RecheckDevices()
+{
+    var micTarget = (micNotice.Length > 0 || micDevice == null) ? cfg.GetValueOrDefault("mic", "") : null;
+    var refTarget = (refNotice.Length > 0 || refDevice == null) ? cfg.GetValueOrDefault("ref", "") : null;
+    string? outTarget = null;
+    if (cableMissing) outTarget = "CABLE Input";
+    else if (outNotice.Length > 0 || outDevice == null) outTarget = cfg.GetValueOrDefault("out", "");
+    if (string.IsNullOrEmpty(micTarget)) micTarget = null;
+    if (string.IsNullOrEmpty(refTarget)) refTarget = null;
+    if (string.IsNullOrEmpty(outTarget)) outTarget = null;
+    if (micTarget == null && refTarget == null && outTarget == null) return "";
+    var error = SwitchDevices(micTarget, refTarget, null, outTarget);
+    return error == "" ? "" : error.Replace("设备切换失败: ", "").Replace("；", "；");
+}
+
 string SetPaused(bool value, bool persist = true)
 {
     lock (devSwitchLock)
@@ -480,6 +497,25 @@ string SetPaused(bool value, bool persist = true)
             return "";
         }
 
+        if (cableMissing)
+        {
+            try
+            {
+                var cable = Find(DataFlow.Render, "CABLE");
+                outDevice = cable;
+                currentOut = cable.FriendlyName;
+                outFallback = false;
+                cableMissing = false;
+                outNotice = "";
+                cfg["out"] = cable.FriendlyName;
+                SaveCfg();
+                Console.WriteLine("[audio] VB-CABLE is back; output rebound");
+            }
+            catch
+            {
+                return "没有找到 VB-CABLE，已保持暂停。请先安装虚拟声卡，或在输出下拉里选择其他设备。";
+            }
+        }
         if (micDevice == null || refDevice == null || outDevice == null)
             return "缺少音频设备：请先在设备下拉里选择麦克风 / 参考 / 输出，然后再恢复。";
 
@@ -548,33 +584,62 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
         }
         var beforeMic = currentMic; var beforeRef = currentRef;
         var beforeRef2 = currentRef2; var beforeOut = currentOut;
-        if (!string.IsNullOrEmpty(micName)) Change("麦克风", () =>
-            ReplaceCapture(micName, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic));
-        if (!string.IsNullOrEmpty(refName)) Change("参考回采", () =>
-            ReplaceCapture(refName, null, refRing, "ref", ref refDevice, ref refCap, ref currentRef));
+        var micOk = false; var refOk = false; var outOk = false;
+        if (!string.IsNullOrEmpty(micName))
+        {
+            var n = errors.Count;
+            Change("麦克风", () =>
+                ReplaceCapture(micName, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic));
+            micOk = errors.Count == n;
+        }
+        if (!string.IsNullOrEmpty(refName))
+        {
+            var n = errors.Count;
+            Change("参考回采", () =>
+                ReplaceCapture(refName, null, refRing, "ref", ref refDevice, ref refCap, ref currentRef));
+            refOk = errors.Count == n;
+        }
         if (ref2Name != null) Change("第二参考", () =>
             ReplaceCapture(ref2Name, null, ref2Ring, "ref2", ref ref2Device, ref ref2Cap, ref currentRef2));
-        if (!string.IsNullOrEmpty(outName) && outName != currentOut) Change("输出", () =>
+        if (!string.IsNullOrEmpty(outName))
         {
-            var freshDevice = Find(DataFlow.Render, outName);
-            WasapiOut? freshOutput = null;
-            try
+            var n = errors.Count;
+            if (outName != currentOut) Change("输出", () =>
             {
-                var freshName = freshDevice.FriendlyName;
-                if (Volatile.Read(ref paused) == 0) freshOutput = StartOutput(freshDevice);
-                var oldOutput = waveOut; var oldDevice = outDevice;
-                waveOut = freshOutput; outDevice = freshDevice; currentOut = freshName;
-                DisposeAudio(oldOutput); DisposeAudio(oldDevice);
-            }
-            catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
-        });
+                var freshDevice = Find(DataFlow.Render, outName);
+                WasapiOut? freshOutput = null;
+                try
+                {
+                    var freshName = freshDevice.FriendlyName;
+                    if (Volatile.Read(ref paused) == 0) freshOutput = StartOutput(freshDevice);
+                    var oldOutput = waveOut; var oldDevice = outDevice;
+                    waveOut = freshOutput; outDevice = freshDevice; currentOut = freshName;
+                    DisposeAudio(oldOutput); DisposeAudio(oldDevice);
+                }
+                catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
+            });
+            outOk = errors.Count == n;
+        }
+        // An explicit, successful selection resolves that channel, even when
+        // it picked the device already in use.
+        if (micOk) micNotice = "";
+        if (refOk) refNotice = "";
+        if (outOk) { outNotice = ""; cableMissing = false; }
         // Only persist what this request actually changed; a fallback that is
         // still in effect must not overwrite the user's original choice.
         var changed = false;
-        if (currentMic != beforeMic) { cfg["mic"] = currentMic; changed = true; }
-        if (currentRef != beforeRef) { cfg["ref"] = currentRef; changed = true; }
+        if (currentMic != beforeMic) { cfg["mic"] = currentMic; changed = true; micNotice = ""; }
+        if (currentRef != beforeRef) { cfg["ref"] = currentRef; changed = true; refNotice = ""; }
         if (currentRef2 != beforeRef2) { cfg["ref2"] = currentRef2; changed = true; }
-        if (currentOut != beforeOut) { cfg["out"] = currentOut; changed = true; }
+        if (currentOut != beforeOut)
+        {
+            cfg["out"] = currentOut; changed = true;
+            outNotice = "";
+            // An explicit output choice (including physical speakers) ends the
+            // missing-cable state; only automatic fallbacks keep it.
+            cableMissing = false;
+        }
+        if (micDevice != null && refDevice != null && outDevice != null) devicesNotice = "";
         if (changed) SaveCfg();
         return errors.Count == 0 ? "" : "设备切换失败: " + string.Join("；", errors);
     }
@@ -704,6 +769,8 @@ object BuildStatus()
     }
     string curMode;
     lock (engineLock) curMode = mode;
+    var deviceNotice = string.Join(" ", new[] { micNotice, refNotice, outNotice, devicesNotice }
+        .Where(n => n.Length > 0));
     string micName, refName, ref2Name, outName;
     lock (devSwitchLock)
     {
@@ -1079,6 +1146,14 @@ var httpThread = new Thread(() =>
                         var bytes = JsonSerializer.SerializeToUtf8Bytes(
                             new { ok = running ? true : ok, running, message, reboot }, jsonOpts);
                         ctx.Response.StatusCode = running ? 202 : (ok ? 200 : 500);
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        ctx.Response.OutputStream.Write(bytes);
+                        break;
+                    }
+                    case "/api/recheck":
+                    {
+                        var error = RecheckDevices();
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(new { ok = error == "", error }, jsonOpts);
                         ctx.Response.ContentType = "application/json; charset=utf-8";
                         ctx.Response.OutputStream.Write(bytes);
                         break;

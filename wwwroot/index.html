@@ -4901,6 +4901,27 @@
     }
   }
 
+  async function recheckDevices() {
+    if (state.cableBusy) return;
+    els.cableRecheck.disabled = true;
+    const label = els.cableRecheck.textContent;
+    els.cableRecheck.textContent = '检测中…';
+    try {
+      const response = await fetchWithTimeout('/api/recheck', {
+        method: 'POST', headers: { Accept: 'application/json' }
+      }, DEVICE_TIMEOUT_MS);
+      const data = await response.json();
+      if (!data.ok) showToast(`重新检测：${data.error || '仍没有找到设备'}`, 'error');
+      else showToast('已重新检测设备', 'success');
+    } catch (error) {
+      showToast(`重新检测失败：${error.message || '请重试'}`, 'error');
+    } finally {
+      els.cableRecheck.disabled = false;
+      els.cableRecheck.textContent = label;
+      void pollStatus();
+    }
+  }
+
   async function openSoundSettings() {
     try {
       const response = await fetchWithTimeout('/api/sound-settings', {
@@ -5250,7 +5271,7 @@
   if (els.aboutLogo && els.brandIcon) els.aboutLogo.src = els.brandIcon.src;
   els.soundSettings.addEventListener('click', () => { void openSoundSettings(); });
   els.cableInstall.addEventListener('click', () => { void installVbCable(); });
-  els.cableRecheck.addEventListener('click', () => { void pollStatus(); });
+  els.cableRecheck.addEventListener('click', () => { void recheckDevices(); });
   window.addEventListener('voiceaec:about', () => els.aboutDialog.showModal());
 
   function setPanelVisible(visible) {
