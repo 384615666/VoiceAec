@@ -86,6 +86,8 @@ Type: files; Name: "{app}\*.log"
 [Code]
 var
   VbCableRan: Boolean;
+  VbCableFailed: Boolean;
+  VbCableExitCode: Integer;
   VbCableNote: TNewStaticText;
 
 procedure InitializeWizard;
@@ -118,7 +120,12 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpFinished then
   begin
-    if VbCableRan then
+    if VbCableFailed then
+      WizardForm.FinishedLabel.Caption :=
+        'VoiceAec 已安装完成，但虚拟声卡没有安装成功（退出码 ' + IntToStr(VbCableExitCode) + '）。' + #13#10#13#10 +
+        '请打开 VoiceAec，在面板顶部点「一键安装虚拟声卡」重试；仍失败可从 www.vb-cable.com 手动安装。' + #13#10#13#10 +
+        '卸载：开始菜单 → VoiceAec → 卸载 VoiceAec，或 Windows「设置 → 应用」。'
+    else if VbCableRan then
       WizardForm.FinishedLabel.Caption :=
         'VoiceAec 已安装完成。' + #13#10#13#10 +
         '虚拟声卡已安装，请重启电脑；重启后才能在外放的同时消除回声，并在语音软件里选中 CABLE Output。' + #13#10#13#10 +
@@ -150,11 +157,11 @@ begin
     'netsh advfirewall firewall delete rule name="VoiceAec Panel" >nul 2>&1' + #13#10 +
     'netsh advfirewall firewall add rule name="VoiceAec Panel" dir=in action=allow program="' +
       ExpandConstant('{app}\VoiceAec.exe') + '" protocol=TCP localport=8765-8774 profile=private >nul 2>&1' + #13#10 +
-    'if /I "%~1"=="cable" (' + #13#10 +
-    '  "' + ExpandConstant('{app}\vendor\VBCABLE\VBCABLE_Setup_x64.exe') + '" -i -h' + #13#10 +
-    '  exit /b %errorlevel%' + #13#10 +
-    ')' + #13#10 +
-    'exit /b 0' + #13#10;
+    'if /I "%~1"=="cable" goto cable' + #13#10 +
+    'exit /b 0' + #13#10 +
+    ':cable' + #13#10 +
+    '"' + ExpandConstant('{app}\vendor\VBCABLE\VBCABLE_Setup_x64.exe') + '" -i -h' + #13#10 +
+    'exit /b %errorlevel%' + #13#10;
   if SaveStringToFile(HelperPath, Helper, False) then
     Log('voiceaec: helper written to ' + HelperPath)
   else
@@ -166,6 +173,11 @@ begin
     '/c "' + HelperPath + '" ' + HelperArgs, ExpandConstant('{tmp}'),
     SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
+    if HelperArgs = 'cable' then
+    begin
+      VbCableFailed := True;
+      VbCableExitCode := -1;
+    end;
     if not WizardSilent then
       MsgBox('未获得管理员授权：局域网访问未开启，虚拟声卡也未安装。' + #13#10 +
         '可以稍后以管理员身份重新运行安装程序，或在 VoiceAec 面板点「一键安装虚拟声卡」。',
@@ -176,10 +188,16 @@ begin
   Log('voiceaec: helper exit code ' + IntToStr(ResultCode));
   if HelperArgs = 'cable' then
   begin
-    VbCableRan := True;
-    if (ResultCode <> 0) and (not WizardSilent) then
-      MsgBox('VB-CABLE 安装程序返回代码 ' + IntToStr(ResultCode) +
-        '。可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
+    VbCableExitCode := ResultCode;
+    if (ResultCode = 0) or (ResultCode = 3010) then
+      VbCableRan := True
+    else
+    begin
+      VbCableFailed := True;
+      if not WizardSilent then
+        MsgBox('VB-CABLE 安装程序返回代码 ' + IntToStr(ResultCode) +
+          '。可以稍后在 VoiceAec 面板点「一键安装虚拟声卡」重试。', mbInformation, MB_OK);
+    end;
   end;
 end;
 

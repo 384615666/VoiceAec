@@ -224,25 +224,35 @@ var refConfigured = HasArg("--ref") || cfg.ContainsKey("ref");
 var outConfigured = HasArg("--out") || cfg.ContainsKey("out");
 var deviceNotices = new List<string>();
 
-MMDevice micDevice;
+MMDevice? TryDefaultDevice(DataFlow flow, Role role)
+{
+    try { return enumerator.GetDefaultAudioEndpoint(flow, role); }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[audio] default {flow} device unavailable: {ex.Message}");
+        return null;
+    }
+}
+
+MMDevice? micDevice;
 var micFallback = false;
 try { micDevice = Find(DataFlow.Capture, micSub); }
 catch (Exception)
 {
     micFallback = true;
-    micDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-    if (micConfigured)
+    micDevice = TryDefaultDevice(DataFlow.Capture, Role.Communications);
+    if (micDevice != null && micConfigured)
         deviceNotices.Add($"麦克风「{ShortName(micSub)}」不在了，已临时改用「{ShortName(micDevice.FriendlyName)}」；插回后重启即可恢复。");
 }
 
-MMDevice refDevice;
+MMDevice? refDevice;
 var refFallback = false;
 try { refDevice = FindAny(refSub); }   // 主参考也允许麦克风(如近讲麦场景);默认仍是播放设备
 catch (Exception)
 {
     refFallback = true;
-    refDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
-    if (refConfigured)
+    refDevice = TryDefaultDevice(DataFlow.Render, Role.Console);
+    if (refDevice != null && refConfigured)
         deviceNotices.Add($"参考回采「{ShortName(refSub)}」不在了，已临时改用「{ShortName(refDevice.FriendlyName)}」；插回后重启即可恢复。");
 }
 
@@ -253,7 +263,7 @@ if (!ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase))
     catch { Console.WriteLine("  (ref2 not found, single-ref)"); }
 }
 
-MMDevice outDevice;
+MMDevice? outDevice = null;
 var cableMissing = false;
 var outFallback = false;
 try
@@ -274,27 +284,40 @@ catch (Exception)
         catch
         {
             cableMissing = true;
-            outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            outDevice = TryDefaultDevice(DataFlow.Render, Role.Multimedia);
         }
     }
     else
     {
         outFallback = true;
-        outDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        if (outConfigured)
+        outDevice = TryDefaultDevice(DataFlow.Render, Role.Multimedia);
+        if (outDevice != null && outConfigured)
             deviceNotices.Add($"输出设备「{ShortName(outSub)}」不在了，已临时改用「{ShortName(outDevice.FriendlyName)}」。");
     }
 }
 
+var devicesMissing = micDevice == null || refDevice == null || outDevice == null;
+if (devicesMissing)
+    deviceNotices.Add("没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。");
 var deviceNotice = string.Join(" ", deviceNotices);
-// Keep the user's saved choice when a device is only temporarily missing, so
-// plugging it back in (or restarting) restores it automatically.
-if (!micFallback) cfg["mic"] = micDevice.FriendlyName;
-if (!refFallback) cfg["ref"] = refDevice.FriendlyName;
+
+// Persist only real devices; a temporary fallback keeps the user's original
+// choice so it comes back when the device does.
+if (!micFallback && micDevice != null) cfg["mic"] = micDevice.FriendlyName;
+if (!refFallback && refDevice != null) cfg["ref"] = refDevice.FriendlyName;
 if (ref2Sub.Equals("none", StringComparison.OrdinalIgnoreCase) || ref2Device != null)
     cfg["ref2"] = ref2Device?.FriendlyName ?? "none";
-if (!cableMissing && !outFallback) cfg["out"] = outDevice.FriendlyName;
+if (!cableMissing && !outFallback && outDevice != null) cfg["out"] = outDevice.FriendlyName;
 SaveCfg();
+
+// Never route the processed microphone to physical speakers just because the
+// virtual cable is missing, and never start audio without the devices it needs.
+if (cableMissing || devicesMissing)
+{
+    paused = 1;
+    audioEnabled.Reset();
+    Console.WriteLine($"[audio] start paused (cableMissing={cableMissing}, devicesMissing={devicesMissing})");
+}
 
 // ── engine / mode management ─────────────────────────────────────────
 const int Rate = 16000;
@@ -379,8 +402,8 @@ var ref2Ring = new SampleRing(Rate / 2 * 4);   // 始终创建,便于运行时�
 var outRing = new SampleRing(Rate * 2 * 4);
 using var inputReady = new AutoResetEvent(false);
 var devSwitchLock = new object();
-string currentMic = micDevice.FriendlyName, currentRef = refDevice.FriendlyName;
-string currentRef2 = ref2Device?.FriendlyName ?? "none", currentOut = outDevice.FriendlyName;
+string currentMic = micDevice?.FriendlyName ?? "", currentRef = refDevice?.FriendlyName ?? "";
+string currentRef2 = ref2Device?.FriendlyName ?? "none", currentOut = outDevice?.FriendlyName ?? "";
 
 long hops = 0, passthroughs = 0, outUnderruns = 0, refTrims = 0, refZeroHops = 0;
 double micDb = -120, outDb = -120, refDb = -120;
@@ -457,6 +480,9 @@ string SetPaused(bool value, bool persist = true)
             return "";
         }
 
+        if (micDevice == null || refDevice == null || outDevice == null)
+            return "缺少音频设备：请先在设备下拉里选择麦克风 / 参考 / 输出，然后再恢复。";
+
         // Publish the complete resumed pipeline only after every resource
         // started successfully. Failure leaves the application safely muted.
         CaptureSession? newMic = null, newRef = null, newRef2 = null;
@@ -520,6 +546,8 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
             }
             catch { DisposeAudio(freshCapture); DisposeAudio(freshDevice); throw; }
         }
+        var beforeMic = currentMic; var beforeRef = currentRef;
+        var beforeRef2 = currentRef2; var beforeOut = currentOut;
         if (!string.IsNullOrEmpty(micName)) Change("麦克风", () =>
             ReplaceCapture(micName, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic));
         if (!string.IsNullOrEmpty(refName)) Change("参考回采", () =>
@@ -540,9 +568,14 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
             }
             catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
         });
-        cfg["mic"] = currentMic; cfg["ref"] = currentRef;
-        cfg["ref2"] = currentRef2; cfg["out"] = currentOut;
-        SaveCfg();
+        // Only persist what this request actually changed; a fallback that is
+        // still in effect must not overwrite the user's original choice.
+        var changed = false;
+        if (currentMic != beforeMic) { cfg["mic"] = currentMic; changed = true; }
+        if (currentRef != beforeRef) { cfg["ref"] = currentRef; changed = true; }
+        if (currentRef2 != beforeRef2) { cfg["ref2"] = currentRef2; changed = true; }
+        if (currentOut != beforeOut) { cfg["out"] = currentOut; changed = true; }
+        if (changed) SaveCfg();
         return errors.Count == 0 ? "" : "设备切换失败: " + string.Join("；", errors);
     }
 }
@@ -674,7 +707,10 @@ object BuildStatus()
     string micName, refName, ref2Name, outName;
     lock (devSwitchLock)
     {
-        micName = currentMic; refName = currentRef; ref2Name = currentRef2; outName = currentOut;
+        micName = string.IsNullOrEmpty(currentMic) ? "（未找到设备）" : currentMic;
+        refName = string.IsNullOrEmpty(currentRef) ? "（未找到设备）" : currentRef;
+        ref2Name = currentRef2;
+        outName = string.IsNullOrEmpty(currentOut) ? "（未找到设备）" : currentOut;
     }
     var appVersion = Assembly.GetEntryAssembly()!.GetName().Version?.ToString(3) ?? "dev";
     return new
@@ -757,6 +793,11 @@ var obsPlugins = new ObsPluginManager();
 const string VbCableUrl = "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip";
 const string VbCableSha256 = "B950E39F01AF1D04EA623C8F6D8EB9B6EA5C477C637295FABF20631C85116BFB";
 var vbCableLock = new object();
+var vbCableGate = new object();
+var vbCableRunning = false;
+var vbCableOk = false;
+var vbCableMessage = "";
+var vbCableReboot = false;
 var vbCableCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VoiceAec", "VbCable");
 
 string EnsureVbCableSetup()
@@ -838,9 +879,10 @@ var httpThread = new Thread(() =>
                     continue;
                 }
                 var expectedMethod = path is "/api/status" or "/api/obs-plugin" or "/" or "/index.html" ? "GET"
-                    : path == "/api/devices" ? ctx.Request.HttpMethod : "POST";
+                    : path is "/api/devices" or "/api/vbcable/install" ? ctx.Request.HttpMethod : "POST";
                 if (ctx.Request.HttpMethod != expectedMethod ||
-                    (path == "/api/devices" && ctx.Request.HttpMethod is not ("GET" or "POST")))
+                    (path == "/api/devices" && ctx.Request.HttpMethod is not ("GET" or "POST")) ||
+                    (path == "/api/vbcable/install" && ctx.Request.HttpMethod is not ("GET" or "POST")))
                 {
                     ctx.Response.StatusCode = 405;
                     continue;
@@ -1001,10 +1043,42 @@ var httpThread = new Thread(() =>
                     }
                     case "/api/vbcable/install":
                     {
-                        var (ok, message, reboot) = InstallVbCable();
+                        if (ctx.Request.HttpMethod == "POST")
+                        {
+                            lock (vbCableGate)
+                            {
+                                if (!vbCableRunning)
+                                {
+                                    vbCableRunning = true;
+                                    vbCableOk = false;
+                                    vbCableMessage = "正在准备安装…";
+                                    vbCableReboot = false;
+                                    _ = Task.Run(() =>
+                                    {
+                                        var result = InstallVbCable();
+                                        lock (vbCableGate)
+                                        {
+                                            vbCableRunning = false;
+                                            vbCableOk = result.Ok;
+                                            vbCableMessage = result.Message;
+                                            vbCableReboot = result.Reboot;
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        bool running, ok, reboot;
+                        string message;
+                        lock (vbCableGate)
+                        {
+                            running = vbCableRunning;
+                            ok = vbCableOk;
+                            message = vbCableMessage;
+                            reboot = vbCableReboot;
+                        }
                         var bytes = JsonSerializer.SerializeToUtf8Bytes(
-                            new { ok, message, reboot }, jsonOpts);
-                        ctx.Response.StatusCode = ok ? 200 : 500;
+                            new { ok = running ? true : ok, running, message, reboot }, jsonOpts);
+                        ctx.Response.StatusCode = running ? 202 : (ok ? 200 : 500);
                         ctx.Response.ContentType = "application/json; charset=utf-8";
                         ctx.Response.OutputStream.Write(bytes);
                         break;

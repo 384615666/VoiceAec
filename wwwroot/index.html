@@ -4874,10 +4874,18 @@
     els.cableRecheck.disabled = true;
     els.cableInstall.textContent = '正在安装…';
     try {
-      const response = await fetchWithTimeout('/api/vbcable/install', {
+      let response = await fetchWithTimeout('/api/vbcable/install', {
         method: 'POST', headers: { Accept: 'application/json' }
-      }, VB_CABLE_TIMEOUT_MS);
-      const data = await response.json();
+      }, 15000);
+      let data = await response.json();
+      while (data.running) {
+        els.cableInstall.textContent = '正在安装…（可继续使用面板）';
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+        response = await fetchWithTimeout('/api/vbcable/install', {
+          method: 'GET', headers: { Accept: 'application/json' }
+        }, 10000);
+        data = await response.json();
+      }
       showToast(data.message || (data.ok ? '安装完成，请重启电脑。' : '安装未完成'), data.ok ? 'success' : 'error');
       if (data.ok) {
         els.cableNote.hidden = false;
