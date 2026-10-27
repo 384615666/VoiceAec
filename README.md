@@ -11,7 +11,7 @@
 - **官网**: <https://384615666.github.io/VoiceAec/>
 - **图文使用手册**: <https://384615666.github.io/VoiceAec/manual.html>
 
-源码分别在 [docs/index.html](docs/index.html) 与 [docs/manual.html](docs/manual.html)。手册对应 v0.4.7;更新版本后界面可能略有差异。
+源码分别在 [docs/index.html](docs/index.html) 与 [docs/manual.html](docs/manual.html)。手册对应 v0.4.9;更新版本后界面可能略有差异。
 
 ## 下载即用
 
@@ -36,7 +36,7 @@
 ## 产品形态
 
 - **原生桌面窗口**(WinForms + WebView2 承载控制面板,1280×800 一屏)
-- 点窗口 **X** 或面板"关闭面板" → 隐藏到系统托盘继续运行(音频不中断)
+- 点窗口 **X** → 隐藏到系统托盘继续运行(音频不中断)
 - **唯一退出入口**:托盘图标右键 → 退出
 - 托盘左键 → 打开/聚焦窗口;右键菜单为自绘的马卡龙风格面板(圆角、彩色线性图标、状态胶囊、自启开关):打开控制面板 / 暂停并静音 / 处理模式四选一 / 开机自启 / 退出
 - **开机自启**(可选,面板开关或托盘勾选):注册 HKCU Run 键,开机以 `--tray` 静默后台运行,无需手动启动
@@ -53,7 +53,7 @@
 
 ## 一键安装 / 卸载 OBS 插件
 
-完整整合包只需要下载一份。面板右下角的 **OBS 插件…** 可打开管理窗口：
+完整整合包只需要下载一份。面板顶栏的 **OBS 插件** 可打开管理窗口：
 
 1. 退出 OBS，点击 **一键安装到 OBS**，按系统提示授予管理员权限。
 2. 安装器使用 OBS 普通安装版的标准路径 `%ProgramData%\obs-studio\plugins\obs-localvqe`，校验并安装插件、模型和依赖。已有版本先备份到 `%ProgramData%\VoiceAec\ObsPlugin\backups`。
