@@ -166,7 +166,8 @@ var refSub = HasArg("--ref") ? Arg("--ref", "") : cfg.GetValueOrDefault("ref", "
 var ref2Sub = HasArg("--ref2") ? Arg("--ref2", "") : cfg.GetValueOrDefault("ref2", "");
 var outSub = HasArg("--out") ? Arg("--out", "") : cfg.GetValueOrDefault("out", "");
 var threads = int.Parse(Arg("--threads", "2"));
-var startMode = Arg("--model", "v1.2");
+var startMode = Arg("--model", cfg.GetValueOrDefault("model", "v1.2"));
+var startModeFromConfig = !HasArg("--model");
 var port = int.Parse(Arg("--port", "8765"));
 var noBrowser = argsList.Contains("--nobrowser");
 var trayMode = argsList.Contains("--tray");     // 后台托盘运行：隐藏控制台 + 不开浏览器
@@ -258,12 +259,18 @@ var modeSwitchLock = new object();
 
 bool ModelExists(string m) => m == "off" || ModelPath(m) != null;
 
-string SwitchModel(string requested)
+void PersistMode(string requested)
 {
-    lock (modeSwitchLock) return SwitchModelCore(requested);
+    lock (cfgLock) cfg["model"] = requested;
+    SaveCfg();
 }
 
-string SwitchModelCore(string requested)
+string SwitchModel(string requested, bool persist = true)
+{
+    lock (modeSwitchLock) return SwitchModelCore(requested, persist);
+}
+
+string SwitchModelCore(string requested, bool persist)
 {
     if (!modelLabels.ContainsKey(requested)) return $"未知模式 '{requested}'";
     if (!ModelExists(requested))
@@ -280,6 +287,7 @@ string SwitchModelCore(string requested)
                 mode = "off";
             }
             Console.WriteLine("[mode] off (passthrough)");
+            if (persist) PersistMode("off");
             return "";
         }
         var fresh = LocalVqe.Context.Create(ModelPath(requested)!, threads);
@@ -292,6 +300,7 @@ string SwitchModelCore(string requested)
         }
         old?.Dispose();
         Console.WriteLine($"[mode] {requested} loaded (sr={fresh.SampleRate} hop={fresh.Hop})");
+        if (persist) PersistMode(requested);
         return "";
     }
     catch (Exception ex)
@@ -302,7 +311,12 @@ string SwitchModelCore(string requested)
 }
 
 {
-    var err = SwitchModel(startMode);
+    if (startModeFromConfig && (!modelLabels.ContainsKey(startMode) || !ModelExists(startMode)))
+    {
+        Console.WriteLine($"[mode] saved mode '{startMode}' unavailable -> v1.2");
+        startMode = "v1.2";
+    }
+    var err = SwitchModel(startMode, persist: false);
     if (err != "") Console.WriteLine($"[mode] init failed -> off: {err}");
 }
 
