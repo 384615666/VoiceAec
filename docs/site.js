@@ -107,66 +107,6 @@
   }
 
   /* -------------------------------------------------------------------------
-     Interface tour tabs: click + arrow keys + Home / End.
-     ---------------------------------------------------------------------- */
-  const tablist = document.querySelector('[role="tablist"]');
-
-  if (tablist) {
-    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
-    const panels = tabs
-      .map((tab) => document.getElementById(tab.getAttribute("aria-controls")))
-      .filter(Boolean);
-
-    const activateTab = (tab, moveFocus) => {
-      tabs.forEach((item) => {
-        const selected = item === tab;
-        item.setAttribute("aria-selected", String(selected));
-        item.tabIndex = selected ? 0 : -1;
-      });
-
-      panels.forEach((panel) => {
-        const selected = panel.id === tab.getAttribute("aria-controls");
-        panel.hidden = !selected;
-      });
-
-      if (moveFocus) tab.focus();
-    };
-
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => activateTab(tab, false));
-    });
-
-    tablist.addEventListener("keydown", (event) => {
-      const currentIndex = tabs.indexOf(document.activeElement);
-      if (currentIndex < 0) return;
-
-      let nextIndex = -1;
-
-      switch (event.key) {
-        case "ArrowRight":
-        case "ArrowDown":
-          nextIndex = (currentIndex + 1) % tabs.length;
-          break;
-        case "ArrowLeft":
-        case "ArrowUp":
-          nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-          break;
-        case "Home":
-          nextIndex = 0;
-          break;
-        case "End":
-          nextIndex = tabs.length - 1;
-          break;
-        default:
-          return;
-      }
-
-      event.preventDefault();
-      activateTab(tabs[nextIndex], true);
-    });
-  }
-
-  /* -------------------------------------------------------------------------
      Reveal on scroll. Content is visible without JS; this only adds motion.
      ---------------------------------------------------------------------- */
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -254,7 +194,8 @@
   });
 })();
 
-/* Interactive control-panel prototype. It simulates UI state only. */
+/* Interactive control-panel prototype. It simulates UI state only:
+   nothing here touches the microphone or system settings. */
 (() => {
   "use strict";
 
@@ -262,39 +203,75 @@
   if (!panel) return;
 
   const $ = (id) => document.getElementById(id);
-  const modeLabels = {
-    off: "关闭（直通）",
-    "v1.2": "均衡模式",
-    "v1.3": "强力模式",
-    "v1.4": "纯回声消除",
+  const setText = (id, text) => {
+    const el = $(id);
+    if (el) el.textContent = text;
+  };
+
+  /* Labels and tips follow the desktop app. `drop` is how many dB the
+     output sits below the microphone; `cpu` is the simulated range in %. */
+  const modes = {
+    off: {
+      label: "关闭（直通）",
+      drop: 0,
+      cpu: [0.2, 0.5],
+      tip: "麦克风原样转发，不经过模型，适合戴耳机时用",
+    },
+    "v1.2": {
+      label: "均衡模式",
+      drop: 4,
+      cpu: [2.6, 3.4],
+      tip: "推荐默认，日常外放先用它",
+    },
+    "v1.3": {
+      label: "强力模式",
+      drop: 7,
+      cpu: [6.2, 7.6],
+      tip: "消得最彻底，CPU 更高，可能轻微削弱人声",
+    },
+    "v1.4": {
+      label: "纯回声消除模式",
+      drop: 3,
+      cpu: [1.0, 1.6],
+      tip: "只消回声、尽量保留人声，适合近场麦克风",
+    },
   };
 
   const state = {
+    mode: "v1.2",
     paused: false,
     seconds: 12,
     hops: 742,
     silent: 12,
     underruns: 8,
     fallback: 0,
-    cpu: 1.4,
+    cpu: 3.1,
   };
 
+  /* Simulated levels in dBFS. The output is derived from the microphone. */
   const levels = [
-    { key: "mic", meter: "demoMicMeter", db: "demoMicDb", base: -60, span: 7 },
-    { key: "ref", meter: "demoRefMeter", db: "demoRefDb", base: -34, span: 6 },
-    { key: "out", meter: "demoOutMeter", db: "demoOutDb", base: -31, span: 6 },
-    { key: "ref2", meter: "demoRef2Meter", db: "demoRef2Db", base: -30, span: 6 },
+    { key: "mic", base: -40, span: 5 },
+    { key: "ref", base: -28, span: 4 },
+    { key: "out" },
+    { key: "ref2", base: -33, span: 4 },
   ].map((item) => {
-    const meter = $(item.meter);
+    const card = panel.querySelector(`[data-demo-level="${item.key}"]`);
+    const meter = card ? card.querySelector(".demo-meter") : null;
+    const peakEl = card ? card.querySelector(".demo-peak") : null;
     const bars = [];
     if (meter) {
       for (let i = 0; i < 18; i += 1) {
-        const bar = document.createElement("i");
-        meter.appendChild(bar);
-        bars.push(bar);
+        bars.push(meter.appendChild(document.createElement("i")));
       }
     }
-    return { ...item, bars, dbEl: $(item.db) };
+    return {
+      ...item,
+      card,
+      bars,
+      peakEl,
+      dbEl: card ? card.querySelector(".demo-db") : null,
+      peak: peakEl ? parseFloat(peakEl.textContent) : NaN,
+    };
   });
 
   const formatTime = (seconds) =>
@@ -309,52 +286,82 @@
   };
 
   let toastTimer = 0;
-  const toast = (message) => {
+  const toast = (message, warn = false) => {
     const el = $("demoToast");
     if (!el) return;
     el.textContent = message;
+    el.classList.toggle("is-warn", warn);
     el.classList.add("is-visible");
     window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => el.classList.remove("is-visible"), 2200);
+    toastTimer = window.setTimeout(() => el.classList.remove("is-visible"), warn ? 4200 : 2600);
+  };
+
+  const sampleCpu = () => {
+    if (state.paused) return Math.random() * 0.2;
+    const [low, high] = modes[state.mode].cpu;
+    return low + Math.random() * (high - low);
   };
 
   const renderLevels = () => {
-    const paused = state.paused;
+    const { paused } = state;
+    let micDb = -40;
+
     levels.forEach((level) => {
-      if (level.key === "ref2" && $("demoRef2Card")?.hidden) return;
-      level.bars.forEach((bar, index) => {
-        const wave = Math.sin((Date.now() / 260) + index * 0.7) * 0.5 + 0.5;
-        const intensity = paused ? 0.04 : 0.22 + wave * 0.55 + Math.random() * 0.18;
-        bar.style.height = `${Math.round(8 + intensity * 80)}%`;
-        bar.classList.toggle("on", !paused && intensity > 0.3);
-      });
-      if (paused) {
-        setDb(level.dbEl, "−∞");
+      if (!level.card || level.card.hidden) return;
+
+      let db;
+      if (level.key === "out") {
+        const drop = modes[state.mode].drop;
+        db = micDb - drop - (drop ? Math.random() * 1.5 : 0);
       } else {
-        setDb(level.dbEl, (level.base + Math.random() * level.span).toFixed(1));
+        db = level.base + Math.random() * level.span;
       }
+      if (level.key === "mic") micDb = db;
+
+      const gain = Math.min(1, Math.max(0.08, (db + 60) / 40));
+      level.bars.forEach((bar, index) => {
+        const wave = Math.sin(Date.now() / 260 + index * 0.7) * 0.5 + 0.5;
+        const intensity = paused ? 0 : gain * (0.35 + wave * 0.5 + Math.random() * 0.15);
+        bar.style.height = `${Math.round(10 + intensity * 86)}%`;
+        bar.classList.toggle("on", intensity > 0.3);
+      });
+
+      if (paused) {
+        setDb(level.dbEl, "-∞");
+        if (level.peakEl) level.peakEl.textContent = "—";
+        level.peak = NaN;
+        return;
+      }
+
+      setDb(level.dbEl, db.toFixed(1));
+      /* Peak hold: jump up at once, fall back slowly. */
+      level.peak = Number.isFinite(level.peak) ? Math.max(db + 2.5, level.peak - 0.6) : db + 2.5;
+      if (level.peakEl) level.peakEl.textContent = `${level.peak.toFixed(1)} dB`;
     });
   };
 
   const updateStats = () => {
-    $("demoUptime").textContent = formatTime(state.seconds);
-    $("demoHops").textContent = state.hops.toLocaleString("en-US");
-    $("demoRate").textContent = state.paused ? "—" : "62.5";
-    $("demoSilent").textContent = state.silent.toLocaleString("en-US");
-    $("demoUnderruns").textContent = String(state.underruns);
-    $("demoFallback").textContent = String(state.fallback);
-    $("demoCpu").textContent = `${state.cpu.toFixed(1)}%`;
-    $("demoStatusText").textContent = state.paused
-      ? `已暂停 · 静音 · ${formatTime(state.seconds)}`
-      : `运行中 · ${formatTime(state.seconds)}`;
+    setText("demoUptime", formatTime(Math.round(state.hops * 0.016)));
+    setText("demoHops", state.hops.toLocaleString("en-US"));
+    setText("demoRate", state.paused ? "—" : "62.5");
+    setText("demoSilent", state.silent.toLocaleString("en-US"));
+    setText("demoUnderruns", String(state.underruns));
+    setText("demoFallback", String(state.fallback));
+    setText("demoCpu", `${state.cpu.toFixed(1)}%`);
+    setText(
+      "demoStatusText",
+      `${state.paused ? "已暂停 · 静音" : "运行中"} · ${formatTime(state.seconds)}`
+    );
   };
 
+  /* Uptime keeps counting while paused; processing stats do not. */
   const tick = () => {
-    if (state.paused) return;
     state.seconds += 1;
-    state.hops += 62 + (Math.random() > 0.5 ? 1 : 0);
-    if (Math.random() > 0.82) state.silent += 1;
-    state.cpu = 1.2 + Math.random() * 0.9;
+    if (!state.paused) {
+      state.hops += state.seconds % 2 ? 63 : 62;
+      if (Math.random() > 0.82) state.silent += 1;
+    }
+    state.cpu = sampleCpu();
     updateStats();
     renderLevels();
   };
@@ -373,53 +380,67 @@
     state.paused = paused;
     panel.classList.toggle("is-paused", paused);
     const button = $("demoPause");
-    button.textContent = paused ? "恢复处理与输出" : "暂停并静音";
-    button.setAttribute("aria-pressed", String(paused));
+    if (button) {
+      button.textContent = paused ? "恢复处理与输出" : "暂停并静音";
+      button.setAttribute("aria-pressed", String(paused));
+    }
+    setText("demoRefPill", paused ? "静默" : "播放中");
+    state.cpu = sampleCpu();
     updateStats();
     renderLevels();
-    toast(paused ? "已暂停：原型不会处理音频" : "已恢复：继续模拟面板");
+    toast(paused ? "已暂停并静音，音频采集和推理已停止" : "已恢复处理与输出");
   };
 
   $("demoPause")?.addEventListener("click", () => setPaused(!state.paused));
 
-  document.querySelectorAll(".demo-mode").forEach((button) => {
+  const modeButtons = Array.from(panel.querySelectorAll(".demo-mode"));
+  modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.mode;
-      if (!mode || !modeLabels[mode]) return;
-      document.querySelectorAll(".demo-mode").forEach((item) => {
+      if (!modes[mode]) return;
+      state.mode = mode;
+      panel.dataset.mode = mode;
+      modeButtons.forEach((item) => {
         const active = item === button;
         item.classList.toggle("is-active", active);
         item.setAttribute("aria-pressed", String(active));
       });
-      $("demoModeBadge").textContent = modeLabels[mode];
-      toast(`已切换到${modeLabels[mode]}（原型）`);
+      setText("demoModeBadge", modes[mode].label);
+      state.cpu = sampleCpu();
+      updateStats();
+      renderLevels();
+      toast(`已切换到${modes[mode].label}：${modes[mode].tip}`);
     });
   });
 
   $("demoRef2")?.addEventListener("change", (event) => {
     const enabled = event.target.checked;
     const card = $("demoRef2Card");
-    const grid = $("demoLevels");
     if (card) card.hidden = !enabled;
-    grid?.classList.toggle("is-four-up", enabled);
+    $("demoLevels")?.classList.toggle("is-four-up", enabled);
     renderLevels();
-    toast(enabled ? "第二参考已开启（原型）" : "第二参考已关闭（原型）");
+    toast(enabled ? "第二参考已启用：把第二只麦克风放在旁人那一侧" : "第二参考已关闭");
   });
 
   $("demoAutostart")?.addEventListener("change", (event) => {
-    toast(event.target.checked ? "开机自启已开启（原型）" : "开机自启已关闭（原型）");
+    toast(event.target.checked ? "已开启开机自启（原型，不改系统设置）" : "已关闭开机自启（原型，不改系统设置）");
   });
 
   $("demoObs")?.addEventListener("click", () => {
-    toast("OBS 插件安装只在 Windows 桌面版可用");
+    toast("桌面版会打开「安装到 OBS」：先退出 OBS，再一键安装滤镜");
   });
 
-  document.querySelectorAll(".demo-device").forEach((select) => {
+  /* Wrong-device options carry data-warn: explain the mistake instead. */
+  panel.querySelectorAll(".demo-device").forEach((select) => {
     select.addEventListener("change", () => {
-      toast(`已选择 ${select.value}（原型）`);
+      const option = select.selectedOptions[0];
+      const warning = option ? option.dataset.warn : "";
+      select.closest(".demo-level")?.classList.toggle("is-warn", Boolean(warning));
+      toast(warning || `设备已切换：${select.value}`, Boolean(warning));
     });
   });
 
+  panel.dataset.mode = state.mode;
   updateStats();
   renderLevels();
 })();
