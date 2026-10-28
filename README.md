@@ -8,8 +8,8 @@
 
 ## 官网与手册
 
-- **官网**: <https://384615666.github.io/VoiceAec/>
-- **图文使用手册**: <https://384615666.github.io/VoiceAec/manual.html>
+- **官网**: <https://voiceaec.lsjx.xyz/>
+- **图文使用手册**: <https://voiceaec.lsjx.xyz/manual.html>
 
 源码分别在 [docs/index.html](docs/index.html) 与 [docs/manual.html](docs/manual.html)。手册对应 v0.5.2;更新版本后界面可能略有差异。
 
