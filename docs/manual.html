@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VoiceAec 使用手册 · 安装、设备、模式与排障</title>
-  <meta name="description" content="VoiceAec 图文使用手册：安装、设备选择、处理模式、托盘与后台、OBS 插件、局域网访问和常见问题。对应 v0.5.2。">
+  <meta name="description" content="VoiceAec 图文使用手册：安装、设备选择、处理模式、托盘与后台、OBS 插件、局域网访问和常见问题。对应 v0.5.3。">
   <meta name="theme-color" content="#fff9f5">
   <link rel="canonical" href="https://voiceaec.lsjx.xyz/manual.html">
   <link rel="icon" type="image/png" href="images/icon-256.png">
@@ -73,7 +73,7 @@
         <strong>VoiceAec</strong>
         <small>使用手册</small>
       </span>
-      <span class="version">v0.5.2</span>
+      <span class="version">v0.5.3</span>
     </a>
 
     <nav class="nav-links" id="navLinks" aria-label="页面目录">
@@ -106,7 +106,7 @@
     <div class="wrap">
       <div class="hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow"><span class="dot"></span>图文使用手册 · v0.5.2</span>
+          <span class="eyebrow"><span class="dot"></span>图文使用手册 · v0.5.3</span>
           <h1>VoiceAec<br><span class="accent">使用手册</span></h1>
           <p class="lead">第一次使用，先看快速上手；已经安装好，可以直接查看设备设置或常见问题。</p>
           <div class="hero-actions">
@@ -125,16 +125,16 @@
           </div>
           <div class="hero-meta">
             <span><svg class="icon" aria-hidden="true"><use href="#i-windows"/></svg>Windows 10 / 11 64 位</span>
-            <span><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>对应 v0.5.2</span>
+            <span><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>对应 v0.5.3</span>
             <span><svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg>真实界面截图</span>
           </div>
         </div>
 
         <div class="hero-art">
           <div class="hero-shot">
-            <img src="images/panel-main.png" alt="VoiceAec 主界面：顶栏、麦克风/参考回采/输出三张电平卡、四种处理模式和运行统计" width="1280" height="830" data-zoom data-caption="VoiceAec 主界面（v0.5.2）" fetchpriority="high">
+            <img src="images/panel-main.jpg" alt="VoiceAec 主界面：顶栏、麦克风/参考回采/输出三张电平卡、四种处理模式和运行统计" width="1280" height="830" data-zoom data-caption="VoiceAec 主界面（v0.5.3）" fetchpriority="high">
           </div>
-          <span class="chip chip-1"><svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg>真实界面 · v0.5.2</span>
+          <span class="chip chip-1"><svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg>真实界面 · v0.5.3</span>
           <span class="chip chip-2"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg>输出到 CABLE Input</span>
           <span class="chip chip-3"><svg class="icon" aria-hidden="true"><use href="#i-tray"/></svg>关闭窗口仍在后台</span>
         </div>
@@ -144,7 +144,7 @@
         <span><strong>第一次使用</strong> 从快速上手开始</span>
         <span><strong>已经装好</strong> 直接看设备设置</span>
         <span><strong>遇到问题</strong> 按症状查排障</span>
-        <span><strong>对应版本</strong> v0.5.2</span>
+        <span><strong>对应版本</strong> v0.5.3</span>
       </div>
     </div>
   </section>
@@ -318,7 +318,7 @@
           <ol class="steps">
             <li>
               <strong>下载安装包</strong>
-              <p>从 <a href="https://github.com/384615666/VoiceAec/releases/latest" target="_blank" rel="noopener">GitHub Releases</a> 下载 <code>VoiceAec-v0.5.2-setup-x64.exe</code>。不要从网盘或第三方下载站拿。</p>
+              <p>从 <a href="https://github.com/384615666/VoiceAec/releases/latest" target="_blank" rel="noopener">GitHub Releases</a> 下载 <code>VoiceAec-v0.5.3-setup-x64.exe</code>。不要从网盘或第三方下载站拿。</p>
             </li>
             <li>
               <strong>选择语言</strong>
@@ -371,7 +371,7 @@
             <span class="pill tone-amber">适合 U 盘 / 绿色使用</span>
           </div>
           <h3 class="mt-12">解压即用，不写安装记录</h3>
-          <p>从 Releases 下载 <code>VoiceAec-v0.5.2-win-x64.zip</code>，右键“全部解压”，双击里面的 <code>VoiceAec.exe</code>。不要直接在压缩包里运行。</p>
+          <p>从 Releases 下载 <code>VoiceAec-v0.5.3-win-x64.zip</code>，右键“全部解压”，双击里面的 <code>VoiceAec.exe</code>。不要直接在压缩包里运行。</p>
           <ul class="small mt-8" style="padding-left:18px;line-height:1.8">
             <li>配置写在 exe 旁的 <code>voiceaec.json</code>；目录不可写时回退到 <code>%LocalAppData%\VoiceAec\voiceaec.json</code>。</li>
             <li>没装 VB-CABLE 时，面板顶部会出现引导条，可一键安装（需要管理员）。</li>
@@ -425,7 +425,7 @@
 
       <figure class="figure mt-24">
         <div class="shot annotated">
-          <img src="images/panel-main.png" alt="VoiceAec 主界面，标出顶栏、电平卡、处理模式、运行统计和底栏提示五个区域" width="1280" height="830" loading="lazy" data-zoom data-caption="主界面五个区域：顶栏、电平三卡、处理模式、运行统计、底栏提示">
+          <img src="images/panel-main.jpg" alt="VoiceAec 主界面，标出顶栏、电平卡、处理模式、运行统计和底栏提示五个区域" width="1280" height="830" loading="lazy" data-zoom data-caption="主界面五个区域：顶栏、电平三卡、处理模式、运行统计、底栏提示">
           <span class="hotspot" style="left:26%;top:9.5%" aria-hidden="true">1</span>
           <span class="hotspot" style="left:50%;top:25%" aria-hidden="true">2</span>
           <span class="hotspot" style="left:50%;top:56.5%" aria-hidden="true">3</span>
@@ -557,7 +557,7 @@
           </ol>
           <figure class="figure mt-16">
             <div class="shot">
-              <img src="images/panel-ref2-menu.png" alt="VoiceAec 开启第二参考后，第二参考卡片的设备菜单展开，列出播放设备" width="1280" height="830" loading="lazy" data-zoom data-caption="第二参考的菜单：可选播放设备，也可选另一只麦克风">
+              <img src="images/panel-ref2-menu.jpg" alt="VoiceAec 开启第二参考后，第二参考卡片的设备菜单展开，列出播放设备" width="1280" height="830" loading="lazy" data-zoom data-caption="第二参考的菜单：可选播放设备，也可选另一只麦克风">
             </div>
             <figcaption class="caption">第二参考菜单：向下滚动还能选另一只麦克风；不想用了，关掉顶部开关即可。</figcaption>
           </figure>
@@ -793,7 +793,7 @@
       </div>
       <figure class="figure mt-16">
         <div class="shot">
-          <img src="images/panel-paused.png" alt="VoiceAec 暂停状态：顶栏显示已暂停静音，按钮变为恢复处理与输出，电平归零" width="1280" height="830" loading="lazy" data-zoom data-caption="暂停并静音后的界面">
+          <img src="images/panel-paused.jpg" alt="VoiceAec 暂停状态：顶栏显示已暂停静音，按钮变为恢复处理与输出，电平归零" width="1280" height="830" loading="lazy" data-zoom data-caption="暂停并静音后的界面">
         </div>
         <figcaption class="caption">暂停后顶栏变成琥珀色，右侧按钮变成“恢复处理与输出”；电平停止，输出静音。</figcaption>
       </figure>
@@ -876,7 +876,7 @@
 
           <div class="callout info mt-16">
             <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
-            <span><strong>弹窗里的版本号是插件版本：</strong>截图显示“已由 VoiceAec 安装 · 0.4.0”，代表 OBS 插件版本 0.4.0，与桌面程序的 v0.5.2 是两个独立版本号。</span>
+            <span><strong>弹窗里的版本号是插件版本：</strong>截图显示“已由 VoiceAec 安装 · 0.4.0”，代表 OBS 插件版本 0.4.0，与桌面程序的 v0.5.3 是两个独立版本号。</span>
           </div>
           <div class="callout warn mt-12">
             <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
@@ -1226,20 +1226,20 @@
       </details>
 
       <details class="adv">
-        <summary>校验下载（v0.5.2）</summary>
+        <summary>校验下载（v0.5.3）</summary>
         <div class="adv-body">
           <p>在 PowerShell 里运行 <code>Get-FileHash .\文件名 -Algorithm SHA256</code>，和下面比对。</p>
-          <p class="small mt-8"><strong>安装版</strong> VoiceAec-v0.5.2-setup-x64.exe</p>
+          <p class="small mt-8"><strong>安装版</strong> VoiceAec-v0.5.3-setup-x64.exe</p>
           <div class="hash mt-8">
-            <code>821FAC1DCEE576A9AF8E6A164B6D5E81E036A34A769BBD52914F6ECBA1A5D654</code>
-            <button class="copy-btn" type="button" data-copy="821FAC1DCEE576A9AF8E6A164B6D5E81E036A34A769BBD52914F6ECBA1A5D654">复制</button>
+            <code>3D640CFC33684246BDE4FE78E3EDBB7F0997D75573D431142DE60B64F88885B9</code>
+            <button class="copy-btn" type="button" data-copy="3D640CFC33684246BDE4FE78E3EDBB7F0997D75573D431142DE60B64F88885B9">复制</button>
           </div>
-          <p class="small mt-12"><strong>便携版</strong> VoiceAec-v0.5.2-win-x64.zip</p>
+          <p class="small mt-12"><strong>便携版</strong> VoiceAec-v0.5.3-win-x64.zip</p>
           <div class="hash mt-8">
-            <code>59F0E9CD3AE93AEAE8B8DB569A26C03BA2EB63C8AFB8701A2D805911EDBDFF2F</code>
-            <button class="copy-btn" type="button" data-copy="59F0E9CD3AE93AEAE8B8DB569A26C03BA2EB63C8AFB8701A2D805911EDBDFF2F">复制</button>
+            <code>71624F240B0B7AD8D6F52D83304C90FA9F22731FCB270ADE29AD4C2837A92A60</code>
+            <button class="copy-btn" type="button" data-copy="71624F240B0B7AD8D6F52D83304C90FA9F22731FCB270ADE29AD4C2837A92A60">复制</button>
           </div>
-          <p class="small mt-12">SHA256 来自 v0.5.2 发布说明。如果下载的是更新版本，请以对应 Release 页的校验值为准。</p>
+          <p class="small mt-12">SHA256 来自 v0.5.3 发布说明。如果下载的是更新版本，请以对应 Release 页的校验值为准。</p>
         </div>
       </details>
     </div>
@@ -1295,7 +1295,7 @@
         <article class="card">
           <h3>反馈时请带上</h3>
           <ul class="small" style="padding-left:20px;line-height:1.9">
-            <li>VoiceAec 版本（「关于」里看，例如 v0.5.2）</li>
+            <li>VoiceAec 版本（「关于」里看，例如 v0.5.3）</li>
             <li>Windows 版本（Win10 / Win11，64 位）</li>
             <li>麦克风、参考回采、输出分别选了什么</li>
             <li>当前模式和底部“每秒推理 / 参考静默 / 补零 / 降级直通”</li>
@@ -1316,7 +1316,7 @@
               查看更新记录
             </a>
           </div>
-          <p class="small mt-12">本手册对应 v0.5.2。更新版本后界面可能略有差异，以实际界面为准。</p>
+          <p class="small mt-12">本手册对应 v0.5.3。更新版本后界面可能略有差异，以实际界面为准。</p>
         </article>
       </div>
     </div>
@@ -1330,7 +1330,7 @@
       <img src="images/icon-256.png" alt="VoiceAec 图标" width="42" height="42">
       <div>
         <strong>VoiceAec 使用手册</strong>
-        <p>外放打游戏，队友听得更清楚。<br>对应 v0.5.2 · 更新于 2026-10-27</p>
+        <p>外放打游戏，队友听得更清楚。<br>对应 v0.5.3 · 更新于 2026-10-30</p>
       </div>
     </div>
     <div class="footer-links">

@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true)][string] $ModelsDirectory,
     [Parameter(Mandatory = $true)][string] $LocaleDirectory,
     [Parameter(Mandatory = $true)][string] $RuntimeDirectory,
-    [string] $Version = '0.4.0',
+    [string] $Version = '0.4.0',   # OBS plugin version written into obs-plugin\manifest.json (independent of the desktop app version)
     [string] $DotNetExe = (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe')
 )
 $ErrorActionPreference = 'Stop'
@@ -44,5 +44,29 @@ foreach ($file in (Get-ChildItem -LiteralPath $LocaleDirectory -File -Filter '*.
 }
 [ordered]@{ Schema = 1; Version = $Version; Files = $entries.ToArray() } |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $plugin 'manifest.json') -Encoding utf8
-Copy-Item -LiteralPath (Join-Path (Split-Path $project -Parent) 'README.md') -Destination $output -Force
+
+# Documentation payload: keep README links, screenshots and notices working inside the package.
+$repoRoot = Split-Path $project -Parent
+$docsOut = Join-Path $output 'docs'
+New-Item -ItemType Directory -Path $docsOut -Force | Out-Null
+
+foreach ($file in @('README.md', 'README.en.md', 'LICENSE', 'THIRD-PARTY-NOTICES.md')) {
+    $source = Join-Path $repoRoot $file
+    if (Test-Path -LiteralPath $source -PathType Leaf) {
+        Copy-Item -LiteralPath $source -Destination $output -Force
+    }
+}
+$v14Doc = Join-Path $repoRoot 'docs\V14-AEC-NUMERICS.md'
+if (Test-Path -LiteralPath $v14Doc -PathType Leaf) {
+    Copy-Item -LiteralPath $v14Doc -Destination $docsOut -Force
+}
+$docsImages = Join-Path $repoRoot 'docs\images'
+if (Test-Path -LiteralPath $docsImages -PathType Container) {
+    Copy-Item -LiteralPath $docsImages -Destination (Join-Path $docsOut 'images') -Recurse -Force
+}
+$nativeDir = Join-Path $repoRoot 'native'
+if (Test-Path -LiteralPath $nativeDir -PathType Container) {
+    Copy-Item -LiteralPath $nativeDir -Destination (Join-Path $output 'native') -Recurse -Force
+}
+
 Write-Output "Unified desktop and OBS package: $output"
