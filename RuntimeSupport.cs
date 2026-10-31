@@ -86,6 +86,11 @@ internal sealed class CaptureSession : IDisposable
     private readonly Action? onSamples;
     private int disposed;
 
+    // Raised when the capture thread dies on its own (device unplugged, stream
+    // invalidated). Intentional Dispose suppresses it, so this only ever means
+    // the session stopped producing audio without anyone asking.
+    public event Action? Stopped;
+
     public CaptureSession(MMDevice device, SampleRing destination, WaveFormat target, Action? onSamples = null)
     {
         this.destination = destination;
@@ -104,6 +109,7 @@ internal sealed class CaptureSession : IDisposable
             };
             resampler = new MediaFoundationResampler(provider, target);
             capture.DataAvailable += OnData;
+            capture.RecordingStopped += OnRecordingStopped;
             capture.StartRecording();
         }
         catch
@@ -112,6 +118,12 @@ internal sealed class CaptureSession : IDisposable
             resampler?.Dispose();
             throw;
         }
+    }
+
+    private void OnRecordingStopped(object? sender, StoppedEventArgs args)
+    {
+        if (Volatile.Read(ref disposed) != 0) return;
+        Stopped?.Invoke();
     }
 
     private void OnData(object? sender, WaveInEventArgs args)

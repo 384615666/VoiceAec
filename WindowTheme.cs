@@ -5,6 +5,10 @@ namespace VoiceAec;
 // Borderless resizable window: keeps the sizing frame (so all edges/corners
 // still resize natively) but removes the native caption. The caption area is
 // drawn by the web panel itself (drag region + custom window buttons).
+// The remaining top frame strip is recolored to the panel's top pink via
+// DWMWA_CAPTION_COLOR — hiding it would need client-covers-whole-window,
+// which kills edge resizing because WM_NCHITTEST for pixels over the
+// WebView2 child never reaches this form.
 internal sealed class PanelForm : Form
 {
     private const int WsCaption = 0x00C00000;
@@ -118,6 +122,7 @@ internal static class WindowTheme
     private const int DwmwaUseImmersiveDarkMode = 20;
     private const int DwmwaWindowCornerPreference = 33;
     private const int DwmwaBorderColor = 34;
+    private const int DwmwaCaptionColor = 35;
     private const int DwmwcpRound = 2;
 
     [DllImport("dwmapi.dll")]
@@ -166,6 +171,11 @@ internal static class WindowTheme
             _ = DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref round, sizeof(int));
             var border = ColorRef(0xF6, 0xE4, 0xEC);   // #F6E4EC soft pink edge
             _ = DwmSetWindowAttribute(hwnd, DwmwaBorderColor, ref border, sizeof(int));
+            // The residual caption strip above the panel (resize frame, only
+            // visible when restored) defaults to light gray; paint it the same
+            // pink as the page's top wash so it blends in seamlessly.
+            var caption = ColorRef(0xFC, 0xDC, 0xEC);
+            _ = DwmSetWindowAttribute(hwnd, DwmwaCaptionColor, ref caption, sizeof(int));
         }
         catch
         {

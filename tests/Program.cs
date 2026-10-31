@@ -78,6 +78,25 @@ UiText.SetLang(null);
 Check(UiText.Lang == "zh" && UiText.S("中文", "English") == "中文" && !UiText.IsEnglish,
     "unknown value falls back to Chinese");
 
+// ── DeviceChangeWatcher: WASAPI must accept the registration and actually
+//    deliver an event. Nudging the default playback volume (then restoring it)
+//    is a harmless way to force one PropertyValueChanged callback.
+{
+    using var enumerator = new NAudio.CoreAudioApi.MMDeviceEnumerator();
+    var watcher = new DeviceChangeWatcher();
+    var fired = new ManualResetEventSlim(false);
+    watcher.Changed += () => fired.Set();
+    enumerator.RegisterEndpointNotificationCallback(watcher);
+    Check(true, "device change watcher registration accepted");
+    using var speaker = enumerator.GetDefaultAudioEndpoint(NAudio.CoreAudioApi.DataFlow.Render, NAudio.CoreAudioApi.Role.Console);
+    var original = speaker.AudioEndpointVolume.MasterVolumeLevelScalar;
+    speaker.AudioEndpointVolume.MasterVolumeLevelScalar = Math.Clamp(original + 0.02f, 0.05f, 1f);
+    var delivered = fired.Wait(2000);
+    speaker.AudioEndpointVolume.MasterVolumeLevelScalar = original;
+    enumerator.UnregisterEndpointNotificationCallback(watcher);
+    Check(delivered, "device change notification delivered within 2s");
+}
+
 // ── Elevated OBS helper: that separate process has to apply the saved language
 //    from voiceaec.json before it can produce install/uninstall messages.
 var langSandbox = Path.Combine(Path.GetTempPath(), "VoiceAec-lang-tests-" + Guid.NewGuid().ToString("N"));

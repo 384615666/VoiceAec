@@ -55,13 +55,14 @@
     font-size: 13px;
     color: var(--ink);
     background:
-      /* Blend into the native title bar: begin with its exact caption colour,
-         then fade into the pastel gradient so no seam is visible. */
-      linear-gradient(180deg, #FFF7F2 0, #FFF7F2 26px, rgba(255, 247, 242, 0) 200px),
+      /* Pastel gradient reaches the very top edge. A soft pink wash across the
+         full width keeps the top from reading as a white strip; the old solid
+         warm-white band (a leftover for the pre-v0.6 native title bar) is gone. */
+      linear-gradient(180deg, rgba(252, 217, 236, .85) 0, rgba(252, 217, 236, 0) 110px),
       radial-gradient(circle at 8% 0%, rgba(252, 217, 236, .82), transparent 34%),
       radial-gradient(circle at 96% 8%, rgba(217, 239, 251, .92), transparent 32%),
       radial-gradient(circle at 82% 98%, rgba(240, 232, 255, .88), transparent 34%),
-      linear-gradient(135deg, #FFFDF8 0%, #FFF7F6 48%, #F7FCFF 100%);
+      linear-gradient(135deg, #FBEEF3 0%, #FFF7F6 48%, #F7FCFF 100%);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     scrollbar-color: var(--pink) var(--cream);
@@ -173,6 +174,22 @@
   /* Start the drag strip at the very top of the client area. */
   html.has-window-chrome .app {
     padding-top: 0;
+  }
+
+  /* 窗口比设计比例高时 .app 居中会在顶部留出与标题栏同色的空条：
+     把它铺成可拖动的标题区，层级压在 .app 之下，不挡任何内容点击。 */
+  .window-top-strip {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    z-index: 0;
+  }
+
+  html.has-window-chrome .window-top-strip {
+    display: block;
   }
 
   .window-actions {
@@ -3095,6 +3112,8 @@
   </symbol>
 </svg>
 
+<div class="window-top-strip" id="windowTopStrip" aria-hidden="true"></div>
+
 <div class="app" id="app">
 
   <div class="window-bar" id="windowBar">
@@ -3882,7 +3901,8 @@
     winMinimize: $('winMinimize'),
     winMaximize: $('winMaximize'),
     winClose: $('winClose'),
-    windowBar: $('windowBar')
+    windowBar: $('windowBar'),
+    windowTopStrip: $('windowTopStrip')
   };
 
   // 无边框窗口：只在 WebView2 里显示自绘窗口控制，局域网浏览器隐藏。
@@ -5145,6 +5165,10 @@
       key === REF2_KEY ? '第二参考菜单已打开。' : `${picker.noun}设备菜单已打开。`
     );
     focusMenuSelection();
+    // 兜底：浏览器（局域网面板）收不到宿主的插拔推送，打开菜单时静默刷新一次
+    if (Date.now() - state.lastDevicesAttempt > 5000) {
+      void refreshDevices({ quiet: true });
+    }
   }
 
   function applyDeviceCurrent(current, options = {}) {
@@ -5164,10 +5188,15 @@
     }
   }
 
+  function devicesSignature() {
+    return JSON.stringify([state.devicesStatus, state.devices]);
+  }
+
   async function refreshDevices(options = {}) {
     if (state.devicesFetching) return;
     const quiet = Boolean(options.quiet);
     const requestStartedAt = Date.now();
+    const signatureBefore = devicesSignature();
 
     state.devicesFetching = true;
     state.lastDevicesAttempt = requestStartedAt;
@@ -5217,12 +5246,25 @@
         els.deviceMenuList.contains(active) || active === document.body
       );
       renderDevicePickers();
-      if (state.openMenuKey) {
+      // 只有列表真的变了才重建菜单内容，避免每次刷新打断悬停 / 焦点
+      if (state.openMenuKey && devicesSignature() !== signatureBefore) {
         renderDeviceMenu();
         positionDeviceMenu();
         if (restoreMenuFocus) focusMenuSelection();
       }
     }
+  }
+
+  const DEVICE_PUSH_DEBOUNCE_MS = 400;
+  let devicePushDebounce = 0;
+  // 宿主在设备插拔时发来 deviceChanged；连发多条时合并成一次刷新
+  function scheduleDeviceRefresh() {
+    if (devicePushDebounce) window.clearTimeout(devicePushDebounce);
+    devicePushDebounce = window.setTimeout(() => {
+      devicePushDebounce = 0;
+      if (!state.connected || state.devicePending) return;
+      void refreshDevices({ quiet: true });
+    }, DEVICE_PUSH_DEBOUNCE_MS);
   }
 
   function maybeRetryDevices() {
@@ -6181,12 +6223,20 @@
 
   // 自绘标题条：单击拖动 = 原生窗口移动（最大化时会先还原，贴边吸附也由系统处理），
   // 双击 = 最大化/还原；拖动超过阈值才触发，避免吃掉双击。
+  // window-top-strip 盖住 .app 居中后顶部多出来的同色空条，层级在内容之下。
   let windowDragStart = null;
-  if (els.windowBar) {
-    els.windowBar.addEventListener('mousedown', (event) => {
-      if (event.button !== 0 || event.target.closest('.window-btn')) return;
-      windowDragStart = { x: event.screenX, y: event.screenY };
-    });
+  const dragSurfaces = [els.windowBar, els.windowTopStrip].filter(Boolean);
+  if (dragSurfaces.length) {
+    for (const surface of dragSurfaces) {
+      surface.addEventListener('mousedown', (event) => {
+        if (event.button !== 0 || event.target.closest('.window-btn')) return;
+        windowDragStart = { x: event.screenX, y: event.screenY };
+      });
+      surface.addEventListener('dblclick', (event) => {
+        if (event.target.closest('.window-btn')) return;
+        postWindowCommand('window-maximize');
+      });
+    }
     window.addEventListener('mousemove', (event) => {
       if (!windowDragStart) return;
       const dx = event.screenX - windowDragStart.x;
@@ -6196,10 +6246,6 @@
       postWindowCommand('window-drag-start');
     });
     window.addEventListener('mouseup', () => { windowDragStart = null; });
-    els.windowBar.addEventListener('dblclick', (event) => {
-      if (event.target.closest('.window-btn')) return;
-      postWindowCommand('window-maximize');
-    });
   }
   if (els.aboutLogo && els.brandIcon) els.aboutLogo.src = els.brandIcon.src;
   els.soundSettings.addEventListener('click', () => { void openSoundSettings(); });
@@ -6230,14 +6276,15 @@
     if (typeof event.data?.panelVisible === 'boolean') setPanelVisible(event.data.panelVisible);
     if (typeof event.data?.windowMaximized === 'boolean') updateWindowState(event.data.windowMaximized);
     if (event.data?.about) els.aboutDialog.showModal();
+    if (event.data?.deviceChanged) scheduleDeviceRefresh();
   });
 
   document.addEventListener('visibilitychange', () => {
     setPanelVisible(!document.hidden);
     if (document.hidden) return;
     pollStatus();
-    if (!state.devicePending && state.devicesLoaded
-      && Date.now() - state.lastDevicesAttempt > 30000) {
+    // 窗口隐藏时 WebView2 被挂起，期间的插拔推送会丢，重新显示时必须补一次刷新
+    if (state.devicesLoaded) {
       void refreshDevices({ quiet: true });
     } else {
       maybeRetryDevices();

@@ -266,7 +266,7 @@ catch (Exception)
     micFallback = true;
     micDevice = TryDefaultDevice(DataFlow.Capture, Role.Communications);
     if (micDevice != null && micConfigured)
-        micNoticeSource = ShortName(micSub);
+        micNoticeSource = micSub;   // 全名:区分信息常在括号里(如"麦克风 (Xmic Z3)")
 }
 
 MMDevice? refDevice;
@@ -277,7 +277,7 @@ catch (Exception)
     refFallback = true;
     refDevice = TryDefaultDevice(DataFlow.Render, Role.Console);
     if (refDevice != null && refConfigured)
-        refNoticeSource = ShortName(refSub);
+        refNoticeSource = refSub;
 }
 
 MMDevice? ref2Device = null;
@@ -316,7 +316,7 @@ catch (Exception)
         outFallback = true;
         outDevice = TryDefaultDevice(DataFlow.Render, Role.Multimedia);
         if (outDevice != null && outConfigured)
-            outNoticeSource = ShortName(outSub);
+            outNoticeSource = outSub;
     }
 }
 
@@ -426,6 +426,10 @@ var ref2Ring = new SampleRing(Rate / 2 * 4);   // 始终创建,便于运行时�
 var outRing = new SampleRing(Rate * 2 * 4);
 using var inputReady = new AutoResetEvent(false);
 var devSwitchLock = new object();
+
+// 设备拔出时 WASAPI 会话直接死亡且无声；会话守卫与插拔通知都汇到这里排队自愈
+var recoveryRequested = new AutoResetEvent(false);
+void QueueRecovery() => recoveryRequested.Set();
 string currentMic = micDevice?.FriendlyName ?? "", currentRef = refDevice?.FriendlyName ?? "";
 string currentRef2 = ref2Device?.FriendlyName ?? "none", currentOut = outDevice?.FriendlyName ?? "";
 
@@ -448,6 +452,49 @@ static double RmsDb(float[] buf)
 
 CaptureSession? micCap = null, refCap = null, ref2Cap = null;
 WasapiOut? waveOut = null;
+// 通道死亡标记：仅表示"当前绑定的会话已停止出声"，自愈成功或用户换设备后清除
+bool micDead = false, refDead = false, ref2Dead = false, outDead = false;
+long micSilentSince = 0;
+
+// 守卫在会话所属线程回调，绝不拿 devSwitchLock（自愈会在持锁时 Dispose 旧会话，
+// 那里要 join 会话线程，等锁会死锁）；引用比较足够判断"还是当前绑定的那个会话"。
+void GuardCapture(string label, CaptureSession session)
+{
+    session.Stopped += () =>
+    {
+        try
+        {
+            if (Volatile.Read(ref paused) != 0) return;
+            var alive = label switch
+            {
+                "mic" => ReferenceEquals(micCap, session),
+                "ref" => ReferenceEquals(refCap, session),
+                _ => ReferenceEquals(ref2Cap, session),
+            };
+            if (!alive) return;
+            if (label == "mic") micDead = true;
+            else if (label == "ref") refDead = true;
+            else ref2Dead = true;
+            QueueRecovery();
+        }
+        catch { }
+    };
+}
+
+void GuardOutput(WasapiOut output)
+{
+    output.PlaybackStopped += (_, _) =>
+    {
+        try
+        {
+            if (Volatile.Read(ref paused) != 0) return;
+            if (!ReferenceEquals(waveOut, output)) return;
+            outDead = true;
+            QueueRecovery();
+        }
+        catch { }
+    };
+}
 void TrimRef(SampleRing r)
 {
     var excess = r.BufferedBytes - Rate / 2 * 4;
@@ -492,6 +539,55 @@ static string StripDeviceSwitchPrefix(string error)
     foreach (var prefix in new[] { "设备切换失败: ", "Device switch failed: " })
         if (error.StartsWith(prefix, StringComparison.Ordinal)) return error[prefix.Length..];
     return error;
+}
+
+// 重绑一个采集通道到 name。force=true 时忽略"名字没变"直接重开（自愈用）；
+// 失败时抛异常且原绑定保持不动。成功后清除该通道的死亡标记。
+void ReplaceCapture(string name, DataFlow? flow, SampleRing ring, string label,
+    ref MMDevice? device, ref CaptureSession? capture, ref string selected, bool force = false)
+{
+    if (!force && name == selected) return;
+    MMDevice? freshDevice = name.Equals("none", StringComparison.OrdinalIgnoreCase)
+        && flow == null ? null : (flow == null ? FindAny(name) : Find(flow.Value, name));
+    CaptureSession? freshCapture = null;
+    try
+    {
+        var freshName = freshDevice?.FriendlyName ?? "none";
+        if (freshDevice != null && Volatile.Read(ref paused) == 0)
+        {
+            freshCapture = StartCapture(freshDevice, ring, label);
+            GuardCapture(label, freshCapture);
+        }
+        var oldDevice = device; var oldCapture = capture;
+        device = freshDevice; capture = freshCapture; selected = freshName;
+        DisposeAudio(oldCapture); DisposeAudio(oldDevice);
+        ring.Clear();
+        if (label == "mic") micDead = false;
+        else if (label == "ref") refDead = false;
+        else ref2Dead = false;
+    }
+    catch { DisposeAudio(freshCapture); DisposeAudio(freshDevice); throw; }
+}
+
+// 重绑输出设备并重启输出；失败时抛异常且原绑定保持不动。
+void ReplaceOutput(string name)
+{
+    var freshDevice = Find(DataFlow.Render, name);
+    WasapiOut? freshOutput = null;
+    try
+    {
+        var freshName = freshDevice.FriendlyName;
+        if (Volatile.Read(ref paused) == 0)
+        {
+            freshOutput = StartOutput(freshDevice);
+            GuardOutput(freshOutput);
+        }
+        var oldOutput = waveOut; var oldDevice = outDevice;
+        waveOut = freshOutput; outDevice = freshDevice; currentOut = freshName;
+        DisposeAudio(oldOutput); DisposeAudio(oldDevice);
+        outDead = false;
+    }
+    catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
 }
 
 string RecheckDevices()
@@ -564,7 +660,12 @@ string SetPaused(bool value, bool persist = true)
             newRef = StartCapture(refDevice, refRing, "ref");
             if (ref2Device != null) newRef2 = StartCapture(ref2Device, ref2Ring, "ref2");
             newOutput = StartOutput(outDevice);
+            GuardCapture("mic", newMic);
+            GuardCapture("ref", newRef);
+            if (newRef2 != null) GuardCapture("ref2", newRef2);
+            GuardOutput(newOutput);
             micCap = newMic; refCap = newRef; ref2Cap = newRef2; waveOut = newOutput;
+            micDead = refDead = ref2Dead = outDead = false;
             Volatile.Write(ref paused, 0);
             audioEnabled.Set();
             if (persist) PersistKey("paused", "0");
@@ -596,25 +697,6 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
             try { action(); }
             catch (Exception ex) { errors.Add($"{label}: {ex.Message}"); }
         }
-        void ReplaceCapture(string name, DataFlow? flow, SampleRing ring, string label,
-            ref MMDevice? device, ref CaptureSession? capture, ref string selected)
-        {
-            if (name == selected) return;
-            MMDevice? freshDevice = name.Equals("none", StringComparison.OrdinalIgnoreCase)
-                && flow == null ? null : (flow == null ? FindAny(name) : Find(flow.Value, name));
-            CaptureSession? freshCapture = null;
-            try
-            {
-                var freshName = freshDevice?.FriendlyName ?? "none";
-                if (freshDevice != null && Volatile.Read(ref paused) == 0)
-                    freshCapture = StartCapture(freshDevice, ring, label);
-                var oldDevice = device; var oldCapture = capture;
-                device = freshDevice; capture = freshCapture; selected = freshName;
-                DisposeAudio(oldCapture); DisposeAudio(oldDevice);
-                ring.Clear();
-            }
-            catch { DisposeAudio(freshCapture); DisposeAudio(freshDevice); throw; }
-        }
         var beforeMic = currentMic; var beforeRef = currentRef;
         var beforeRef2 = currentRef2; var beforeOut = currentOut;
         var micOk = false; var refOk = false; var outOk = false;
@@ -637,20 +719,7 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
         if (!string.IsNullOrEmpty(outName))
         {
             var n = errors.Count;
-            if (outName != currentOut) Change(UiText.S("输出", "Output"), () =>
-            {
-                var freshDevice = Find(DataFlow.Render, outName);
-                WasapiOut? freshOutput = null;
-                try
-                {
-                    var freshName = freshDevice.FriendlyName;
-                    if (Volatile.Read(ref paused) == 0) freshOutput = StartOutput(freshDevice);
-                    var oldOutput = waveOut; var oldDevice = outDevice;
-                    waveOut = freshOutput; outDevice = freshDevice; currentOut = freshName;
-                    DisposeAudio(oldOutput); DisposeAudio(oldDevice);
-                }
-                catch { DisposeAudio(freshOutput); DisposeAudio(freshDevice); throw; }
-            });
+            if (outName != currentOut) Change(UiText.S("输出", "Output"), () => ReplaceOutput(outName));
             outOk = errors.Count == n;
         }
         // An explicit, successful selection resolves that channel, even when
@@ -678,6 +747,64 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
             : UiText.S("设备切换失败: ", "Device switch failed: ") + string.Join(UiText.S("；", "; "), errors);
     }
 }
+
+// 设备插拔自愈：拔出时 WASAPI 会话死亡（无声、电平静止），插回后把死掉的通道
+// 重绑到当前选择的同名设备并重启，免去手动"暂停→恢复"。
+void RecoverAudio(bool eventDriven)
+{
+    lock (devSwitchLock)
+    {
+        if (Volatile.Read(ref paused) != 0)
+        {
+            // 只有启动时因缺设备而暂停才自动恢复；用户手动暂停的不打扰
+            if (!eventDriven || !devicesMissingNotice) return;
+            try { RecheckDevices(); SetPaused(false); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] auto-resume: {ex.Message}"); }
+            return;
+        }
+
+        // 兜底：就算 RecordingStopped 没触发（个别驱动会让采集线程卡住），
+        // 未暂停时麦克风环形缓冲持续 5 秒颗粒无收也算死亡。回采通道不适用——
+        // 系统静音时 loopback 本来就不出包。
+        void NoteSilence(ref long since, SampleRing ring, ref bool dead)
+        {
+            if (ring.BufferedBytes >= HopBytes) { since = 0; return; }
+            if (since == 0) { since = Environment.TickCount64; return; }
+            if (Environment.TickCount64 - since > 5000) { dead = true; since = 0; }
+        }
+        if (micCap != null) NoteSilence(ref micSilentSince, micRing, ref micDead);
+
+        if (micDead && !string.IsNullOrEmpty(currentMic))
+            try { ReplaceCapture(currentMic, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic, force: true); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] recover mic: {ex.Message}"); }
+        if (refDead && !string.IsNullOrEmpty(currentRef))
+            try { ReplaceCapture(currentRef, null, refRing, "ref", ref refDevice, ref refCap, ref currentRef, force: true); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] recover ref: {ex.Message}"); }
+        if (ref2Dead && !string.IsNullOrEmpty(currentRef2) && !currentRef2.Equals("none", StringComparison.OrdinalIgnoreCase))
+            try { ReplaceCapture(currentRef2, null, ref2Ring, "ref2", ref ref2Device, ref ref2Cap, ref currentRef2, force: true); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] recover ref2: {ex.Message}"); }
+        if (outDead && !string.IsNullOrEmpty(currentOut))
+            try { ReplaceOutput(currentOut); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] recover out: {ex.Message}"); }
+    }
+}
+
+var recoveryThread = new Thread(() =>
+{
+    while (!shutdown.IsCancellationRequested)
+    {
+        var eventDriven = recoveryRequested.WaitOne(2000);
+        if (shutdown.IsCancellationRequested) break;
+        if (eventDriven)
+        {
+            Thread.Sleep(400);   // 插拔一次会连发多条通知，等它收敛
+            try { recoveryRequested.Reset(); } catch { }
+        }
+        try { RecoverAudio(eventDriven); }
+        catch (Exception ex) { Console.Error.WriteLine($"[audio] recover: {ex.Message}"); }
+    }
+}) { IsBackground = true };
+recoveryThread.Start();
 
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; shutdown.Cancel(); };
 
@@ -817,18 +944,36 @@ object BuildStatus()
         if (micNoticeSource != null)
             notices.Add(UiText.F("麦克风「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
                 "Microphone \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
-                micNoticeSource, ShortName(currentMic)));
+                micNoticeSource, currentMic));
         if (refNoticeSource != null)
             notices.Add(UiText.F("参考回采「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
                 "Reference loopback \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
-                refNoticeSource, ShortName(currentRef)));
+                refNoticeSource, currentRef));
         if (outNoticeSource != null)
             notices.Add(UiText.F("输出设备「{0}」不在了，已临时改用「{1}」。",
                 "Output device \"{0}\" is gone; temporarily using \"{1}\".",
-                outNoticeSource, ShortName(currentOut)));
+                outNoticeSource, currentOut));
         if (devicesMissingNotice)
             notices.Add(UiText.S("没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。",
                 "No usable microphone or speaker was found, so processing is paused. Connect your devices, pick them in the panel, then click \"Resume processing & output\"."));
+        // 运行期拔出：与启动期缺设备不同，通道自愈在等设备插回。
+        // 显示完整 FriendlyName——区分信息常在括号里(ShortName 会把"麦克风 (Xmic Z3)"截成"麦克风")。
+        if (micDead && !string.IsNullOrEmpty(currentMic))
+            notices.Add(UiText.F("麦克风「{0}」被拔出了，插回后声音会自动恢复。",
+                "Microphone \"{0}\" was unplugged; audio resumes automatically once it is replugged.",
+                currentMic));
+        if (refDead && !string.IsNullOrEmpty(currentRef))
+            notices.Add(UiText.F("参考回采「{0}」被拔出了，插回后声音会自动恢复。",
+                "Reference loopback \"{0}\" was unplugged; audio resumes automatically once it is replugged.",
+                currentRef));
+        if (ref2Dead && !string.IsNullOrEmpty(currentRef2) && !currentRef2.Equals("none", StringComparison.OrdinalIgnoreCase))
+            notices.Add(UiText.F("第二参考「{0}」被拔出了，插回后声音会自动恢复。",
+                "Second reference \"{0}\" was unplugged; audio resumes automatically once it is replugged.",
+                currentRef2));
+        if (outDead && !string.IsNullOrEmpty(currentOut))
+            notices.Add(UiText.F("输出设备「{0}」被拔出了，插回后声音会自动恢复。",
+                "Output device \"{0}\" was unplugged; audio resumes automatically once it is replugged.",
+                currentOut));
         deviceNotice = string.Join(" ", notices);
     }
     var appVersion = Assembly.GetEntryAssembly()!.GetName().Version?.ToString(3) ?? "dev";
@@ -1647,6 +1792,34 @@ var trayThread = new Thread(() =>
         UiText.S("左键点击图标打开控制面板；右键可选择模式 / 开机自启 / 退出",
             "Left-click the icon to open the control panel; right-click for mode, startup and exit."), ToolTipIcon.Info);
 
+    // 设备插拔推送：WASAPI 在自己的线程回调 DeviceChangeWatcher，插拔一次会连发
+    // 多条事件，这里在 UI 线程上合并成一条 deviceChanged 消息，面板据此刷新设备列表。
+    var deviceWatcher = new DeviceChangeWatcher();
+    var devicePushTimer = new System.Windows.Forms.Timer { Interval = 300 };
+    devicePushTimer.Tick += (_, _) =>
+    {
+        devicePushTimer.Stop();
+        var core = panelWebView?.CoreWebView2;
+        if (core == null) return;
+        try { core.PostWebMessageAsJson("{\"deviceChanged\":true}"); }
+        catch (Exception ex) { Console.Error.WriteLine($"[panel] device push: {ex.Message}"); }
+    };
+    deviceWatcher.Changed += () =>
+    {
+        try
+        {
+            var form = panelForm;
+            if (form == null || form.IsDisposed || !form.IsHandleCreated) return;
+            form.BeginInvoke(() => devicePushTimer.Start());
+        }
+        catch (Exception) { }   // the form may be tearing down between the checks and BeginInvoke
+    };
+    // 注册用的枚举器必须整个运行期存活，被回收后通知会失效
+    var notifyEnumerator = new MMDeviceEnumerator();
+    deviceWatcher.Changed += QueueRecovery;   // 插拔同时触发音频自愈
+    try { notifyEnumerator.RegisterEndpointNotificationCallback(deviceWatcher); }
+    catch (Exception ex) { Console.Error.WriteLine($"[panel] device watcher: {ex.Message}"); }
+
     var quitTimer = new System.Windows.Forms.Timer { Interval = 400 };
     quitTimer.Tick += (_, _) =>
     {
@@ -1662,6 +1835,8 @@ var trayThread = new Thread(() =>
     quitTimer.Start();
     if (!trayMode) ShowPanel();   // 手动启动直接显示窗口；--tray（开机自启）仅托盘
     Application.Run();
+    try { notifyEnumerator.UnregisterEndpointNotificationCallback(deviceWatcher); } catch { }
+    notifyEnumerator.Dispose();
 }) { IsBackground = true };
 trayThread.SetApartmentState(ApartmentState.STA);
 trayThread.Start();

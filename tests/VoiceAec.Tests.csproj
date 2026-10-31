@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <Compile Include="..\DeviceChangeWatcher.cs" Link="DeviceChangeWatcher.cs" />
     <Compile Include="..\SampleRing.cs" Link="SampleRing.cs" />
     <Compile Include="..\RuntimeSupport.cs" Link="RuntimeSupport.cs" />
     <Compile Include="..\UiText.cs" Link="UiText.cs" />
