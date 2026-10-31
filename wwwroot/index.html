@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="voiceaec-token" content="__VOICEAEC_TOKEN__">
+<meta name="voiceaec-lang" content="__VOICEAEC_LANG__">
 <title>VoiceAec</title>
 <style>
   :root {
@@ -54,6 +55,9 @@
     font-size: 13px;
     color: var(--ink);
     background:
+      /* Blend into the native title bar: begin with its exact caption colour,
+         then fade into the pastel gradient so no seam is visible. */
+      linear-gradient(180deg, #FFF7F2 0, #FFF7F2 26px, rgba(255, 247, 242, 0) 200px),
       radial-gradient(circle at 8% 0%, rgba(252, 217, 236, .82), transparent 34%),
       radial-gradient(circle at 96% 8%, rgba(217, 239, 251, .92), transparent 32%),
       radial-gradient(circle at 82% 98%, rgba(240, 232, 255, .88), transparent 34%),
@@ -147,6 +151,86 @@
   .hint-bar {
     flex: 0 0 auto;
     font-size: 11px;
+  }
+
+  /* ── 自绘窗口标题条（无边框窗口，仅 WebView2 内显示） ─────── */
+
+  .window-bar {
+    display: none;
+    flex: 0 0 auto;
+    height: 46px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 0 2px;
+    user-select: none;
+  }
+
+  html.has-window-chrome .window-bar {
+    display: flex;
+  }
+
+  /* Start the drag strip at the very top of the client area. */
+  html.has-window-chrome .app {
+    padding-top: 0;
+  }
+
+  .window-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .window-btn {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .55);
+    color: var(--ink-soft);
+    box-shadow: 0 3px 10px rgba(242, 123, 169, .08);
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+
+  .window-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .window-btn:hover {
+    background: #fff;
+    color: var(--ink);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(242, 123, 169, .16);
+  }
+
+  .window-btn:active {
+    transform: translateY(0) scale(.96);
+  }
+
+  .window-btn:focus-visible {
+    outline: 2px solid rgba(79, 168, 232, .35);
+    outline-offset: 2px;
+  }
+
+  .window-btn-close:hover {
+    background: var(--berry);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(242, 123, 169, .35);
+  }
+
+  html[lang="en"] .window-bar-title {
+    letter-spacing: .04em;
   }
 
   /* ── 顶部状态条 ───────────────────────────────────────────── */
@@ -1952,6 +2036,38 @@
     box-shadow: 0 5px 12px rgba(142, 124, 224, .1);
   }
 
+  .obs-close:disabled {
+    opacity: .55;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .obs-head-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .obs-close.obs-lang {
+    justify-content: center;
+    min-width: 40px;
+    padding: 6px 9px;
+    white-space: nowrap;
+    letter-spacing: .02em;
+  }
+
+  html[lang="en"] .about-dialog .about-head-copy {
+    min-width: 0;
+  }
+
+  html[lang="en"] .about-dialog .about-tagline {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
   .obs-dialog p {
     margin: 9px 0 0;
     color: var(--ink-soft);
@@ -2613,6 +2729,18 @@
     box-shadow: 0 16px 36px rgba(46, 196, 137, .20);
   }
 
+  /* popover 进入 top layer 后由浏览器重置 inset/margin，这里恢复原有 fixed 定位 */
+  .toast[popover] {
+    top: 88px;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    border: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
   /* ── 离线浮层 ─────────────────────────────────────────────── */
 
   .offline-overlay {
@@ -2840,6 +2968,78 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* ── 英文界面专属排版兜底（中文布局保持不变） ────────────── */
+  html[lang="en"] .topbar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  html[lang="en"] .brand {
+    flex: 0 0 auto;
+  }
+
+  html[lang="en"] .top-status {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    row-gap: 8px;
+  }
+
+  html[lang="en"] .metric {
+    grid-template-columns: 84px minmax(0, 1fr) 20px;
+  }
+
+  html[lang="en"] .metric-label {
+    font-size: 9.5px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  /* 英文电平卡：标题与角色/状态标签允许换行，避免 4 列或窄窗时压住右侧读数 */
+  html[lang="en"] .level-heading {
+    flex-wrap: wrap;
+    row-gap: 3px;
+  }
+
+  html[lang="en"] .level-heading h2 {
+    white-space: normal;
+  }
+
+  /* 英文第二参考卡：底部状态文字较长时换行，避免与右侧“关闭顶部开关停用”提示重叠 */
+  html[lang="en"] .ref2-card .level-foot {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  html[lang="en"] .ref2-card .ref2-off-hint {
+    text-align: left;
+    white-space: normal;
+  }
+
+  /* 英文模式卡：窄窗时标题占满一行、徽章换到下一行，避免 "Balan…" 截断 */
+  @media (max-width: 1120px) {
+    html[lang="en"] .mode-top {
+      flex-wrap: wrap;
+      row-gap: 4px;
+    }
+
+    html[lang="en"] .mode-title-wrap {
+      flex: 1 1 100%;
+    }
+
+    html[lang="en"] .mode-name {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    html[lang="en"] .mode-badges {
+      max-width: none;
+      justify-content: flex-start;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2896,6 +3096,20 @@
 </svg>
 
 <div class="app" id="app">
+
+  <div class="window-bar" id="windowBar">
+    <div class="window-actions" role="group" aria-label="窗口控制">
+      <button class="window-btn" id="winMinimize" type="button" aria-label="最小化" title="最小化">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg>
+      </button>
+      <button class="window-btn" id="winMaximize" type="button" aria-label="最大化" title="最大化">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+      </button>
+      <button class="window-btn window-btn-close" id="winClose" type="button" aria-label="隐藏到托盘" title="隐藏到托盘">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>
+      </button>
+    </div>
+  </div>
 
   <header class="topbar">
     <div class="brand" id="brandAbout" role="button" tabindex="0" aria-label="关于 VoiceAec" title="关于 VoiceAec：版本、开源许可与项目链接">
@@ -3530,13 +3744,16 @@
         <p class="about-tagline">本地实时音频控制台</p>
       </div>
     </div>
-    <button class="obs-close" id="aboutClose" type="button">关闭</button>
+    <div class="obs-head-actions">
+      <button class="obs-close obs-lang" id="aboutLang" type="button" aria-label="Switch to English" title="Switch to English">EN</button>
+      <button class="obs-close" id="aboutClose" type="button">关闭</button>
+    </div>
   </div>
   <p class="about-version">版本 <strong id="aboutVersion">—</strong><span class="about-mid">·</span>MIT 开源许可</p>
   <div class="about-lan" id="aboutLan" hidden>
     <span class="about-lan-label">局域网访问</span>
-    <a class="about-lan-url" id="aboutLanUrl" href="#" target="_blank" rel="noopener"></a>
-    <span class="about-lan-hint" id="aboutLanHint">同一 Wi-Fi 下的手机 / 平板可直接打开，无需密码</span>
+    <a class="about-lan-url" id="aboutLanUrl" href="#" aria-label="点击复制局域网地址" title="点击复制局域网地址"></a>
+    <span class="about-lan-hint" id="aboutLanHint">同一 Wi-Fi 下的手机 / 平板可直接打开，无需密码；点击地址可复制</span>
   </div>
   <p>把麦克风与音箱参考回采一起送入神经网络模型，消除对方听到的游戏与媒体回声，再输出到 VB-CABLE 虚拟声卡；游戏声音照常外放。内置 OBS 音频滤镜一键安装。</p>
   <div class="about-links">
@@ -3549,7 +3766,7 @@
   <p class="about-fine about-uninstall">卸载：Windows「设置 → 应用」→ VoiceAec，或开始菜单 → VoiceAec → 卸载 VoiceAec。</p>
 </dialog>
 
-<div class="toast" id="toast" role="status" aria-live="assertive" aria-atomic="true"></div>
+<div class="toast" id="toast" role="status" aria-live="assertive" aria-atomic="true" popover="manual"></div>
 
 <div class="device-menu" id="deviceMenu" data-channel="mic" data-placement="bottom">
   <div class="device-menu-head">
@@ -3624,7 +3841,7 @@
     brandAbout: $('brandAbout'), brandIcon: $('brandIcon'), soundSettings: $('soundSettings'),
     cableBanner: $('cableBanner'), cableInstall: $('cableInstall'), cableNote: $('cableNote'),
     cableRecheck: $('cableRecheck'),
-    aboutDialog: $('aboutDialog'), aboutClose: $('aboutClose'), aboutLogo: $('aboutLogo'),
+    aboutDialog: $('aboutDialog'), aboutClose: $('aboutClose'), aboutLogo: $('aboutLogo'), aboutLang: $('aboutLang'),
     aboutVersion: $('aboutVersion'), aboutLan: $('aboutLan'), aboutLanUrl: $('aboutLanUrl'), aboutLanHint: $('aboutLanHint'),
     modeBadge: $('modeBadge'),
     modeBadgeText: $('modeBadgeText'),
@@ -3661,8 +3878,555 @@
     deviceMenuCount: $('deviceMenuCount'),
     deviceMenuList: $('deviceMenuList'),
     deviceMenuIconUse: $('deviceMenuIconUse'),
-    deviceMenuTip: $('deviceMenuTip')
+    deviceMenuTip: $('deviceMenuTip'),
+    winMinimize: $('winMinimize'),
+    winMaximize: $('winMaximize'),
+    winClose: $('winClose'),
+    windowBar: $('windowBar')
   };
+
+  // 无边框窗口：只在 WebView2 里显示自绘窗口控制，局域网浏览器隐藏。
+  const previewWindowChrome = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get('chrome') === '1';
+    } catch (_) {
+      return false;
+    }
+  })();
+  const hasWindowChrome = Boolean(window.chrome?.webview) || previewWindowChrome;
+  if (hasWindowChrome) document.documentElement.classList.add('has-window-chrome');
+
+  function postWindowCommand(command) {
+    try {
+      window.chrome?.webview?.postMessage(command);
+    } catch (_) { }
+  }
+
+  // ── 中英双语（i18n）──────────────────────────────────────────
+  // 中文原文是唯一事实来源：中文模式逐字输出原文，英文模式查字典/规则翻译；
+  // 原文与初始语言由后端注入（meta[name="voiceaec-lang"]），切换时 POST /api/lang。
+  const LANG_ZH = 'zh';
+  const LANG_EN = 'en';
+  const TITLE_ZH = 'VoiceAec';
+  const TITLE_EN = 'VoiceAec — Real-Time Echo Cancellation';
+  const LANG_BUTTON_ZH = 'EN';
+  const LANG_BUTTON_EN = '中文';
+  const LANG_ARIA_TO_EN = 'Switch to English';
+  const LANG_ARIA_TO_ZH = '切换到中文';
+  const I18N_ATTRS = ['title', 'placeholder', 'aria-label', 'aria-description', 'aria-valuetext', 'alt', 'data-caption', 'data-hint'];
+  const I18N_CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+  const I18N_SKIP_TAGS = { SCRIPT: 1, STYLE: 1, CODE: 1, PRE: 1, KBD: 1, SAMP: 1, NOSCRIPT: 1, TEXTAREA: 1 };
+  const NOUN_EN = { '麦克风': 'microphone', '参考回采': 'reference', '输出': 'output', '第二参考': 'second reference' };
+  const ARIA_STATE_EN = { '正在保存': 'saving', '已开启': 'on', '已关闭': 'off', '正在读取': 'reading' };
+  const METRIC_EN = { '消除强度': 'Cancellation strength', '人声保留': 'Voice preservation', 'CPU 占用': 'CPU usage', '模型体积': 'Model size' };
+  const RATE_STATE_EN = { '已暂停推理': 'inference paused', '偏离正常范围': 'outside the normal range', '正常值 62.5': 'normal 62.5' };
+  const I18N_DICT = Object.freeze({
+    // 顶栏 / 品牌
+    '本地实时音频控制台': 'Real-time local audio console',
+    '正在连接…': 'Connecting…',
+    'CPU 占用': 'CPU usage',
+    'OBS 插件': 'OBS plugin',
+    '开启第二参考': 'Enable second reference',
+    '开机自启': 'Start with Windows',
+    '当前模式': 'Current mode',
+    '均衡模式': 'Balanced mode',
+    '暂停并静音': 'Pause & mute',
+    // 虚拟声卡引导
+    '还差一步：安装虚拟声卡': 'One more step: install the virtual audio cable',
+    'VoiceAec 需要 VB-CABLE 把处理后的声音送给 QQ / 游戏。它由 VB-Audio 免费提供（捐赠软件），安装需要管理员权限，装完请重启电脑。': 'VoiceAec needs VB-CABLE to send the processed audio to QQ / games. It is provided free by VB-Audio (donationware); installation requires administrator rights, and you should restart your PC afterwards.',
+    '一键安装虚拟声卡': 'Install virtual audio cable',
+    '官网下载': 'Download from website',
+    '重新检测': 'Recheck',
+    // 电平区
+    '麦克风': 'Microphone',
+    '输入': 'Input',
+    '正在获取设备…': 'Detecting devices…',
+    '缓冲 — ms': 'Buffer — ms',
+    '峰值 —': 'Peak —',
+    '参考回采': 'Reference capture',
+    '静默': 'Silent',
+    '输出': 'Output',
+    '第二参考': 'Second reference',
+    '噪声参考': 'Noise reference',
+    '点击选择设备': 'Click to select a device',
+    '待选择': 'Not selected',
+    '接第二只麦克风靠近旁人/噪声源，可帮助消除他们说话（建议配强力模式）': 'Place a second microphone near other people / noise sources to help cancel their voices (Aggressive mode recommended)',
+    '尚未选择设备': 'No device selected',
+    '关闭顶部开关停用': 'Turn off the switch above to disable',
+    '实时音频电平': 'Live audio levels',
+    '麦克风输入：人声与音箱回声会被一起采集': 'Microphone input: your voice and speaker echo are captured together',
+    '更换麦克风设备': 'Change microphone device',
+    '麦克风电平': 'Microphone level',
+    '参考回采：音箱正在播放的声音': 'Reference capture: what the speakers are playing',
+    '更换参考回采设备': 'Change reference capture device',
+    '参考回采电平': 'Reference capture level',
+    '输出：处理后的声音送入 CABLE 虚拟声卡': 'Output: processed audio goes to the CABLE virtual audio cable',
+    '更换输出设备': 'Change output device',
+    '输出电平': 'Output level',
+    '第二参考：接另一只麦克风帮助消除旁人噪声': 'Second reference: another microphone helps cancel nearby voices',
+    '选择第二参考设备': 'Select second reference device',
+    // 处理模式
+    '处理模式': 'Processing modes',
+    '按场景选择合适模式': 'Pick the mode that fits your scenario',
+    '关闭（直通）': 'Off (passthrough)',
+    '使用中': 'In use',
+    '文件缺失': 'File missing',
+    '切换中…': 'Switching…',
+    '消除强度': 'Cancellation strength',
+    '人声保留': 'Voice preservation',
+    '模型体积': 'Model size',
+    '适合场景': 'Best for',
+    '戴耳机聊天': 'Headset chat',
+    '音乐监听': 'Music monitoring',
+    '模式简介': 'About this mode',
+    '不做任何处理，麦克风原样转发。戴耳机聊天时用它最省电；外放时对方会听到你音箱里放出的声音。': 'No processing — the microphone is passed through as-is. Best for battery life when chatting with a headset; on speakers, others will hear the sound coming out of your speakers.',
+    '推荐 · 默认': 'Recommended · Default',
+    '日常开黑': 'Everyday gaming',
+    '外放音箱': 'Speaker output',
+    '约 130 万参数，消得干净、人声自然，程序 CPU 约 3%。日常外放开黑首选。': 'About 1.3M parameters — clean cancellation with natural voice, using about 3% CPU. The default choice for everyday speaker gaming.',
+    '强力模式': 'Aggressive mode',
+    '嘈杂环境': 'Noisy places',
+    '大音量外放': 'Loud speakers',
+    '约 480 万参数，消除力度最大，压低周围噪声；代价是人声偶尔被轻微削掉，程序 CPU 约 7%。音箱开得响或环境吵时用。': 'About 4.8M parameters — maximum cancellation to suppress surrounding noise; the trade-off is occasional slight clipping of your voice, using about 7% CPU. Use it with loud speakers or in noisy surroundings.',
+    '纯回声消除模式': 'Echo-only mode',
+    '房间回音': 'Room echo',
+    '保留全部人声': 'Keep all voice',
+    '约 20 万参数的小模型，只消回声不碰人声；如果有播放对话声则效果不佳，仅适合只需要消除房间的回音的场景。': 'A small ~200K-parameter model that removes echo without touching your voice; it struggles with dialogue playback, so it only suits room-echo cancellation.',
+    '处理模式选择': 'Processing mode selection',
+    // 统计栏
+    '处理时长': 'Processed time',
+    '累计推理跳数': 'Total inference hops',
+    '跳': 'hops',
+    '每秒推理': 'Inference rate',
+    '跳/秒': 'hops/s',
+    '正常值 62.5': 'Normal 62.5',
+    '参考静默跳数': 'Silent reference hops',
+    '输出补零次数': 'Output underruns',
+    '次': 'times',
+    '降级直通次数': 'Fallback pass-throughs',
+    '运行统计': 'Runtime stats',
+    '正常值 62.5 跳/秒': 'Normal 62.5 hops/s',
+    // 底部提示
+    '提示': 'Tip',
+    '正在获取使用提示…': 'Loading tips…',
+    '打开系统声音设置': 'Open sound settings',
+    '打开 Windows 的「设置 → 系统 → 声音」': 'Open Windows Settings → System → Sound',
+    // OBS 对话框
+    '安装到 OBS': 'Install to OBS',
+    '关闭': 'Close',
+    '将 VoiceAec 安装为 OBS 音频滤镜。普通安装版 OBS 64 位可用，便携模式不使用此安装目录。': 'Installs VoiceAec as an OBS audio filter. Works with standard 64-bit OBS installations; portable mode does not use this install path.',
+    '正在读取插件状态…': 'Reading plugin status…',
+    '请先退出 OBS。完成后重启 OBS，在麦克风的「滤镜 → 音频滤镜」中添加 VoiceAec。': 'Please quit OBS first. Afterwards restart OBS and add VoiceAec under the microphone\'s Filters → Audio Filters.',
+    '安装前自动备份旧版本；卸载时恢复安装前版本。系统可能请求管理员权限。': 'The previous version is backed up automatically before installing and restored when uninstalling. Windows may ask for administrator rights.',
+    '使用 OBS 滤镜时可暂停桌面端，避免重复处理同一路麦克风和增加占用。': 'While using the OBS filter, you can pause the desktop app to avoid processing the same microphone twice and extra CPU load.',
+    '一键安装到 OBS': 'Install to OBS',
+    '一键卸载': 'Uninstall',
+    '刷新状态': 'Refresh status',
+    '关闭 OBS 插件设置': 'Close OBS plugin settings',
+    // 关于对话框
+    '版本': 'Version',
+    'MIT 开源许可': 'MIT open-source license',
+    '局域网访问': 'LAN access',
+    '同一 Wi-Fi 下的手机 / 平板可直接打开，无需密码': 'Phones / tablets on the same Wi-Fi can open it directly, no password needed',
+    '把麦克风与音箱参考回采一起送入神经网络模型，消除对方听到的游戏与媒体回声，再输出到 VB-CABLE 虚拟声卡；游戏声音照常外放。内置 OBS 音频滤镜一键安装。': 'Feeds the microphone and speaker reference capture into a neural network model to cancel the game and media echo your teammates hear, then outputs to the VB-CABLE virtual audio cable; game audio still plays on your speakers. Includes one-click OBS audio filter installation.',
+    'GitHub 仓库': 'GitHub repository',
+    '检查更新': 'Check for updates',
+    '第三方声明': 'Third-party notices',
+    '推理引擎 LocalVQE': 'Inference engine LocalVQE',
+    '基于 LocalVQE（Apache-2.0）、ggml、NAudio、WebView2 与 .NET 构建，安装程序使用 Inno Setup。': 'Built with LocalVQE (Apache-2.0), ggml, NAudio, WebView2 and .NET; the installer uses Inno Setup.',
+    '卸载：Windows「设置 → 应用」→ VoiceAec，或开始菜单 → VoiceAec → 卸载 VoiceAec。': 'Uninstall: Windows Settings → Apps → VoiceAec, or Start menu → VoiceAec → Uninstall VoiceAec.',
+    '关于 VoiceAec': 'About VoiceAec',
+    '关于 VoiceAec：版本、开源许可与项目链接': 'About VoiceAec: version, open-source license and project links',
+    'VoiceAec 图标': 'VoiceAec icon',
+    '本程序音频进程的 CPU 占用（占整机算力的比例，不含其他程序）': 'CPU usage of the VoiceAec audio process (share of total system capacity, excluding other apps)',
+    '安装或卸载 OBS 音频滤镜': 'Install or uninstall the OBS audio filter',
+    '开启后可在电平区配置第二参考麦克风': 'Enable to configure a second reference microphone in the level area',
+    '开机后自动在后台运行，无需手动启动': 'Run in the background automatically after Windows starts; no manual launch needed',
+    '暂停采集、推理和输出；静音并降低占用，恢复后沿用当前设备和模式': 'Pause capture, inference and output; mute and reduce CPU load. The current devices and mode are kept when you resume.',
+    // 设备菜单
+    '麦克风设备': 'Microphone device',
+    '点选后立即生效': 'Changes apply immediately',
+    '设备名过长时，悬停可查看完整名称': 'Hover a long device name to see it in full',
+    '第二参考设备列表': 'Second reference device list',
+    '播放设备': 'Playback devices',
+    '麦克风（噪声参考）': 'Microphones (noise reference)',
+    '第二参考菜单已打开。': 'Second reference menu opened.',
+    '正在更新第二参考…': 'Updating second reference…',
+    '第二参考已启用': 'Second reference enabled',
+    '第二参考已关闭': 'Second reference disabled',
+    '第二参考已关闭。': 'Second reference disabled.',
+    '设备已切换': 'Device switched',
+    '重新读取设备列表': 'Reload device list',
+    // 离线浮层
+    '连接中断': 'Connection lost',
+    '面板连接暂时中断': 'Panel connection interrupted',
+    '暂时无法读取程序状态，音频处理可能仍在继续。面板正在自动重连。': 'Program status is temporarily unavailable; audio processing may still be running. The panel is reconnecting automatically.',
+    '正在自动重连': 'Reconnecting automatically',
+    // 设备选择状态
+    '正在关闭…': 'Closing…',
+    '等待连接…': 'Waiting for connection…',
+    '暂不可用': 'Unavailable',
+    '读取中…': 'Loading…',
+    '未启用': 'Disabled',
+    '麦克风 · 噪声参考': 'Microphone · noise reference',
+    '播放设备 · 辅助参考': 'Playback device · auxiliary reference',
+    '正在关闭第二参考': 'Disabling second reference',
+    '正在关闭第二参考…': 'Disabling second reference…',
+    '选择第二参考设备，帮助消除旁人噪声': 'Select a second reference device to help cancel nearby voices',
+    '已启用': 'Enabled',
+    '启用中…': 'Enabling…',
+    '等待程序连接…': 'Waiting for the app to connect…',
+    '设备信息暂不可用': 'Device information unavailable',
+    '未检测到设备': 'No devices detected',
+    '读取中': 'Loading',
+    '读取失败': 'Load failed',
+    '设备列表读取失败': 'Could not load the device list',
+    '请确认程序正在运行，然后重试。': 'Make sure the app is running, then try again.',
+    '正在读取设备列表…': 'Loading the device list…',
+    '马上就好': 'Almost done',
+    '没有找到可用的第二参考设备': 'No second reference devices found',
+    '连接一只麦克风或选择播放设备后即可添加。': 'Connect a microphone or choose a playback device to add one.',
+    '没有找到可用的参考设备': 'No reference devices found',
+    '确认设备已连接，或重新读取列表。': 'Check that the device is connected, or reload the list.',
+    '没有找到可用设备': 'No devices found',
+    '选麦克风当参考时，它听到的人声也会被当作要消除的成分': 'When a microphone is used as the reference, the voices it picks up are also treated as content to cancel',
+    '选择设备后立即生效；停用请关闭顶部开关': 'Changes apply immediately after selecting; turn off the switch above to disable',
+    // 设备切换 / 状态反馈
+    '后端未确认切换，请重试': 'The app did not confirm the switch. Please try again.',
+    '切换请求超时，请稍后再试': 'The switch request timed out. Please try again later.',
+    '网络连接异常，已保持原设备': 'Network error — the previous device was kept',
+    '第二参考设置失败，已保持原设置。': 'Failed to set the second reference; the previous setting was kept.',
+    '已重新连接 VoiceAec。': 'Reconnected to VoiceAec.',
+    '已重新连接 VoiceAec': 'Reconnected to VoiceAec',
+    '面板连接暂时中断，音频处理可能仍在继续，正在自动重连。': 'Panel connection interrupted; audio processing may still be running and the panel is reconnecting automatically.',
+    '点击卡片立即切换': 'Click a card to switch instantly',
+    '等待恢复连接…': 'Waiting to reconnect…',
+    '正在切换模式…': 'Switching mode…',
+    '正在切换…': 'Switching…',
+    '恢复处理与输出': 'Resume processing & output',
+    '恢复音频采集、推理和输出': 'Resume audio capture, inference and output',
+    '暂停采集、推理和输出；静音并降低占用': 'Pause capture, inference and output; mute and reduce CPU load',
+    '正在保存': 'Saving',
+    '已开启': 'On',
+    '已关闭': 'Off',
+    '正在读取': 'Reading',
+    '开机自启已开启。': 'Start with Windows enabled.',
+    '开机自启已关闭。': 'Start with Windows disabled.',
+    '后端未确认设置': 'The app did not confirm the setting',
+    '设置请求超时，请重试': 'The settings request timed out. Please try again.',
+    '网络连接异常，请重试': 'Network error. Please try again.',
+    '已暂停 · 静音': 'Paused · muted',
+    '运行中': 'Running',
+    '静音': 'Muted',
+    '播放中': 'Playing',
+    '参考回采：音箱正在出声': 'Reference capture: the speakers are playing',
+    '参考回采：当前静默': 'Reference capture: currently silent',
+    '已暂停推理': 'Inference paused',
+    '偏离正常范围': 'Outside normal range',
+    // VB-CABLE 安装 / 重新检测
+    '正在安装…': 'Installing…',
+    '正在安装…（可继续使用面板）': 'Installing… (you can keep using the panel)',
+    '安装完成，请重启电脑。': 'Installation complete. Please restart your PC.',
+    '安装未完成': 'Installation not completed',
+    '已安装完成，重启电脑后虚拟声卡会自动出现。': 'Installation complete. The virtual audio cable will appear after you restart your PC.',
+    '检测中…': 'Checking…',
+    '已重新检测设备': 'Devices rechecked',
+    '无法打开': 'Could not open',
+    '请到官网手动安装': 'please install it manually from the official website',
+    '仍没有找到设备': 'no devices were found yet',
+    '请重试': 'please try again',
+    '请手动打开 设置 → 系统 → 声音': 'please open Settings → System → Sound manually',
+    // 暂停 / OBS 插件
+    '请求未完成': 'Request not completed',
+    '已暂停并静音，音频采集和推理已停止': 'Paused and muted — audio capture and inference have stopped',
+    '已恢复处理与输出': 'Processing and output resumed',
+    '状态更新延迟，重试中…': 'Status update delayed, retrying…',
+    'OBS 正在运行，请先退出后再安装或卸载。': 'OBS is running. Please quit it before installing or uninstalling.',
+    '检测到已有插件。安装时会先备份，卸载时可恢复。': 'An existing plugin was detected. It will be backed up before installing and can be restored when uninstalling.',
+    '尚未安装 OBS 插件。': 'The OBS plugin is not installed yet.',
+    '当前包缺少 OBS 插件资源，请使用完整整合包。': 'This package is missing the OBS plugin files. Please use the full bundle.',
+    '更新 / 重新安装': 'Update / reinstall',
+    '移除本程序安装的版本，恢复安装前的插件': 'Remove the version installed by this app and restore the previous plugin',
+    '移除本程序安装的插件': 'Remove the plugin installed by this app',
+    '正在准备安装，请留意系统的管理员权限提示…': 'Preparing to install — watch for the Windows administrator prompt…',
+    '正在准备卸载，请留意系统的管理员权限提示…': 'Preparing to uninstall — watch for the Windows administrator prompt…',
+    '操作未完成': 'Operation not completed',
+    '切换请求超时，请重试': 'The switch request timed out. Please try again.',
+    '网络连接异常，已保持原模式': 'Network error — the previous mode was kept',
+    '未知': 'unknown',
+    // 语言切换
+    '已切换到中文': 'Switched to Chinese',
+    // 局域网地址复制
+    '点击复制局域网地址': 'Click to copy the LAN address',
+    '同一 Wi-Fi 下的手机 / 平板可直接打开，无需密码；点击地址可复制': 'Phones / tablets on the same Wi-Fi can open it directly, no password needed; click the address to copy it',
+    '已复制局域网地址': 'LAN address copied',
+    '复制失败，请手动选择地址': 'Copy failed — select the address manually',
+    // 窗口控制
+    '最小化': 'Minimize',
+    '最大化': 'Maximize',
+    '还原': 'Restore',
+    '隐藏到托盘': 'Hide to tray',
+    '窗口控制': 'Window controls',
+    '已切换到英文': 'Switched to English'
+  });
+
+  // 含插值的动态模板：正则 -> 英文生成函数（${...} 部分保留原值，必要时递归翻译）
+  const I18N_RULES = [
+    [/^更换(麦克风|参考回采|输出)设备，当前：(.*)$/, (m) => `Change ${NOUN_EN[m[1]]} device, current: ${translateCore(m[2])}`],
+    [/^更换(麦克风|参考回采|输出)设备$/, (m) => `Change ${NOUN_EN[m[1]]} device`],
+    [/^正在切换(麦克风|参考回采|输出)设备…$/, (m) => `Switching ${NOUN_EN[m[1]]} device…`],
+    [/^(麦克风|参考回采|输出)设备列表$/, (m) => `${i18nCap(NOUN_EN[m[1]])} device list`],
+    [/^(麦克风|参考回采|输出)设备菜单已打开。$/, (m) => `${i18nCap(NOUN_EN[m[1]])} device menu opened.`],
+    [/^(麦克风|参考回采|输出)设备已切换为 (.*)。$/, (m) => `${i18nCap(NOUN_EN[m[1]])} device switched to ${m[2]}.`],
+    [/^(麦克风|参考回采|输出)设备切换失败，已保持原设备。$/, (m) => `Failed to switch the ${NOUN_EN[m[1]]} device; the previous device was kept.`],
+    [/^(麦克风|参考回采|输出)设备$/, (m) => `${i18nCap(NOUN_EN[m[1]])} device`],
+    [/^正在切换到 (.*)…$/, (m) => `Switching to ${translateCore(m[1])}…`],
+    [/^(.*)（点击更换设备）$/, (m) => `${translateCore(m[1])} (click to change device)`],
+    [/^(.*)（点击更换第二参考）$/, (m) => `${m[1]} (click to change second reference)`],
+    [/^正在启用第二参考 (.*)$/, (m) => `Enabling second reference ${m[1]}`],
+    [/^正在启用 (.*)…$/, (m) => `Enabling ${m[1]}…`],
+    [/^正在启用 (.*)$/, (m) => `Enabling ${m[1]}`],
+    [/^第二参考正在使用 (.*)，点击更换$/, (m) => `Second reference is using ${m[1]}; click to change`],
+    [/^开启第二参考，(已开启|已关闭)$/, (m) => `Second reference: ${m[1] === '已开启' ? 'on' : 'off'}`],
+    [/^开机自启，(正在保存|已开启|已关闭|正在读取)$/, (m) => `Start with Windows: ${ARIA_STATE_EN[m[1]]}`],
+    [/^第二参考已设为 (.*)。$/, (m) => `Second reference set to ${m[1]}.`],
+    [/^服务返回异常（HTTP (\d+)）$/, (m) => `The app returned an error (HTTP ${m[1]})`],
+    [/^第二参考设置失败：(.*)$/, (m) => `Failed to set the second reference: ${translateCore(m[1])}`],
+    [/^设备切换失败：(.*)$/, (m) => `Failed to switch device: ${translateCore(m[1])}`],
+    [/^开机自启设置失败：(.*)$/, (m) => `Failed to change the start-with-Windows setting: ${translateCore(m[1])}`],
+    [/^正在自动重连 · 第 (\d+) 次$/, (m) => `Reconnecting automatically · attempt ${m[1]}`],
+    [/^(运行中|已暂停 · 静音) · (.+)$/, (m) => `${translateCore(m[1])} · ${m[2]}`],
+    [/^峰值 (-?[\d.]+) dB$/, (m) => `Peak ${m[1]} dB`],
+    [/^缓冲 (\d+) ms$/, (m) => `Buffer ${m[1]} ms`],
+    [/^(\d+) 个可选$/, (m) => `${m[1]} available`],
+    [/^每秒推理 (.*) 跳每秒，(已暂停推理|偏离正常范围|正常值 62\.5)$/, (m) => `Inference rate ${m[1] === '未知' ? 'unknown' : m[1]} hops/s, ${RATE_STATE_EN[m[2]]}`],
+    [/^安装未完成：(.*)$/, (m) => `Installation not completed: ${translateCore(m[1])}`],
+    [/^重新检测：(.*)$/, (m) => `Recheck: ${translateCore(m[1])}`],
+    [/^重新检测失败：(.*)$/, (m) => `Recheck failed: ${translateCore(m[1])}`],
+    [/^没能打开系统声音设置：(.*)$/, (m) => `Could not open the Windows sound settings: ${translateCore(m[1])}`],
+    [/^切换暂停状态失败：(.*)$/, (m) => `Failed to toggle pause: ${translateCore(m[1])}`],
+    [/^已由 VoiceAec 安装 · (.*)$/, (m) => `Installed by VoiceAec · ${m[1]}`],
+    [/^安装位置：(.*)$/, (m) => `Install location: ${m[1]}`],
+    [/^无法读取 OBS 插件状态：(.*)$/, (m) => `Could not read the OBS plugin status: ${translateCore(m[1])}`],
+    [/^OBS 插件操作未完成：(.*)$/, (m) => `OBS plugin operation not completed: ${translateCore(m[1])}`],
+    [/^切换失败：(.*)$/, (m) => `Switch failed: ${translateCore(m[1])}`],
+    [/^语言切换失败：(.*)$/, (m) => `Failed to switch language: ${translateCore(m[1])}`],
+    [/^(消除强度|人声保留|CPU 占用|模型体积) ([0-5])\/5$/, (m) => `${METRIC_EN[m[1]]} ${m[2]}/5`]
+  ];
+
+  let currentLang = LANG_ZH;
+  let langObserver = null;
+  const i18nTextOriginals = new WeakMap();
+  const i18nAttrOriginals = new WeakMap();
+
+  function normalizeLang(value) {
+    const text = String(value == null ? '' : value).trim().toLowerCase();
+    return text.indexOf('en') === 0 ? LANG_EN : LANG_ZH;
+  }
+
+  function readInitialLang() {
+    const meta = document.querySelector('meta[name="voiceaec-lang"]');
+    return normalizeLang(meta && meta.content);
+  }
+
+  function i18nCap(value) {
+    const text = String(value == null ? '' : value);
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+  }
+
+  function translateCore(value) {
+    if (typeof value !== 'string' || value === '') return value;
+    const direct = I18N_DICT[value];
+    if (direct !== undefined) return direct;
+    for (let index = 0; index < I18N_RULES.length; index += 1) {
+      const rule = I18N_RULES[index];
+      const match = rule[0].exec(value);
+      if (match) return rule[1](match);
+    }
+    return value;
+  }
+
+  function tr(value) {
+    return currentLang === LANG_EN ? translateCore(value) : value;
+  }
+
+  // 文本节点常带缩进/换行：保留首尾空白，只翻译中间正文
+  function translateTextValue(value) {
+    const direct = translateCore(value);
+    if (direct !== value) return direct;
+    const match = /^(\s*)([\s\S]*?)(\s*)$/.exec(value);
+    if (!match || !match[2]) return value;
+    const translated = translateCore(match[2]);
+    return translated !== match[2] ? match[1] + translated + match[3] : value;
+  }
+
+  function i18nSkipped(element) {
+    if (!element || element.nodeType !== 1) return false;
+    if (I18N_SKIP_TAGS[String(element.tagName || '').toUpperCase()]) return true;
+    return Boolean(element.hasAttribute && element.hasAttribute('data-no-i18n'));
+  }
+
+  function i18nInsideSkipped(node) {
+    let parent = node && node.parentNode;
+    while (parent && parent.nodeType === 1) {
+      if (i18nSkipped(parent)) return true;
+      parent = parent.parentNode;
+    }
+    return false;
+  }
+
+  function applyTextNode(node) {
+    const original = i18nTextOriginals.get(node);
+    if (currentLang === LANG_EN) {
+      const source = original !== undefined ? original : node.data;
+      const next = translateTextValue(source);
+      if (next !== source) {
+        if (original === undefined) i18nTextOriginals.set(node, source);
+        if (node.data !== next) node.data = next;
+      }
+    } else if (original !== undefined && node.data !== original) {
+      node.data = original;
+    }
+  }
+
+  function rememberAttrSource(element, name, raw) {
+    if (!element || !element.setAttribute) return;
+    let store = i18nAttrOriginals.get(element);
+    if (!store) {
+      store = new Map();
+      i18nAttrOriginals.set(element, store);
+    }
+    store.set(name, raw);
+  }
+
+  // 属性翻译策略：动态写入优先。
+  // - setAttr 写入时同步把中文源更新进 WeakMap，观察者不会再用旧源回写；
+  // - 观察者若发现 current 既不是已知原文也不是其译文（例如直接 setAttribute 的新值），
+  //   以 current 为最新源，绝不回写旧译文。
+  function applyElementAttrs(element) {
+    if (!element || !element.getAttribute) return;
+    let store = i18nAttrOriginals.get(element);
+    for (let index = 0; index < I18N_ATTRS.length; index += 1) {
+      const name = I18N_ATTRS[index];
+      const current = element.getAttribute(name);
+      if (current == null) continue;
+      if (currentLang === LANG_EN) {
+        if (store && store.has(name)) {
+          const source = store.get(name);
+          const expected = translateCore(source);
+          if (current === expected) continue;
+          if (current === source) {
+            if (expected !== source) element.setAttribute(name, expected);
+            continue;
+          }
+          if (I18N_CJK.test(current)) {
+            store.set(name, current);
+            const translated = translateCore(current);
+            if (translated !== current) element.setAttribute(name, translated);
+          }
+          continue;
+        }
+        const translated = translateCore(current);
+        if (translated !== current) {
+          rememberAttrSource(element, name, current);
+          element.setAttribute(name, translated);
+        }
+      } else if (store && store.has(name)) {
+        const source = store.get(name);
+        if (current !== source) element.setAttribute(name, source);
+      }
+    }
+  }
+
+  function walkI18nTree(node) {
+    if (!node) return;
+    if (node.nodeType === 3) {
+      applyTextNode(node);
+      return;
+    }
+    if (node.nodeType !== 1 || i18nSkipped(node)) return;
+    applyElementAttrs(node);
+    for (let child = node.firstChild; child; child = child.nextSibling) walkI18nTree(child);
+  }
+
+  function localizeAddedNode(node) {
+    if (!node) return;
+    if (node.nodeType === 3) {
+      if (!i18nInsideSkipped(node)) applyTextNode(node);
+      return;
+    }
+    if (node.nodeType !== 1 || i18nInsideSkipped(node) || i18nSkipped(node)) return;
+    applyElementAttrs(node);
+    for (let child = node.firstChild; child; child = child.nextSibling) localizeAddedNode(child);
+  }
+
+  function startLangObserver() {
+    if (langObserver || typeof MutationObserver !== 'function' || !document.body) return;
+    langObserver = new MutationObserver((records) => {
+      if (currentLang !== LANG_EN) return;
+      records.forEach((record) => {
+        if (record.type === 'characterData') {
+          if (!i18nInsideSkipped(record.target)) applyTextNode(record.target);
+        } else if (record.type === 'attributes') {
+          if (record.target && !i18nInsideSkipped(record.target)) applyElementAttrs(record.target);
+        } else {
+          record.addedNodes.forEach((node) => localizeAddedNode(node));
+        }
+      });
+    });
+    langObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: I18N_ATTRS
+    });
+  }
+
+  function updateLangButton() {
+    const button = els.aboutLang;
+    if (!button) return;
+    const english = currentLang === LANG_EN;
+    const label = english ? LANG_BUTTON_EN : LANG_BUTTON_ZH;
+    const aria = english ? LANG_ARIA_TO_ZH : LANG_ARIA_TO_EN;
+    if (button.textContent !== label) button.textContent = label;
+    if (button.getAttribute('aria-label') !== aria) button.setAttribute('aria-label', aria);
+    if (button.getAttribute('title') !== aria) button.setAttribute('title', aria);
+    button.disabled = Boolean(state && state.langPending);
+  }
+
+  function rerenderForLanguage() {
+    refreshControls();
+    if (state.lastStatus) {
+      updateRun(state.lastStatus);
+      updateLevels(state.lastStatus);
+      updateStats(state.lastStatus);
+      updateHint(null);
+      updateCableBanner(state.lastStatus.cableMissing);
+    }
+    if (state.lastObsData) renderObsPlugin(state.lastObsData);
+    if (state.openMenuKey) renderDeviceMenu();
+    if (state.toastRaw) setText(els.toast, state.toastRaw);
+    if (state.srRaw) setText(els.srStatus, state.srRaw);
+    if (state.cableNoteRaw) setText(els.cableNote, state.cableNoteRaw);
+    if (state.offline) {
+      setText(els.runText, '连接中断');
+      refreshControls();
+      setText(els.retryText, `正在自动重连 · 第 ${state.retryCount} 次`);
+    } else {
+      setText(els.retryText, '正在自动重连');
+    }
+  }
+
+  function applyLanguage(lang, options = {}) {
+    currentLang = normalizeLang(lang);
+    if (document.documentElement) document.documentElement.lang = currentLang === LANG_EN ? 'en' : 'zh-CN';
+    document.title = currentLang === LANG_EN ? TITLE_EN : TITLE_ZH;
+    walkI18nTree(document.body);
+    updateLangButton();
+    if (currentLang === LANG_EN) startLangObserver();
+    if (!options || options.rerender !== false) rerenderForLanguage();
+  }
 
   const channels = {
     mic: {
@@ -3780,25 +4544,39 @@
     openMenuKey: null,
     menuAnchor: null,
     ref2Visible: false,
+    windowMaximized: false,
+    langPending: false,
+    lastStatus: null,
+    lastObsData: null,
+    toastRaw: '',
+    srRaw: '',
+    cableNoteRaw: '',
     peaks: {
       mic: { value: 0, hold: 0 },
       ref: { value: 0, hold: 0 },
       out: { value: 0, hold: 0 }
     },
-    toastTimer: 0
+    toastTimer: 0,
+    toastLayerTimer: 0
   };
 
   const numberFormatter = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 0 });
 
   function setText(element, value) {
     if (!element) return;
-    const next = value == null ? '' : String(value);
+    const raw = value == null ? '' : String(value);
+    if (element === els.srStatus) state.srRaw = raw;
+    if (element === els.cableNote) state.cableNoteRaw = raw;
+    const next = tr(raw);
     if (element.textContent !== next) element.textContent = next;
   }
 
   function setAttr(element, name, value) {
     if (!element) return;
-    const next = value == null ? '' : String(value);
+    const raw = value == null ? '' : String(value);
+    const translatable = I18N_ATTRS.indexOf(name) >= 0;
+    if (translatable) rememberAttrSource(element, name, raw);
+    const next = translatable ? tr(raw) : raw;
     if (element.getAttribute(name) !== next) element.setAttribute(name, next);
   }
 
@@ -3852,8 +4630,28 @@
     return info.label || (DEFAULT_MODELS[mode] && DEFAULT_MODELS[mode].label) || String(mode || '—');
   }
 
+  // toast 用 top-layer popover 呈现：即使「关于」/OBS 等模态 dialog 打开也位于其遮罩之上
+  function showToastLayer() {
+    const toast = els.toast;
+    if (!toast || typeof toast.showPopover !== 'function') return;
+    try {
+      if (!toast.matches(':popover-open')) toast.showPopover();
+    } catch (_) { /* 不支持 popover 时退回普通 fixed 元素 */ }
+  }
+
+  function hideToastLayer() {
+    const toast = els.toast;
+    if (!toast || typeof toast.hidePopover !== 'function') return;
+    try {
+      if (toast.matches(':popover-open')) toast.hidePopover();
+    } catch (_) { /* 不支持 popover 时忽略 */ }
+  }
+
   function showToast(message, tone = 'info') {
+    state.toastRaw = message == null ? '' : String(message);
     window.clearTimeout(state.toastTimer);
+    window.clearTimeout(state.toastLayerTimer);
+    showToastLayer();
     setText(els.toast, message);
     els.toast.classList.toggle('is-error', tone === 'error');
     els.toast.classList.toggle('is-success', tone === 'success');
@@ -3861,6 +4659,7 @@
     const duration = tone === 'error' ? 5200 : (tone === 'info' ? 5000 : 3000);
     state.toastTimer = window.setTimeout(() => {
       els.toast.classList.remove('is-visible');
+      state.toastLayerTimer = window.setTimeout(hideToastLayer, 260);
     }, duration);
   }
 
@@ -4056,21 +4855,31 @@
     const anchor = state.menuAnchor || pickers[key].btn;
     if (!anchor) return;
 
+    // The panel and overlays are zoomed on large windows, so compute the menu
+    // geometry in the zoomed panel's local coordinate space (visual / scale).
+    const scale = panelScale > 0 ? panelScale : 1;
     const rect = anchor.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const width = Math.min(Math.max(rect.width + 90, 360), 460, Math.max(280, vw - 24));
+    const localRect = {
+      left: rect.left / scale,
+      right: rect.right / scale,
+      top: rect.top / scale,
+      bottom: rect.bottom / scale,
+      width: rect.width / scale
+    };
+    const vw = window.innerWidth / scale;
+    const vh = window.innerHeight / scale;
+    const width = Math.min(Math.max(localRect.width + 90, 360), 460, Math.max(280, vw - 24));
     els.deviceMenu.style.width = `${Math.round(width)}px`;
 
     const height = els.deviceMenu.offsetHeight;
-    let left = rect.left - 6;
-    if (rect.width > width + 20) {
-      left = rect.left + (rect.width - width) / 2;
+    let left = localRect.left - 6;
+    if (localRect.width > width + 20) {
+      left = localRect.left + (localRect.width - width) / 2;
     }
     left = clamp(left, 12, Math.max(12, vw - width - 12));
 
-    const fitsBelow = rect.bottom + 8 + height <= vh - 12;
-    let top = fitsBelow ? rect.bottom + 8 : rect.top - height - 8;
+    const fitsBelow = localRect.bottom + 8 + height <= vh - 12;
+    let top = fitsBelow ? localRect.bottom + 8 : localRect.top - height - 8;
     top = clamp(top, 12, Math.max(12, vh - height - 12));
 
     els.deviceMenu.dataset.placement = fitsBelow ? 'bottom' : 'top';
@@ -4148,11 +4957,11 @@
     const copy = document.createElement('div');
     copy.className = 'device-state-copy';
     const heading = document.createElement('strong');
-    heading.textContent = title;
+    heading.textContent = tr(title);
     copy.appendChild(heading);
     if (text) {
       const detail = document.createElement('span');
-      detail.textContent = text;
+      detail.textContent = tr(text);
       copy.appendChild(detail);
     }
     wrap.appendChild(copy);
@@ -4164,7 +4973,7 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'device-retry';
-      button.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg><span>重新读取设备列表</span>';
+      button.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg><span>${tr('重新读取设备列表')}</span>`;
       group.appendChild(button);
     }
 
@@ -4175,12 +4984,12 @@
     const group = document.createElement('div');
     group.className = 'device-menu-group';
     group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', label);
+    setAttr(group, 'aria-label', label);
 
     const heading = document.createElement('span');
     heading.className = 'device-menu-group-label';
     heading.setAttribute('aria-hidden', 'true');
-    heading.textContent = label;
+    heading.textContent = tr(label);
     group.appendChild(heading);
 
     options.forEach((option) => group.appendChild(option));
@@ -4590,7 +5399,7 @@
 
       if (ui.title) {
         setText(ui.title, label);
-        ui.title.title = label;
+        setAttr(ui.title, 'title', label);
       }
       if (ui.current) ui.current.hidden = !isCurrent || switchingHere;
       if (ui.missing) ui.missing.hidden = available;
@@ -4648,7 +5457,7 @@
       : (known ? (enabled ? '已开启' : '已关闭') : '正在读取');
 
     els.autostartToggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
-    els.autostartToggle.setAttribute('aria-label', `开机自启，${ariaState}`);
+    setAttr(els.autostartToggle, 'aria-label', `开机自启，${ariaState}`);
     els.autostartToggle.disabled = !state.connected || !known || pending;
 
     if (els.autostartField) {
@@ -4775,7 +5584,7 @@
 
     const ariaNow = silent ? -60 : Number(clamped.toFixed(1));
     ui.meter.setAttribute('aria-valuenow', String(ariaNow));
-    ui.meter.setAttribute('aria-valuetext', silent ? '静音' : `${formatDb(shown)} dBFS`);
+    setAttr(ui.meter, 'aria-valuetext', silent ? '静音' : `${formatDb(shown)} dBFS`);
   }
 
   function updateLevels(data) {
@@ -4788,7 +5597,7 @@
     const active = Boolean(data.ref && data.ref.active);
     setText(els.refPill, active ? '播放中' : '静默');
     els.refPill.dataset.active = active ? 'true' : 'false';
-    els.refPill.title = active ? '参考回采：音箱正在出声' : '参考回采：当前静默';
+    setAttr(els.refPill, 'title', active ? '参考回采：音箱正在出声' : '参考回采：当前静默');
   }
 
   function updateStats(data) {
@@ -4806,7 +5615,8 @@
 
     const warn = !state.paused && hasRate && (rate < 55 || rate > 70);
     els.statRateCard.classList.toggle('is-warn', warn);
-    els.statRateCard.setAttribute(
+    setAttr(
+      els.statRateCard,
       'aria-label',
       `每秒推理 ${hasRate ? rate.toFixed(1) : '未知'} 跳每秒，${state.paused ? '已暂停推理' : (warn ? '偏离正常范围' : '正常值 62.5')}`
     );
@@ -4832,6 +5642,7 @@
   }
 
   function applyStatus(data) {
+    state.lastStatus = data;
     markOnline();
     if (data.version) setText(els.aboutVersion, 'v' + data.version);
     updateLanAddress(data);
@@ -4858,6 +5669,49 @@
     if (!available) return;
     setText(els.aboutLanUrl, data.lanUrl);
     els.aboutLanUrl.href = data.lanUrl;
+    els.aboutLanUrl.dataset.url = data.lanUrl;
+  }
+
+  async function writeClipboardText(text) {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) { }
+    try {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.top = '-1000px';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const copied = document.execCommand('copy');
+      area.remove();
+      return copied;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function copyLanAddress() {
+    const url = ((els.aboutLanUrl && (els.aboutLanUrl.dataset.url || els.aboutLanUrl.textContent)) || '').trim();
+    if (!url) return;
+    let copied = false;
+    if (window.chrome?.webview) {
+      // WebView2: let the host write the Windows clipboard, so no browser
+      // permission prompt is involved.
+      try {
+        window.chrome.webview.postMessage('copy-lan-url');
+        copied = true;
+      } catch (_) {
+        copied = false;
+      }
+    }
+    if (!copied) copied = await writeClipboardText(url);
+    showToast(copied ? '已复制局域网地址' : '复制失败，请手动选择地址', copied ? 'success' : 'error');
   }
 
   function updateCableBanner(missing) {
@@ -4872,14 +5726,14 @@
     const label = els.cableInstall.textContent;
     els.cableInstall.disabled = true;
     els.cableRecheck.disabled = true;
-    els.cableInstall.textContent = '正在安装…';
+    setText(els.cableInstall, '正在安装…');
     try {
       let response = await fetchWithTimeout('/api/vbcable/install', {
         method: 'POST', headers: { Accept: 'application/json' }
       }, 15000);
       let data = await response.json();
       while (data.running) {
-        els.cableInstall.textContent = '正在安装…（可继续使用面板）';
+        setText(els.cableInstall, '正在安装…（可继续使用面板）');
         await new Promise(resolve => window.setTimeout(resolve, 1000));
         response = await fetchWithTimeout('/api/vbcable/install', {
           method: 'GET', headers: { Accept: 'application/json' }
@@ -4897,7 +5751,7 @@
       state.cableBusy = false;
       els.cableInstall.disabled = false;
       els.cableRecheck.disabled = false;
-      els.cableInstall.textContent = label;
+      setText(els.cableInstall, label);
     }
   }
 
@@ -4905,7 +5759,7 @@
     if (state.cableBusy) return;
     els.cableRecheck.disabled = true;
     const label = els.cableRecheck.textContent;
-    els.cableRecheck.textContent = '检测中…';
+    setText(els.cableRecheck, '检测中…');
     try {
       const response = await fetchWithTimeout('/api/recheck', {
         method: 'POST', headers: { Accept: 'application/json' }
@@ -4917,7 +5771,7 @@
       showToast(`重新检测失败：${error.message || '请重试'}`, 'error');
     } finally {
       els.cableRecheck.disabled = false;
-      els.cableRecheck.textContent = label;
+      setText(els.cableRecheck, label);
       void pollStatus();
     }
   }
@@ -5011,6 +5865,7 @@
   }
 
   function renderObsPlugin(data) {
+    state.lastObsData = data;
     state.obsBusy = data.busy === true;
     const description = data.error || (data.obsRunning ? 'OBS 正在运行，请先退出后再安装或卸载。'
       : data.busy ? data.message
@@ -5024,7 +5879,7 @@
     els.obsUninstall.disabled = !data.canUninstall;
     els.obsRefresh.disabled = data.busy === true;
     setText(els.obsInstall, data.managed ? '更新 / 重新安装' : '一键安装到 OBS');
-    els.obsUninstall.title = data.hadPrevious ? '移除本程序安装的版本，恢复安装前的插件' : '移除本程序安装的插件';
+    setAttr(els.obsUninstall, 'title', data.hadPrevious ? '移除本程序安装的版本，恢复安装前的插件' : '移除本程序安装的插件');
   }
 
   async function refreshObsPlugin() {
@@ -5120,6 +5975,53 @@
         state.pendingMode = null;
         refreshControls();
       }, 300);
+    }
+  }
+
+  async function changeLanguage() {
+    if (state.langPending) return;
+    const target = currentLang === LANG_EN ? LANG_ZH : LANG_EN;
+    state.langPending = true;
+    updateLangButton();
+
+    try {
+      const response = await fetchWithTimeout('/api/lang', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain; charset=UTF-8',
+          Accept: 'application/json'
+        },
+        body: target
+      }, AUTOSTART_TIMEOUT_MS);
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = null;
+      }
+
+      if (!response.ok || !payload || payload.ok !== true) {
+        const detail = payload && typeof payload.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : `服务返回异常（HTTP ${response.status}）`;
+        throw new Error(detail);
+      }
+
+      const confirmed = payload && typeof payload.lang === 'string' ? normalizeLang(payload.lang) : target;
+      applyLanguage(confirmed === target ? target : confirmed);
+      updateHint(null);
+      showToast(currentLang === LANG_EN ? 'Switched to English' : '已切换到中文', 'success');
+      void pollStatus();
+      void refreshObsPlugin();
+    } catch (error) {
+      const detail = error && error.name === 'AbortError'
+        ? '切换请求超时，请重试'
+        : (error && error.message ? error.message : '请重试');
+      showToast(`语言切换失败：${detail}`, 'error');
+    } finally {
+      state.langPending = false;
+      updateLangButton();
     }
   }
 
@@ -5268,6 +6170,37 @@
     openAbout();
   });
   els.aboutClose.addEventListener('click', () => els.aboutDialog.close());
+  if (els.aboutLang) els.aboutLang.addEventListener('click', () => { void changeLanguage(); });
+  if (els.winMinimize) els.winMinimize.addEventListener('click', () => postWindowCommand('window-minimize'));
+  if (els.winMaximize) els.winMaximize.addEventListener('click', () => postWindowCommand('window-maximize'));
+  if (els.winClose) els.winClose.addEventListener('click', () => postWindowCommand('window-close'));
+  if (els.aboutLanUrl) els.aboutLanUrl.addEventListener('click', (event) => {
+    event.preventDefault();
+    void copyLanAddress();
+  });
+
+  // 自绘标题条：单击拖动 = 原生窗口移动（最大化时会先还原，贴边吸附也由系统处理），
+  // 双击 = 最大化/还原；拖动超过阈值才触发，避免吃掉双击。
+  let windowDragStart = null;
+  if (els.windowBar) {
+    els.windowBar.addEventListener('mousedown', (event) => {
+      if (event.button !== 0 || event.target.closest('.window-btn')) return;
+      windowDragStart = { x: event.screenX, y: event.screenY };
+    });
+    window.addEventListener('mousemove', (event) => {
+      if (!windowDragStart) return;
+      const dx = event.screenX - windowDragStart.x;
+      const dy = event.screenY - windowDragStart.y;
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      windowDragStart = null;
+      postWindowCommand('window-drag-start');
+    });
+    window.addEventListener('mouseup', () => { windowDragStart = null; });
+    els.windowBar.addEventListener('dblclick', (event) => {
+      if (event.target.closest('.window-btn')) return;
+      postWindowCommand('window-maximize');
+    });
+  }
   if (els.aboutLogo && els.brandIcon) els.aboutLogo.src = els.brandIcon.src;
   els.soundSettings.addEventListener('click', () => { void openSoundSettings(); });
   els.cableInstall.addEventListener('click', () => { void installVbCable(); });
@@ -5282,8 +6215,20 @@
     else { void pollStatus(); void refreshObsPlugin(); }
   }
 
+  function updateWindowState(maximized) {
+    state.windowMaximized = Boolean(maximized);
+    if (!els.winMaximize) return;
+    const label = state.windowMaximized ? '还原' : '最大化';
+    setAttr(els.winMaximize, 'aria-label', label);
+    setAttr(els.winMaximize, 'title', label);
+    els.winMaximize.innerHTML = state.windowMaximized
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="1.5"/><path d="M6 16V7.5A1.5 1.5 0 0 1 7.5 6H16"/></svg>'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>';
+  }
+
   window.chrome?.webview?.addEventListener('message', (event) => {
     if (typeof event.data?.panelVisible === 'boolean') setPanelVisible(event.data.panelVisible);
+    if (typeof event.data?.windowMaximized === 'boolean') updateWindowState(event.data.windowMaximized);
     if (event.data?.about) els.aboutDialog.showModal();
   });
 
@@ -5299,12 +6244,50 @@
     }
   });
 
+  // ── 大窗口 / 全屏适配：按可用空间等比放大面板，保持 1248×860 的设计比例 ──
+  const PANEL_DESIGN_WIDTH = 1248;
+  const PANEL_DESIGN_HEIGHT = 860;
+  const PANEL_MAX_SCALE = 2;
+  let panelScale = 1;
+  function panelZoomTargets() {
+    return [els.app, els.obsDialog, els.aboutDialog, els.deviceMenu].filter(Boolean);
+  }
+  function fitPanelScale() {
+    const app = els.app;
+    if (!app) return;
+    const viewportWidth = Number(window.innerWidth);
+    const viewportHeight = Number(window.innerHeight);
+    if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)
+      || viewportWidth <= 0 || viewportHeight <= 0) {
+      panelScale = 1;
+      panelZoomTargets().forEach((element) => { element.style.zoom = '1'; });
+      return;
+    }
+    const availableWidth = Math.max(320, viewportWidth - 24);
+    const availableHeight = Math.max(240, viewportHeight - 24);
+    const rawScale = Math.min(
+      availableWidth / PANEL_DESIGN_WIDTH,
+      availableHeight / PANEL_DESIGN_HEIGHT,
+      PANEL_MAX_SCALE
+    );
+    panelScale = Math.max(1, Math.floor(rawScale * 1000) / 1000);
+    panelZoomTargets().forEach((element) => { element.style.zoom = String(panelScale); });
+    if (state.openMenuKey) positionDeviceMenu();
+  }
+
   function init() {
     updateHint(HINT_PLACEHOLDER);
     refreshControls();
     void refreshDevices();
     pollStatus();
   }
+
+  // 首屏绘制前同步应用初始语言，避免中文闪烁
+  applyLanguage(readInitialLang(), { rerender: false });
+
+  // 首次打开及窗口尺寸变化（含最大化 / 全屏）时适配面板缩放
+  fitPanelScale();
+  window.addEventListener('resize', fitPanelScale);
 
   init();
 })();

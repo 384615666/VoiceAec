@@ -9,6 +9,7 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <Compile Include="..\SampleRing.cs" Link="SampleRing.cs" />
     <Compile Include="..\RuntimeSupport.cs" Link="RuntimeSupport.cs" />
+    <Compile Include="..\UiText.cs" Link="UiText.cs" />
     <Compile Include="..\ObsPluginInstaller.cs" Link="ObsPluginInstaller.cs" />
   </ItemGroup>
 </Project>

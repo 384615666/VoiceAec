@@ -10,6 +10,8 @@ internal static class ObsInstallerTests
         Console.WriteLine("PASS: " + label);
     }
 
+    private static bool HasCjk(string value) => value.Any(ch => ch >= '\u4e00' && ch <= '\u9fff');
+
     public static void Run()
     {
         var sandbox = Path.Combine(Path.GetTempPath(), "VoiceAec-installer-tests-" + Guid.NewGuid().ToString("N"));
@@ -40,10 +42,21 @@ internal static class ObsInstallerTests
         File.WriteAllText(otherPlugin, "unrelated plugin");
         try
         {
-            Check(installer.Install().Ok && File.Exists(plugin) && installer.ReadReceipt() != null,
+            // The installer reports status text in the current UI language.
+            UiText.SetLang("en");
+            var installed = installer.Install();
+            Check(installed.Ok && File.Exists(plugin) && installer.ReadReceipt() != null,
                 "fresh plugin installation validates and records owned files");
-            Check(installer.Uninstall().Ok && !File.Exists(plugin) && File.ReadAllText(otherPlugin) == "unrelated plugin",
+            Check(installed.Message.Contains("Installed") && !HasCjk(installed.Message),
+                "OBS install status message follows the English UI language");
+            var uninstalled = installer.Uninstall();
+            Check(uninstalled.Ok && !File.Exists(plugin) && File.ReadAllText(otherPlugin) == "unrelated plugin",
                 "fresh uninstall removes owned plugin and leaves other plugins untouched");
+            Check(uninstalled.Message.Contains("Removed") && !HasCjk(uninstalled.Message),
+                "OBS uninstall status message follows the English UI language");
+            UiText.SetLang(null);
+            Check(installer.Install().Message.Contains("已安装到 OBS") && !installer.Uninstall().Message.Contains("Removed"),
+                "OBS status messages return to Chinese after switching back");
 
             Directory.CreateDirectory(Path.GetDirectoryName(plugin)!);
             File.WriteAllText(plugin, "original plugin");

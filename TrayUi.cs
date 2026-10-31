@@ -115,7 +115,8 @@ internal static class TraySupport
     private static Icon LoadIcon(string name, int size)
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(name)
-            ?? throw new InvalidOperationException($"缺少图标资源 {name}");
+            ?? throw new InvalidOperationException(
+                UiText.F("缺少图标资源 {0}", "Missing icon resource {0}", name));
         return new Icon(stream, Math.Max(16, size), Math.Max(16, size));
     }
 }
@@ -518,10 +519,11 @@ internal sealed class TrayHeaderItem : ToolStripItem
         var textLeft = iconBox.Right + Px(10);
         TextRenderer.DrawText(g, "VoiceAec", titleFont, new Point(textLeft, Px(12)), TrayPalette.Ink,
             TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
-        TextRenderer.DrawText(g, "本地实时音频控制台", captionFont, new Point(textLeft, Px(35)), TrayPalette.Muted,
+        TextRenderer.DrawText(g, UiText.S("本地实时音频控制台", "Audio console"), captionFont,
+            new Point(textLeft, Px(35)), TrayPalette.Muted,
             TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
 
-        var label = snapshot.Paused ? "已暂停" : "运行中";
+        var label = snapshot.Paused ? UiText.S("已暂停", "Paused") : UiText.S("运行中", "Running");
         var pillSize = TextRenderer.MeasureText(g, label, pillFont, new Size(int.MaxValue, int.MaxValue),
             TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
         var pill = new Rectangle(right - Px(14) - pillSize.Width - Px(14), Px(13),
@@ -604,9 +606,12 @@ internal sealed class TrayMenu : ContextMenuStrip
     private readonly float scale;
     private readonly int innerWidth;
     private readonly TrayHeaderItem header;
+    private TrayMenuItem? openItem;
     private TrayMenuItem? pauseItem;
     private TrayMenuItem? autostartItem;
     private TrayMenuItem? modeHead;
+    private TrayMenuItem? aboutItem;
+    private TrayMenuItem? quitItem;
     private bool chromeApplied;
 
     public event Action? OpenPanelRequested;
@@ -636,15 +641,15 @@ internal sealed class TrayMenu : ContextMenuStrip
         Items.Add(header);
         Items.Add(Separator());
 
-        var open = Row("打开控制面板", TrayGlyph.Panel, TrayPalette.Blue);
-        open.Click += (_, _) => OpenPanelRequested?.Invoke();
-        Items.Add(open);
+        openItem = Row(UiText.S("打开控制面板", "Open control panel"), TrayGlyph.Panel, TrayPalette.Blue);
+        openItem.Click += (_, _) => OpenPanelRequested?.Invoke();
+        Items.Add(openItem);
 
-        pauseItem = Row("暂停并静音", TrayGlyph.Pause, TrayPalette.Violet);
+        pauseItem = Row(UiText.S("暂停并静音", "Pause and mute"), TrayGlyph.Pause, TrayPalette.Violet);
         pauseItem.Click += (_, _) => PauseRequested?.Invoke();
         Items.Add(pauseItem);
 
-        modeHead = Row("处理模式", TrayGlyph.Mode, TrayPalette.Berry);
+        modeHead = Row(UiText.S("处理模式", "Mode"), TrayGlyph.Mode, TrayPalette.Berry);
         modeHead.DropDown = new TrayDropDown(scale, Px(202));
         modeHead.DropDownOpened += (_, _) => { modeHead.Highlight = true; modeHead.Invalidate(); };
         modeHead.DropDownClosed += (_, _) => { modeHead.Highlight = false; modeHead.Invalidate(); };
@@ -652,21 +657,21 @@ internal sealed class TrayMenu : ContextMenuStrip
 
         Items.Add(Separator());
 
-        autostartItem = Row("开机自启", TrayGlyph.Autostart, TrayPalette.Green);
+        autostartItem = Row(UiText.S("开机自启", "Start with Windows"), TrayGlyph.Autostart, TrayPalette.Green);
         autostartItem.ShowSwitch = true;
         autostartItem.Click += (_, _) => AutostartRequested?.Invoke(!autostartItem.SwitchOn);
         Items.Add(autostartItem);
 
-        var about = Row("关于 VoiceAec", TrayGlyph.Info, TrayPalette.Violet);
-        about.Click += (_, _) => AboutRequested?.Invoke();
-        Items.Add(about);
+        aboutItem = Row(UiText.S("关于 VoiceAec", "About VoiceAec"), TrayGlyph.Info, TrayPalette.Violet);
+        aboutItem.Click += (_, _) => AboutRequested?.Invoke();
+        Items.Add(aboutItem);
 
         Items.Add(Separator());
 
-        var quit = Row("退出 VoiceAec", TrayGlyph.Exit, TrayPalette.Coral);
-        quit.Danger = true;
-        quit.Click += (_, _) => QuitRequested?.Invoke();
-        Items.Add(quit);
+        quitItem = Row(UiText.S("退出 VoiceAec", "Quit VoiceAec"), TrayGlyph.Exit, TrayPalette.Coral);
+        quitItem.Danger = true;
+        quitItem.Click += (_, _) => QuitRequested?.Invoke();
+        Items.Add(quitItem);
 
         Items.Add(new TraySpacer(innerWidth, Px(7)));
         MinimumSize = new Size(innerWidth, 0);
@@ -698,9 +703,18 @@ internal sealed class TrayMenu : ContextMenuStrip
 
     private void ApplyState(TrayMenuState state)
     {
+        // The language can change while the application runs, so every label is
+        // re-read here: an open menu is refreshed, and the next open matches.
+        if (openItem != null) openItem.Text = UiText.S("打开控制面板", "Open control panel");
+        if (modeHead != null) modeHead.Text = UiText.S("处理模式", "Mode");
+        if (autostartItem != null) autostartItem.Text = UiText.S("开机自启", "Start with Windows");
+        if (aboutItem != null) aboutItem.Text = UiText.S("关于 VoiceAec", "About VoiceAec");
+        if (quitItem != null) quitItem.Text = UiText.S("退出 VoiceAec", "Quit VoiceAec");
         if (pauseItem != null)
         {
-            pauseItem.Text = state.Paused ? "恢复处理与输出" : "暂停并静音";
+            pauseItem.Text = state.Paused
+                ? UiText.S("恢复处理与输出", "Resume processing")
+                : UiText.S("暂停并静音", "Pause and mute");
             pauseItem.Glyph = state.Paused ? TrayGlyph.Resume : TrayGlyph.Pause;
             pauseItem.Accent = state.Paused ? TrayPalette.Green : TrayPalette.Violet;
             pauseItem.Invalidate();
@@ -719,6 +733,14 @@ internal sealed class TrayMenu : ContextMenuStrip
             dropDown.Rebuild(state, ModeRequested ?? (_ => { }));
         header.Invalidate();
         Invalidate();
+    }
+
+    /// <summary>Re-reads every label after a runtime language change.</summary>
+    internal void RefreshLanguage()
+    {
+        ApplyState(stateSource());
+        foreach (ToolStripItem item in Items) item.Invalidate();
+        PerformLayout();
     }
 
     protected override void OnOpening(System.ComponentModel.CancelEventArgs e)

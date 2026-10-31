@@ -64,18 +64,19 @@ internal static class LocalVqe
         {
             var opts = localvqe_options_new();
             if (opts == IntPtr.Zero)
-                throw new Exception("localvqe_options_new failed");
+                throw new Exception(UiText.S("无法初始化本地推理引擎。", "Could not initialize the local inference engine."));
             IntPtr h;
             try
             {
                 if (localvqe_options_set_model_path(opts, modelPath) != 0 ||
                     localvqe_options_set_threads(opts, threads) != 0)
-                    throw new ArgumentException("无效的模型路径或线程数");
+                    throw new ArgumentException(UiText.S("无效的模型路径或线程数", "Invalid model path or thread count"));
                 h = localvqe_new_with_options(opts);
             }
             finally { localvqe_options_free(opts); }
             if (h == IntPtr.Zero)
-                throw new Exception($"localvqe_new failed for '{modelPath}' (threads={threads})");
+                throw new Exception(UiText.F("无法加载模型「{0}」（线程数 {1}）。",
+                    "Could not load the model \"{0}\" (threads={1}).", modelPath, threads));
             return new Context(h);
         }
 

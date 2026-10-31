@@ -14,7 +14,14 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using VoiceAec;
 
-if (args.Contains("--obs-plugin-action")) return ObsPluginManager.RunHelper(args);
+if (args.Contains("--obs-plugin-action"))
+{
+    // The helper runs in its own (usually elevated) process before the normal
+    // config initialization below. Apply the persisted language first so every
+    // install/uninstall result message uses the user's interface language.
+    UiText.ApplySavedLanguage();
+    return ObsPluginManager.RunHelper(args);
+}
 
 // A GUI-subsystem executable never gets a console window; --console/--list
 // attach to the caller's console (or allocate one) and re-open the streams.
@@ -78,6 +85,9 @@ Dictionary<string, string> LoadCfg()
     return [];
 }
 var cfg = LoadCfg();
+// The stored language is applied before anything user-visible is produced;
+// missing or invalid values fall back to Chinese.
+UiText.SetLang(cfg.GetValueOrDefault("lang"));
 void SaveCfg()
 {
     lock (cfgLock)
@@ -113,21 +123,24 @@ var modelFiles = new Dictionary<string, string>
 string? ModelPath(string m) => modelFiles.TryGetValue(m, out var f)
     ? modelDirs.Select(d => Path.Combine(d, f)).FirstOrDefault(File.Exists)
     : null;
-var modelLabels = new Dictionary<string, string>
+var modelKeys = new[] { "off", "v1.2", "v1.3", "v1.4" };
+bool KnownMode(string m) => modelKeys.Contains(m);
+string ModelLabel(string m) => m switch
 {
-    ["off"] = "关闭（直通）",
-    ["v1.2"] = "均衡模式",
-    ["v1.3"] = "强力模式",
-    ["v1.4"] = "纯回声消除模式",
+    "off" => UiText.S("关闭（直通）", "Off (passthrough)"),
+    "v1.2" => UiText.S("均衡模式", "Balanced mode"),
+    "v1.3" => UiText.S("强力模式", "Aggressive mode"),
+    "v1.4" => UiText.S("纯回声消除模式", "Echo-only mode"),
+    _ => m,
 };
 
 if (argsList.Contains("--list"))
 {
     var enumDevices = new MMDeviceEnumerator();
-    Console.WriteLine("== Capture ==");
+    Console.WriteLine(UiText.S("== 采集设备 ==", "== Capture =="));
     foreach (var d in enumDevices.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
         Console.WriteLine($"  {d.FriendlyName}");
-    Console.WriteLine("== Render ==");
+    Console.WriteLine(UiText.S("== 播放设备 ==", "== Render =="));
     foreach (var d in enumDevices.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
         Console.WriteLine($"  {d.FriendlyName}");
     return 0;
@@ -189,7 +202,11 @@ MMDevice Find(DataFlow flow, string substring)
     var hits = enumerator.EnumerateAudioEndPoints(flow, DeviceState.Active)
         .Where(d => d.FriendlyName.Contains(substring, StringComparison.OrdinalIgnoreCase)).ToList();
     if (hits.Count == 0)
-        throw new Exception($"no active {flow} device matching '{substring}' (use --list)");
+        throw new Exception(flow == DataFlow.Capture
+            ? UiText.F("没有找到匹配「{0}」的可用采集设备（可用 --list 查看）",
+                "no active capture device matching '{0}' (use --list)", substring)
+            : UiText.F("没有找到匹配「{0}」的可用播放设备（可用 --list 查看）",
+                "no active playback device matching '{0}' (use --list)", substring));
     return hits[0];
 }
 
@@ -197,12 +214,12 @@ MMDevice Find(DataFlow flow, string substring)
 if (micSub.Length == 0)
 {
     try { micSub = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications).FriendlyName; }
-    catch { micSub = "麦克风"; }
+    catch { micSub = UiText.S("麦克风", "Microphone"); }
 }
 if (refSub.Length == 0)
 {
     try { refSub = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console).FriendlyName; }
-    catch { refSub = "扬声器"; }
+    catch { refSub = UiText.S("扬声器", "Speakers"); }
 }
 if (ref2Sub.Length == 0) ref2Sub = "none";
 if (outSub.Length == 0) outSub = "CABLE Input";
@@ -216,16 +233,20 @@ MMDevice? FindAny(string substring)
     if (hits.Count > 0) return hits[0];
     var caps = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active)
         .Where(d => d.FriendlyName.Contains(substring, StringComparison.OrdinalIgnoreCase)).ToList();
-    return caps.Count > 0 ? caps[0] : throw new Exception($"no active device matching '{substring}'");
+    return caps.Count > 0 ? caps[0]
+        : throw new Exception(UiText.F("没有找到匹配「{0}」的可用设备（可用 --list 查看）",
+            "no active device matching '{0}' (use --list)", substring));
 }
 
 var micConfigured = HasArg("--mic") || cfg.ContainsKey("mic");
 var refConfigured = HasArg("--ref") || cfg.ContainsKey("ref");
 var outConfigured = HasArg("--out") || cfg.ContainsKey("out");
-var micNotice = "";
-var refNotice = "";
-var outNotice = "";
-var devicesNotice = "";
+// A notice keeps the configured device name that went missing; its text is
+// rendered on demand so a runtime language switch takes effect immediately.
+string? micNoticeSource = null;
+string? refNoticeSource = null;
+string? outNoticeSource = null;
+var devicesMissingNotice = false;
 
 MMDevice? TryDefaultDevice(DataFlow flow, Role role)
 {
@@ -245,7 +266,7 @@ catch (Exception)
     micFallback = true;
     micDevice = TryDefaultDevice(DataFlow.Capture, Role.Communications);
     if (micDevice != null && micConfigured)
-        micNotice = $"麦克风「{ShortName(micSub)}」不在了，已临时改用「{ShortName(micDevice.FriendlyName)}」；插回后重启即可恢复。";
+        micNoticeSource = ShortName(micSub);
 }
 
 MMDevice? refDevice;
@@ -256,7 +277,7 @@ catch (Exception)
     refFallback = true;
     refDevice = TryDefaultDevice(DataFlow.Render, Role.Console);
     if (refDevice != null && refConfigured)
-        refNotice = $"参考回采「{ShortName(refSub)}」不在了，已临时改用「{ShortName(refDevice.FriendlyName)}」；插回后重启即可恢复。";
+        refNoticeSource = ShortName(refSub);
 }
 
 MMDevice? ref2Device = null;
@@ -295,13 +316,12 @@ catch (Exception)
         outFallback = true;
         outDevice = TryDefaultDevice(DataFlow.Render, Role.Multimedia);
         if (outDevice != null && outConfigured)
-            outNotice = $"输出设备「{ShortName(outSub)}」不在了，已临时改用「{ShortName(outDevice.FriendlyName)}」。";
+            outNoticeSource = ShortName(outSub);
     }
 }
 
 var devicesMissing = micDevice == null || refDevice == null || outDevice == null;
-if (devicesMissing)
-    devicesNotice = "没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。";
+if (devicesMissing) devicesMissingNotice = true;
 
 // Persist only real devices; a temporary fallback keeps the user's original
 // choice so it comes back when the device does.
@@ -349,9 +369,11 @@ string SwitchModel(string requested, bool persist = true)
 
 string SwitchModelCore(string requested, bool persist)
 {
-    if (!modelLabels.ContainsKey(requested)) return $"未知模式 '{requested}'";
+    if (!KnownMode(requested))
+        return UiText.F("未知模式 '{0}'", "Unknown mode '{0}'", requested);
     if (!ModelExists(requested))
-        return $"模型文件不存在: {modelFiles[requested]}(已查找 {string.Join("、", modelDirs)})";
+        return UiText.F("模型文件不存在: {0}(已查找 {1})", "Model file not found: {0} (searched {1})",
+            modelFiles[requested], string.Join(UiText.S("、", ", "), modelDirs));
     Volatile.Write(ref switching, true);
     try
     {
@@ -382,13 +404,13 @@ string SwitchModelCore(string requested, bool persist)
     }
     catch (Exception ex)
     {
-        return $"加载失败: {ex.Message}";
+        return UiText.F("加载失败: {0}", "Failed to load: {0}", ex.Message);
     }
     finally { Volatile.Write(ref switching, false); }
 }
 
 {
-    if (startModeFromConfig && (!modelLabels.ContainsKey(startMode) || !ModelExists(startMode)))
+    if (startModeFromConfig && (!KnownMode(startMode) || !ModelExists(startMode)))
     {
         Console.WriteLine($"[mode] saved mode '{startMode}' unavailable -> v1.2");
         startMode = "v1.2";
@@ -463,19 +485,28 @@ void ClearAudioBuffers()
     Interlocked.Exchange(ref refActiveTick, 0);
 }
 
+// The API reports a channel-specific error without repeating the generic
+// "device switch failed" prefix, in whichever language produced it.
+static string StripDeviceSwitchPrefix(string error)
+{
+    foreach (var prefix in new[] { "设备切换失败: ", "Device switch failed: " })
+        if (error.StartsWith(prefix, StringComparison.Ordinal)) return error[prefix.Length..];
+    return error;
+}
+
 string RecheckDevices()
 {
-    var micTarget = (micNotice.Length > 0 || micDevice == null) ? cfg.GetValueOrDefault("mic", "") : null;
-    var refTarget = (refNotice.Length > 0 || refDevice == null) ? cfg.GetValueOrDefault("ref", "") : null;
+    var micTarget = (micNoticeSource != null || micDevice == null) ? cfg.GetValueOrDefault("mic", "") : null;
+    var refTarget = (refNoticeSource != null || refDevice == null) ? cfg.GetValueOrDefault("ref", "") : null;
     string? outTarget = null;
     if (cableMissing) outTarget = "CABLE Input";
-    else if (outNotice.Length > 0 || outDevice == null) outTarget = cfg.GetValueOrDefault("out", "");
+    else if (outNoticeSource != null || outDevice == null) outTarget = cfg.GetValueOrDefault("out", "");
     if (string.IsNullOrEmpty(micTarget)) micTarget = null;
     if (string.IsNullOrEmpty(refTarget)) refTarget = null;
     if (string.IsNullOrEmpty(outTarget)) outTarget = null;
     if (micTarget == null && refTarget == null && outTarget == null) return "";
     var error = SwitchDevices(micTarget, refTarget, null, outTarget);
-    return error == "" ? "" : error.Replace("设备切换失败: ", "").Replace("；", "；");
+    return error == "" ? "" : StripDeviceSwitchPrefix(error);
 }
 
 string SetPaused(bool value, bool persist = true)
@@ -506,18 +537,20 @@ string SetPaused(bool value, bool persist = true)
                 currentOut = cable.FriendlyName;
                 outFallback = false;
                 cableMissing = false;
-                outNotice = "";
+                outNoticeSource = null;
                 cfg["out"] = cable.FriendlyName;
                 SaveCfg();
                 Console.WriteLine("[audio] VB-CABLE is back; output rebound");
             }
             catch
             {
-                return "没有找到 VB-CABLE，已保持暂停。请先安装虚拟声卡，或在输出下拉里选择其他设备。";
+                return UiText.S("没有找到 VB-CABLE，已保持暂停。请先安装虚拟声卡，或在输出下拉里选择其他设备。",
+                    "VB-CABLE was not found; audio stays paused. Install the virtual cable first, or pick another device in the Output dropdown.");
             }
         }
         if (micDevice == null || refDevice == null || outDevice == null)
-            return "缺少音频设备：请先在设备下拉里选择麦克风 / 参考 / 输出，然后再恢复。";
+            return UiText.S("缺少音频设备：请先在设备下拉里选择麦克风 / 参考 / 输出，然后再恢复。",
+                "Audio devices are missing: choose Microphone / Reference / Output in the device dropdowns, then resume.");
 
         // Publish the complete resumed pipeline only after every resource
         // started successfully. Failure leaves the application safely muted.
@@ -541,7 +574,7 @@ string SetPaused(bool value, bool persist = true)
         {
             DisposeAudio(newOutput); DisposeAudio(newMic); DisposeAudio(newRef); DisposeAudio(newRef2);
             ClearAudioBuffers();
-            return $"恢复失败，已保持静音: {ex.Message}";
+            return UiText.F("恢复失败，已保持静音: {0}", "Failed to resume; audio stays muted: {0}", ex.Message);
         }
     }
 }
@@ -588,23 +621,23 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
         if (!string.IsNullOrEmpty(micName))
         {
             var n = errors.Count;
-            Change("麦克风", () =>
+            Change(UiText.S("麦克风", "Microphone"), () =>
                 ReplaceCapture(micName, DataFlow.Capture, micRing, "mic", ref micDevice, ref micCap, ref currentMic));
             micOk = errors.Count == n;
         }
         if (!string.IsNullOrEmpty(refName))
         {
             var n = errors.Count;
-            Change("参考回采", () =>
+            Change(UiText.S("参考回采", "Reference loopback"), () =>
                 ReplaceCapture(refName, null, refRing, "ref", ref refDevice, ref refCap, ref currentRef));
             refOk = errors.Count == n;
         }
-        if (ref2Name != null) Change("第二参考", () =>
+        if (ref2Name != null) Change(UiText.S("第二参考", "Second reference"), () =>
             ReplaceCapture(ref2Name, null, ref2Ring, "ref2", ref ref2Device, ref ref2Cap, ref currentRef2));
         if (!string.IsNullOrEmpty(outName))
         {
             var n = errors.Count;
-            if (outName != currentOut) Change("输出", () =>
+            if (outName != currentOut) Change(UiText.S("输出", "Output"), () =>
             {
                 var freshDevice = Find(DataFlow.Render, outName);
                 WasapiOut? freshOutput = null;
@@ -622,26 +655,27 @@ string SwitchDevices(string? micName, string? refName, string? ref2Name, string?
         }
         // An explicit, successful selection resolves that channel, even when
         // it picked the device already in use.
-        if (micOk) micNotice = "";
-        if (refOk) refNotice = "";
-        if (outOk) { outNotice = ""; cableMissing = false; }
+        if (micOk) micNoticeSource = null;
+        if (refOk) refNoticeSource = null;
+        if (outOk) { outNoticeSource = null; cableMissing = false; }
         // Only persist what this request actually changed; a fallback that is
         // still in effect must not overwrite the user's original choice.
         var changed = false;
-        if (currentMic != beforeMic) { cfg["mic"] = currentMic; changed = true; micNotice = ""; }
-        if (currentRef != beforeRef) { cfg["ref"] = currentRef; changed = true; refNotice = ""; }
+        if (currentMic != beforeMic) { cfg["mic"] = currentMic; changed = true; micNoticeSource = null; }
+        if (currentRef != beforeRef) { cfg["ref"] = currentRef; changed = true; refNoticeSource = null; }
         if (currentRef2 != beforeRef2) { cfg["ref2"] = currentRef2; changed = true; }
         if (currentOut != beforeOut)
         {
             cfg["out"] = currentOut; changed = true;
-            outNotice = "";
+            outNoticeSource = null;
             // An explicit output choice (including physical speakers) ends the
             // missing-cable state; only automatic fallbacks keep it.
             cableMissing = false;
         }
-        if (micDevice != null && refDevice != null && outDevice != null) devicesNotice = "";
+        if (micDevice != null && refDevice != null && outDevice != null) devicesMissingNotice = false;
         if (changed) SaveCfg();
-        return errors.Count == 0 ? "" : "设备切换失败: " + string.Join("；", errors);
+        return errors.Count == 0 ? ""
+            : UiText.S("设备切换失败: ", "Device switch failed: ") + string.Join(UiText.S("；", "; "), errors);
     }
 }
 
@@ -769,21 +803,40 @@ object BuildStatus()
     }
     string curMode;
     lock (engineLock) curMode = mode;
-    var deviceNotice = string.Join(" ", new[] { micNotice, refNotice, outNotice, devicesNotice }
-        .Where(n => n.Length > 0));
-    string micName, refName, ref2Name, outName;
+    string micName, refName, ref2Name, outName, deviceNotice;
     lock (devSwitchLock)
     {
-        micName = string.IsNullOrEmpty(currentMic) ? "（未找到设备）" : currentMic;
-        refName = string.IsNullOrEmpty(currentRef) ? "（未找到设备）" : currentRef;
+        var missingName = UiText.S("（未找到设备）", "(device not found)");
+        micName = string.IsNullOrEmpty(currentMic) ? missingName : currentMic;
+        refName = string.IsNullOrEmpty(currentRef) ? missingName : currentRef;
         ref2Name = currentRef2;
-        outName = string.IsNullOrEmpty(currentOut) ? "（未找到设备）" : currentOut;
+        outName = string.IsNullOrEmpty(currentOut) ? missingName : currentOut;
+        // Notices are re-rendered on every poll so switching the UI language
+        // updates the hint without waiting for the device state to change.
+        var notices = new List<string>();
+        if (micNoticeSource != null)
+            notices.Add(UiText.F("麦克风「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
+                "Microphone \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
+                micNoticeSource, ShortName(currentMic)));
+        if (refNoticeSource != null)
+            notices.Add(UiText.F("参考回采「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
+                "Reference loopback \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
+                refNoticeSource, ShortName(currentRef)));
+        if (outNoticeSource != null)
+            notices.Add(UiText.F("输出设备「{0}」不在了，已临时改用「{1}」。",
+                "Output device \"{0}\" is gone; temporarily using \"{1}\".",
+                outNoticeSource, ShortName(currentOut)));
+        if (devicesMissingNotice)
+            notices.Add(UiText.S("没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。",
+                "No usable microphone or speaker was found, so processing is paused. Connect your devices, pick them in the panel, then click \"Resume processing & output\"."));
+        deviceNotice = string.Join(" ", notices);
     }
     var appVersion = Assembly.GetEntryAssembly()!.GetName().Version?.ToString(3) ?? "dev";
     return new
     {
         ok = true,
         version = appVersion,
+        lang = UiText.Lang,
         mode = curMode,
         switching = Volatile.Read(ref switching),
         paused = Volatile.Read(ref paused) != 0,
@@ -808,18 +861,22 @@ object BuildStatus()
             trims = Interlocked.Read(ref refTrims),
             passthroughs = Interlocked.Read(ref passthroughs)
         },
-        models = modelLabels.ToDictionary(kv => kv.Key, kv => new { available = ModelExists(kv.Key), label = kv.Value }),
+        models = modelKeys.ToDictionary(k => k, k => new { available = ModelExists(k), label = ModelLabel(k) }),
         autostart = GetAutostart(),
         cableMissing,
         lanAvailable,
         lanUrl = lanAvailable && primaryLan != null ? $"http://{primaryLan}:{actualPort}/" : "",
         hint = cableMissing
-            ? "还差一步：没有找到 VB-CABLE 虚拟声卡。点上方「一键安装虚拟声卡」，装完重启电脑，语音软件里就能选到 CABLE Output。"
+            ? UiText.S("还差一步：没有找到 VB-CABLE 虚拟声卡。点上方「一键安装虚拟声卡」，装完重启电脑，语音软件里就能选到 CABLE Output。",
+                "One more step: VB-CABLE is not installed. Click \"Install virtual audio cable\" above, restart your PC, then CABLE Output appears in your voice app.")
             : Volatile.Read(ref paused) != 0
-            ? "已暂停：现在不采集也不输出声音，点右上角「恢复处理与输出」就能继续。"
+            ? UiText.S("已暂停：现在不采集也不输出声音，点右上角「恢复处理与输出」就能继续。",
+                "Paused: no audio is captured or played. Click \"Resume processing & output\" in the top-right corner to continue.")
             : deviceNotice.Length > 0
             ? deviceNotice
-            : $"打开 QQ 或游戏语音，把「麦克风」选成 CABLE Output；声音继续从「{ShortName(refName)}」播放，就能一边外放一边消除回声。"
+            : UiText.F("打开 QQ 或游戏语音，把「麦克风」选成 CABLE Output；声音继续从「{0}」播放，就能一边外放一边消除回声。",
+                "Open QQ or your game voice app and set the microphone to CABLE Output. Audio keeps playing through \"{0}\", so you can use speakers and still cancel the echo.",
+                ShortName(refName))
     };
 }
 
@@ -848,7 +905,7 @@ for (var p = port; p < port + 10 && listener == null; p++)
 if (listener == null && lanEnabled)
     for (var p = port; p < port + 10 && listener == null; p++)
         TryBind(new[] { $"http://localhost:{p}/", $"http://127.0.0.1:{p}/" }, p);
-if (listener == null) throw new Exception("cannot bind HTTP listener (8765-8774)");
+if (listener == null) throw new Exception(UiText.S("无法绑定 HTTP 监听端口（8765-8774）", "cannot bind HTTP listener (8765-8774)"));
 lanAvailable = lanEnabled && listener.Prefixes.Any(x => x.Contains("+:"));
 if (lanEnabled && !lanAvailable) Console.WriteLine("[lan] wildcard bind denied; panel is loopback-only");
 
@@ -881,9 +938,11 @@ string EnsureVbCableSetup()
         File.WriteAllBytes(zip, client.GetByteArrayAsync(VbCableUrl).GetAwaiter().GetResult());
     var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(zip)));
     if (!hash.Equals(VbCableSha256, StringComparison.OrdinalIgnoreCase))
-        throw new InvalidOperationException("下载的 VB-CABLE 安装包校验失败，已停止安装。");
+        throw new InvalidOperationException(UiText.S("下载的 VB-CABLE 安装包校验失败，已停止安装。",
+            "The downloaded VB-CABLE package failed verification; installation was stopped."));
     ZipFile.ExtractToDirectory(zip, vbCableCache, overwriteFiles: true);
-    if (!File.Exists(setup)) throw new InvalidOperationException("VB-CABLE 安装文件不完整。");
+    if (!File.Exists(setup))
+        throw new InvalidOperationException(UiText.S("VB-CABLE 安装文件不完整。", "The VB-CABLE installer files are incomplete."));
     return setup;
 }
 
@@ -891,7 +950,8 @@ string EnsureVbCableSetup()
 {
     lock (vbCableLock)
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10)) return (false, "仅支持 Windows 10 及以上。", false);
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10))
+            return (false, UiText.S("仅支持 Windows 10 及以上。", "Windows 10 or later is required."), false);
         try
         {
             var setup = EnsureVbCableSetup();
@@ -902,23 +962,29 @@ string EnsureVbCableSetup()
                 Arguments = "-i -h",
                 WorkingDirectory = Path.GetDirectoryName(setup)!,
             });
-            if (process == null) return (false, "无法启动 VB-CABLE 安装程序。", false);
+            if (process == null)
+                return (false, UiText.S("无法启动 VB-CABLE 安装程序。", "Could not start the VB-CABLE installer."), false);
             if (!process.WaitForExit(180_000))
             {
-                return (false, "VB-CABLE 安装超时，请到官网手动安装。", false);
+                return (false, UiText.S("VB-CABLE 安装超时，请到官网手动安装。",
+                    "VB-CABLE installation timed out; install it manually from the official website."), false);
             }
             return process.ExitCode is 0 or 3010
-                ? (true, "虚拟声卡已安装。请重启电脑，重启后会自动找到 CABLE Output。", true)
-                : (false, $"VB-CABLE 安装程序返回代码 {process.ExitCode}，请到官网手动安装。", false);
+                ? (true, UiText.S("虚拟声卡已安装。请重启电脑，重启后会自动找到 CABLE Output。",
+                    "Virtual audio cable installed. Restart your PC and CABLE Output will appear automatically."), true)
+                : (false, UiText.F("VB-CABLE 安装程序返回代码 {0}，请到官网手动安装。",
+                    "The VB-CABLE installer returned code {0}; install it manually from the official website.",
+                    process.ExitCode), false);
         }
         catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            return (false, "已取消管理员授权，虚拟声卡没有安装。", false);
+            return (false, UiText.S("已取消管理员授权，虚拟声卡没有安装。",
+                "Administrator permission was declined; the virtual audio cable was not installed."), false);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[vbcable] {ex}");
-            return (false, $"安装失败：{ex.Message}", false);
+            return (false, UiText.F("安装失败：{0}", "Installation failed: {0}", ex.Message), false);
         }
     }
 }
@@ -966,7 +1032,8 @@ var httpThread = new Thread(() =>
                             if (path != "/api/obs-plugin")
                             {
                                 if (!obsPlugins.Start(path.EndsWith("/uninstall", StringComparison.Ordinal) ? "uninstall" : "install"))
-                                    throw new InvalidOperationException("已有 OBS 插件任务正在执行。");
+                                    throw new InvalidOperationException(UiText.S("已有 OBS 插件任务正在执行。",
+                                        "Another OBS plugin task is already running."));
                                 ctx.Response.StatusCode = 202;
                             }
                             response = obsPlugins.Status();
@@ -985,8 +1052,11 @@ var httpThread = new Thread(() =>
                     case "/" or "/index.html":
                     {
                         var bytes = File.Exists(indexHtml)
-                            ? System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(indexHtml).Replace("__VOICEAEC_TOKEN__", apiToken))
-                            : "<meta charset='utf-8'><body style='font-family:sans-serif;padding:40px'>前端文件缺失: wwwroot/index.html</body>"u8.ToArray();
+                            ? System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(indexHtml)
+                                .Replace("__VOICEAEC_TOKEN__", apiToken)
+                                .Replace("__VOICEAEC_LANG__", UiText.Lang))
+                            : System.Text.Encoding.UTF8.GetBytes(
+                                $"<meta charset='utf-8'><body style='font-family:sans-serif;padding:40px'>{UiText.S("前端文件缺失: wwwroot/index.html", "Frontend files missing: wwwroot/index.html")}</body>");
                         ctx.Response.ContentType = "text/html; charset=utf-8";
                         ctx.Response.ContentLength64 = bytes.Length;
                         ctx.Response.OutputStream.Write(bytes);
@@ -1007,12 +1077,12 @@ var httpThread = new Thread(() =>
                             body = (sr.ReadToEnd() ?? "").Trim();
                         var ok = false;
                         string error = "";
-                        if (body == "off" || body == "v1.2" || body == "v1.3" || body == "v1.4")
+                        if (KnownMode(body))
                         {
                             error = SwitchModel(body);
                             if (error == "") ok = true;
                         }
-                        else error = $"未知模式 '{body}'";
+                        else error = UiText.F("未知模式 '{0}'", "Unknown mode '{0}'", body);
                         string nowMode;
                         lock (engineLock) nowMode = mode;
                         var bytes = JsonSerializer.SerializeToUtf8Bytes(
@@ -1064,7 +1134,9 @@ var httpThread = new Thread(() =>
                             }
                             catch { }
                             string nowMic, nowRef, nowRef2, nowOut;
-                            var err = mic == null && rf == null && rf2 == null && ot == null ? "请求体需含 mic/ref/ref2/out 字段" : SwitchDevices(mic, rf, rf2, ot);
+                            var err = mic == null && rf == null && rf2 == null && ot == null
+                                ? UiText.S("请求体需含 mic/ref/ref2/out 字段", "Request body must include mic/ref/ref2/out fields.")
+                                : SwitchDevices(mic, rf, rf2, ot);
                             lock (devSwitchLock) { nowMic = currentMic; nowRef = currentRef; nowRef2 = currentRef2; nowOut = currentOut; }
                             var bytes = JsonSerializer.SerializeToUtf8Bytes(
                                 err == "" ? (object)new { ok = true, current = new { mic = nowMic, @ref = nowRef, ref2 = nowRef2, @out = nowOut } }
@@ -1101,11 +1173,35 @@ var httpThread = new Thread(() =>
                         else
                         {
                             var bytes = JsonSerializer.SerializeToUtf8Bytes(
-                                new { ok = false, error = "body 必须是 true 或 false" }, jsonOpts);
+                                new { ok = false, error = UiText.S("body 必须是 true 或 false", "body must be true or false") }, jsonOpts);
                             ctx.Response.StatusCode = 400;
                             ctx.Response.ContentType = "application/json; charset=utf-8";
                             ctx.Response.OutputStream.Write(bytes);
                         }
+                        break;
+                    }
+                    case "/api/lang":
+                    {
+                        string body;
+                        using (var sr = new StreamReader(ctx.Request.InputStream))
+                            body = (sr.ReadToEnd() ?? "").Trim();
+                        if (!UiText.TryNormalizeLang(body, out var requestedLang))
+                        {
+                            ctx.Response.StatusCode = 400;
+                            var errorBytes = JsonSerializer.SerializeToUtf8Bytes(
+                                new { ok = false, error = UiText.S("语言必须是 zh 或 en。", "Language must be zh or en.") }, jsonOpts);
+                            ctx.Response.ContentType = "application/json; charset=utf-8";
+                            ctx.Response.OutputStream.Write(errorBytes);
+                            break;
+                        }
+                        // Persist first, then notify the UI: a tray refresh problem
+                        // must not lose the language choice or fail the response.
+                        PersistKey("lang", requestedLang);
+                        try { UiText.SetLang(requestedLang); } catch { }
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                            new { ok = true, lang = UiText.Lang }, jsonOpts);
+                        ctx.Response.ContentType = "application/json; charset=utf-8";
+                        ctx.Response.OutputStream.Write(bytes);
                         break;
                     }
                     case "/api/vbcable/install":
@@ -1118,7 +1214,7 @@ var httpThread = new Thread(() =>
                                 {
                                     vbCableRunning = true;
                                     vbCableOk = false;
-                                    vbCableMessage = "正在准备安装…";
+                                    vbCableMessage = UiText.S("正在准备安装…", "Preparing installation…");
                                     vbCableReboot = false;
                                     _ = Task.Run(() =>
                                     {
@@ -1140,7 +1236,7 @@ var httpThread = new Thread(() =>
                         {
                             running = vbCableRunning;
                             ok = vbCableOk;
-                            message = vbCableMessage;
+                            message = vbCableRunning ? UiText.S("正在准备安装…", "Preparing installation…") : vbCableMessage;
                             reboot = vbCableReboot;
                         }
                         var bytes = JsonSerializer.SerializeToUtf8Bytes(
@@ -1334,7 +1430,7 @@ var trayThread = new Thread(() =>
         Console.WriteLine("[panel] showing control panel");
         if (panelForm == null || panelForm.IsDisposed)
         {
-            panelForm = new Form
+            panelForm = new PanelForm
             {
                 Text = "VoiceAec",
                 StartPosition = savedWindow.HasValue ? FormStartPosition.Manual : FormStartPosition.CenterScreen,
@@ -1352,7 +1448,7 @@ var trayThread = new Thread(() =>
             panelWebView = wv;
             panelForm.Controls.Add(wv);
             panelForm.VisibleChanged += (_, _) => UpdatePanelVisibility();
-            panelForm.Resize += (_, _) => UpdatePanelVisibility();
+            panelForm.Resize += (_, _) => { UpdatePanelVisibility(); PostWindowState(); };
             panelForm.FormClosing += (_, e) =>
             {
                 if (exiting) return;
@@ -1370,6 +1466,9 @@ var trayThread = new Thread(() =>
                     wv.ZoomFactor = 1.0;
                     wv.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                     wv.CoreWebView2.Settings.IsZoomControlEnabled = false;
+                    // Let the panel's own title strip act as the native caption:
+                    // dragging, double-click maximize/restore and the system menu.
+                    wv.CoreWebView2.Settings.IsNonClientRegionSupportEnabled = true;
                     wv.CoreWebView2.NewWindowRequested += (_, e2) =>
                     {
                         // About-page links (target=_blank) go to the default browser.
@@ -1380,11 +1479,47 @@ var trayThread = new Thread(() =>
                     };
                     wv.CoreWebView2.WebMessageReceived += (_, e2) =>
                     {
-                        if (e2.TryGetWebMessageAsString() == "close-panel")
-                            panelForm.BeginInvoke(() => { SaveWindow(); panelForm.Hide(); });
+                        var command = e2.TryGetWebMessageAsString();
+                        if (string.IsNullOrEmpty(command)) return;
+                        panelForm.BeginInvoke(() =>
+                        {
+                            switch (command)
+                            {
+                                case "window-minimize":
+                                    panelForm.WindowState = FormWindowState.Minimized;
+                                    break;
+                                case "window-maximize":
+                                    panelForm.WindowState = panelForm.WindowState == FormWindowState.Maximized
+                                        ? FormWindowState.Normal
+                                        : FormWindowState.Maximized;
+                                    break;
+                                case "window-close":
+                                case "close-panel":
+                                    SaveWindow();
+                                    panelForm.Hide();
+                                    break;
+                                case "window-drag-start":
+                                    WindowTheme.BeginWindowDrag(panelForm.Handle);
+                                    break;
+                                case "copy-lan-url":
+                                    try
+                                    {
+                                        if (lanAvailable && primaryLan != null && actualPort > 0)
+                                        {
+                                            System.Windows.Forms.Clipboard.SetText(
+                                                $"http://{primaryLan}:{actualPort}/");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.Error.WriteLine($"[panel] clipboard: {ex.Message}");
+                                    }
+                                    break;
+                            }
+                        });
                     };
                     wv.CoreWebView2.Navigate(panelUrl);
-                    wv.CoreWebView2.NavigationCompleted += (_, _) => UpdatePanelVisibility();
+                    wv.CoreWebView2.NavigationCompleted += (_, _) => { UpdatePanelVisibility(); PostWindowState(); };
                 }
                 catch (Exception ex)
                 {
@@ -1392,7 +1527,9 @@ var trayThread = new Thread(() =>
                     var tip = new Label
                     {
                         Dock = DockStyle.Fill,
-                        Text = $"面板加载失败（WebView2）：{ex.Message}\r\n音频处理仍在后台运行。",
+                        Text = UiText.F("面板加载失败（WebView2）：{0}\r\n音频处理仍在后台运行。",
+                            "Panel failed to load (WebView2): {0}\r\nAudio processing is still running in the background.",
+                            ex.Message),
                         Padding = new Padding(24),
                         ForeColor = Color.Firebrick,
                     };
@@ -1405,6 +1542,19 @@ var trayThread = new Thread(() =>
         Console.WriteLine("[panel] form shown");
         if (panelForm.WindowState == FormWindowState.Minimized) panelForm.WindowState = FormWindowState.Normal;
         panelForm.Activate();
+
+        void PostWindowState()
+        {
+            var core = panelWebView?.CoreWebView2;
+            if (core == null || panelForm == null || panelForm.IsDisposed) return;
+            try
+            {
+                core.PostWebMessageAsJson(panelForm.WindowState == FormWindowState.Maximized
+                    ? "{\"windowMaximized\":true}"
+                    : "{\"windowMaximized\":false}");
+            }
+            catch (Exception ex) { Console.Error.WriteLine($"[panel] window state: {ex.Message}"); }
+        }
     }
 
     using var trayIcon = TraySupport.TrayIcon();
@@ -1416,19 +1566,19 @@ var trayThread = new Thread(() =>
     };
     Console.WriteLine("[panel] tray icon ready");
 
-    var modeEntries = new List<TrayModeEntry>
-    {
-        new("off", modelLabels["off"], Color.FromArgb(0xE8, 0xB8, 0x4B), true),
-        new("v1.2", modelLabels["v1.2"], Color.FromArgb(0x2E, 0xC4, 0x89), ModelExists("v1.2")),
-        new("v1.3", modelLabels["v1.3"], Color.FromArgb(0xF2, 0x7B, 0xA9), ModelExists("v1.3")),
-        new("v1.4", modelLabels["v1.4"], Color.FromArgb(0x4F, 0xA8, 0xE8), ModelExists("v1.4")),
-    };
     TrayMenuState CurrentTrayState()
     {
         string current;
         lock (engineLock) current = mode;
-        if (!modelLabels.ContainsKey(current)) current = "off";
-        return new TrayMenuState(current, modelLabels[current], Volatile.Read(ref paused) != 0,
+        if (!KnownMode(current)) current = "off";
+        var modeEntries = new List<TrayModeEntry>
+        {
+            new("off", ModelLabel("off"), Color.FromArgb(0xE8, 0xB8, 0x4B), true),
+            new("v1.2", ModelLabel("v1.2"), Color.FromArgb(0x2E, 0xC4, 0x89), ModelExists("v1.2")),
+            new("v1.3", ModelLabel("v1.3"), Color.FromArgb(0xF2, 0x7B, 0xA9), ModelExists("v1.3")),
+            new("v1.4", ModelLabel("v1.4"), Color.FromArgb(0x4F, 0xA8, 0xE8), ModelExists("v1.4")),
+        };
+        return new TrayMenuState(current, ModelLabel(current), Volatile.Read(ref paused) != 0,
             GetAutostart(), modeEntries);
     }
 
@@ -1443,12 +1593,17 @@ var trayThread = new Thread(() =>
     {
         var error = SwitchModel(requested);
         icon.ShowBalloonTip(2000, "VoiceAec",
-            error == "" ? $"已切换：{modelLabels[requested]}" : $"切换失败：{error}", ToolTipIcon.Info);
+            error == "" ? UiText.F("已切换：{0}", "Switched to: {0}", ModelLabel(requested))
+                        : UiText.F("切换失败：{0}", "Switch failed: {0}", error), ToolTipIcon.Info);
     };
     menu.AutostartRequested += enabled =>
     {
         try { SetAutostart(enabled); }
-        catch (Exception ex) { icon.ShowBalloonTip(2000, "VoiceAec", $"设置失败：{ex.Message}", ToolTipIcon.Warning); }
+        catch (Exception ex)
+        {
+            icon.ShowBalloonTip(2000, "VoiceAec",
+                UiText.F("设置失败：{0}", "Failed to change the setting: {0}", ex.Message), ToolTipIcon.Warning);
+        }
     };
     menu.QuitRequested += () => shutdown.Cancel();
     menu.AboutRequested += () =>
@@ -1456,17 +1611,41 @@ var trayThread = new Thread(() =>
         ShowPanel();
         _ = OpenAboutAsync();
     };
-    menu.Opening += (_, _) =>
+    void RefreshTrayTip()
     {
         string current;
         lock (engineLock) current = mode;
-        icon.Text = Volatile.Read(ref paused) != 0 ? "VoiceAec · 已暂停并静音" : $"VoiceAec · {modelLabels[current]}";
+        if (!KnownMode(current)) current = "off";
+        icon.Text = Volatile.Read(ref paused) != 0
+            ? UiText.S("VoiceAec · 已暂停并静音", "VoiceAec · Paused and muted")
+            : $"VoiceAec · {ModelLabel(current)}";
+    }
+    menu.Opening += (_, _) => RefreshTrayTip();
+    // POST /api/lang arrives on the HTTP thread: refresh the tray text and menu
+    // content on the UI thread; an open menu is closed so it reopens localized.
+    UiText.LanguageChanged += () =>
+    {
+        try
+        {
+            icon.ContextMenuStrip?.BeginInvoke((Action)(() =>
+            {
+                try
+                {
+                    if (menu.Visible) menu.Close(ToolStripDropDownCloseReason.AppFocusChange);
+                    menu.RefreshLanguage();
+                    RefreshTrayTip();
+                }
+                catch (Exception) { }   // a refresh failure must not take down the tray
+            }));
+        }
+        catch (Exception) { }   // no window handle yet or shutting down
     };
     icon.ContextMenuStrip = menu;
     icon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowPanel(); };
     icon.BalloonTipClicked += (_, _) => ShowPanel();
-    icon.ShowBalloonTip(2500, "VoiceAec 已在后台运行",
-        "左键点击图标打开控制面板；右键可选择模式 / 开机自启 / 退出", ToolTipIcon.Info);
+    icon.ShowBalloonTip(2500, UiText.S("VoiceAec 已在后台运行", "VoiceAec is running in the background"),
+        UiText.S("左键点击图标打开控制面板；右键可选择模式 / 开机自启 / 退出",
+            "Left-click the icon to open the control panel; right-click for mode, startup and exit."), ToolTipIcon.Info);
 
     var quitTimer = new System.Windows.Forms.Timer { Interval = 400 };
     quitTimer.Tick += (_, _) =>
@@ -1489,7 +1668,9 @@ trayThread.Start();
 
 Console.WriteLine($"  [http]    http://localhost:{actualPort}/");
 // 面板由托盘线程的原生窗口（WebView2）承载，不再拉起系统浏览器
-Console.WriteLine("== 语音软件选 CABLE Output；窗口关闭后程序在系统托盘继续运行，右键托盘图标可退出 ==");
+Console.WriteLine(UiText.S(
+    "== 语音软件选 CABLE Output；窗口关闭后程序在系统托盘继续运行，右键托盘图标可退出 ==",
+    "== Select CABLE Output in your voice app; closing the window keeps VoiceAec in the tray, right-click the icon to quit =="));
 shutdown.Token.WaitHandle.WaitOne();
 
 Console.WriteLine("stopping...");

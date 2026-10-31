@@ -83,6 +83,14 @@ VoiceAec 用 [LocalVQE](https://github.com/localai-org/LocalVQE) 神经网络做
 | :---: | :---: |
 | <img src="docs/images/tray-menu-crop.png" width="290" alt="托盘菜单"> | <img src="docs/images/dialog-obs-crop.png" width="560" alt="OBS 插件管理对话框"> |
 
+窗口没有原生标题栏：按住顶部空白拖动窗口、双击最大化 / 还原，右上角三个圆形按钮分别是最小化 / 最大化（还原）/ 关闭；关闭只是隐藏到托盘，音频继续。边缘和四角可以拖动缩放。
+
+「关于」右上角还可以一键切换界面语言：中文界面点 **EN** 切到英文，英文界面点 **中文** 切回；面板、托盘和提示文案会一起切换并记住选择。
+
+| 中文界面 · 「关于」 | English UI · About |
+| :---: | :---: |
+| <img src="docs/images/dialog-about-crop.png" width="360" alt="中文「关于」对话框：「关闭」按钮旁有 EN 语言切换按钮"> | <img src="docs/images/dialog-about-en-crop.png" width="360" alt="English About dialog with a 中文 language switch next to Close"> |
+
 ## 快速开始
 
 **系统要求**：Windows 10/11 64 位（不支持 32 位、macOS、Linux）；WebView2 运行时（一般系统自带）；一只麦克风和一个耳机/音箱；[VB-CABLE](https://vb-audio.com/Cable/) 虚拟声卡（安装包自带，安装向导可代装）。最新版本号见上方 release 徽章或 [Releases](https://github.com/384615666/VoiceAec/releases) 页面。
@@ -155,7 +163,7 @@ OBS 里也能直接使用同一个模型：面板顶栏点「OBS 插件」打开
 
 「一键卸载」会移除本程序安装的版本，如果安装前已有插件则恢复备份；后来新增的模型、配置和外部改动文件会保留。
 
-> 限制：仅支持普通安装版 OBS 64 位（便携版 OBS 不扫描标准插件目录）；OBS 运行中禁止安装/卸载，安装器不会替你关闭 OBS；需要管理员权限，拒绝 UAC 会失败。插件版本号与桌面端独立（当前桌面端 v0.5.3，插件为 0.4.0），弹窗显示的是插件版本。
+> 限制：仅支持普通安装版 OBS 64 位（便携版 OBS 不扫描标准插件目录）；OBS 运行中禁止安装/卸载，安装器不会替你关闭 OBS；需要管理员权限，拒绝 UAC 会失败。插件版本号与桌面端独立（当前桌面端 v0.6.0，插件为 0.4.0），弹窗显示的是插件版本。
 
 ## 功能一览
 
@@ -170,7 +178,9 @@ OBS 里也能直接使用同一个模型：面板顶栏点「OBS 插件」打开
 | 🚀 开机自启 | 写入 HKCU Run，开机以 `--tray` 静默后台运行 |
 | 🪟 托盘常驻 | 关窗只隐藏；托盘左键打开面板，右键菜单切换模式/自启/退出 |
 | 📐 窗口记忆 | 关闭或退出时记住窗口位置与尺寸（副屏也适用） |
-| 🌐 局域网面板 | 同一 Wi-Fi 下手机/平板打开「关于」里显示的 `http://192.168.x.x:8765/` 看电平、切模式（端口占用时会自动顺延，以「关于」为准）；可用 `--no-lan` 关闭 |
+| 🌐 局域网面板 | 同一 Wi-Fi 下手机/平板打开「关于」里显示的 `http://192.168.x.x:8765/` 看电平、切模式（端口占用时会自动顺延，以「关于」为准）；点击地址即可复制；可用 `--no-lan` 关闭 |
+| 🌍 中英双语界面 | 「关于」右上角一键切换中文 / English；面板、托盘菜单、提示与错误消息同步切换，选择持久化到 `voiceaec.json` |
+| 🪟 无边框窗口 | 面板内自绘最小化 / 最大化 / 关闭，顶部拖动、双击最大化、边缘缩放；最大化留在当前显示器，关闭即隐藏到托盘 |
 | 🧩 OBS 插件 | 面板内一键安装/卸载，带备份与回滚 |
 | 📊 运行统计 | 处理时长、累计推理跳数、每秒推理（正常约 62.5 跳/秒）、参考静默跳数、输出补零次数、降级直通次数 |
 | 🛡 健壮性 | 无设备/无虚拟声卡时以暂停状态打开；重复启动只激活已有实例；高 DPI 使用 PerMonitorV2 |
@@ -216,6 +226,7 @@ OBS 里也能直接使用同一个模型：面板顶栏点「OBS 插件」打开
 | POST | `/api/devices` | JSON `{mic\|ref\|ref2\|out: "设备名"}`，热切换并持久化 |
 | POST | `/api/model` | 纯文本 `off` / `v1.2` / `v1.3` / `v1.4` |
 | POST | `/api/autostart` | 纯文本 `true` / `1` / `on` 或 `false` / `0` / `off` |
+| POST | `/api/lang` | 纯文本 `zh` / `en`，切换界面语言并持久化；`/api/status` 的 `lang` 返回当前值 |
 | POST | `/api/pause` | 纯文本 `true` 暂停并静音，`false` 恢复；失败保持静音 |
 | POST | `/api/recheck` | 按保存的设备名重新检测并绑定（v0.5.2 新增） |
 | POST | `/api/sound-settings` | 打开 Windows「设置 → 系统 → 声音」 |
@@ -255,6 +266,7 @@ OBS 里也能直接使用同一个模型：面板顶栏点「OBS 插件」打开
 
 - **安装版**：`%LocalAppData%\Programs\VoiceAec\voiceaec.json`；
 - **便携版**：优先放在 exe 旁；如果 `%LocalAppData%\VoiceAec\voiceaec.json` 已存在则优先用它，exe 旁不可写时也会回退到该路径；
+- **界面语言**：`lang` 为 `zh` / `en`，在「关于」里切换即可；
 - 一般不需要手动修改；配置损坏时退出程序后删除该文件即可恢复默认。
 
 </details>
@@ -315,12 +327,13 @@ VoiceAec/
 
 | 版本 | 亮点 |
 | --- | --- |
+| **v0.6.0** | 新增中英双语界面与 `POST /api/lang` / `lang` 配置；无边框自绘窗口（最小化 / 最大化 / 关闭、拖动与边缘缩放、多显示器原地最大化）；「关于」里的局域网地址点击即复制；英文版封面。 |
 | **v0.5.3** | 全新项目主页、功能图解与英文概览；截图格式规范化；发布包附带文档素材。功能与 v0.5.2 一致。 |
 | **v0.5.2** | 缺虚拟声卡时恢复也会被拦住；明确选择输出后可恢复；提示随状态刷新；新增「重新检测」接口。 |
 | **v0.5.0** | 缺 CABLE 保持暂停、无设备不崩溃、临时回退不写回配置、虚拟声卡后台安装、安装器正确判断驱动结果。 |
 | **v0.4.9** | 设备拔掉自动回退、记住窗口位置与大小、暂停状态保留、CABLE 改名兼容。 |
 
-完整记录见 [docs/RELEASE-v0.5.3.md](https://github.com/384615666/VoiceAec/blob/main/docs/RELEASE-v0.5.3.md) 与 [全部发布](https://github.com/384615666/VoiceAec/releases)。
+完整记录见 [docs/RELEASE-v0.6.0.md](https://github.com/384615666/VoiceAec/blob/main/docs/RELEASE-v0.6.0.md) 与 [全部发布](https://github.com/384615666/VoiceAec/releases)。
 
 ## 常见问题
 

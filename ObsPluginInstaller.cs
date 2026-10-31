@@ -52,9 +52,11 @@ internal sealed class ObsPluginInstaller
         if (!File.Exists(path)) return null;
         RejectLinks(path);
         var receipt = JsonSerializer.Deserialize<ObsPluginReceipt>(File.ReadAllText(path), Json)
-            ?? throw new InvalidDataException("安装记录无法读取，已停止操作。");
+            ?? throw new InvalidDataException(UiText.S("安装记录无法读取，已停止操作。",
+                "The install receipt could not be read; operation stopped."));
         if (receipt.Schema != 1 || !Guid.TryParseExact(receipt.Id, "N", out _) || receipt.Files == null)
-            throw new InvalidDataException("安装记录无效，已停止操作。");
+            throw new InvalidDataException(UiText.S("安装记录无效，已停止操作。",
+                "The install receipt is invalid; operation stopped."));
         foreach (var item in receipt.Files)
         {
             _ = ChildPath(Target, item.Key);
@@ -68,26 +70,30 @@ internal sealed class ObsPluginInstaller
         var manifest = ChildPath(appRoot, ManifestPath);
         RejectLinks(manifest);
         var payload = JsonSerializer.Deserialize<ObsPluginPayload>(File.ReadAllText(manifest), Json)
-            ?? throw new InvalidDataException("OBS 插件安装资源无效。");
+            ?? throw new InvalidDataException(UiText.S("OBS 插件安装资源无效。", "The OBS plugin payload is invalid."));
         if (payload.Schema != 1 || string.IsNullOrWhiteSpace(payload.Version) || payload.Files is not { Length: > 0 })
-            throw new InvalidDataException("OBS 插件安装资源无效。");
+            throw new InvalidDataException(UiText.S("OBS 插件安装资源无效。", "The OBS plugin payload is invalid."));
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in payload.Files)
         {
             var destination = file.Destination.Replace('\\', '/');
             if (!(destination.StartsWith("bin/64bit/", StringComparison.Ordinal) || destination.StartsWith("data/", StringComparison.Ordinal)) ||
-                !names.Add(destination)) throw new InvalidDataException("插件清单包含重复或无效的目标文件。");
+                !names.Add(destination))
+                throw new InvalidDataException(UiText.S("插件清单包含重复或无效的目标文件。",
+                    "The plugin manifest contains duplicate or invalid destination files."));
             _ = ChildPath(Target, file.Destination);
             var source = ChildPath(appRoot, file.Source);
             RejectLinks(source);
             ValidateHash(file.Sha256);
             if (!File.Exists(source) || !Hash(source).Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException($"插件资源缺失或损坏：{file.Source}。请重新解压完整发布包。");
+                throw new InvalidDataException(UiText.F("插件资源缺失或损坏：{0}。请重新解压完整发布包。",
+                    "Plugin payload missing or damaged: {0}. Extract the complete release package again.", file.Source));
         }
         foreach (var required in new[] { "bin/64bit/obs-localvqe.dll", "bin/64bit/liblocalvqe.dll",
             "bin/64bit/ggml.dll", "bin/64bit/ggml-base.dll", "data/locale/en-US.ini",
             "data/localvqe-v1.3-4.8M-f32.gguf" })
-            if (!names.Contains(required)) throw new InvalidDataException($"安装清单缺少 {required}。");
+            if (!names.Contains(required))
+                throw new InvalidDataException(UiText.F("安装清单缺少 {0}。", "The install manifest is missing {0}.", required));
         return payload;
     }
 
@@ -99,7 +105,8 @@ internal sealed class ObsPluginInstaller
         RejectLinks(storeRoot);
         var old = ReadReceipt();
         if (old?.HadPrevious == true && !Directory.Exists(BackupPath(old.Id)))
-            throw new InvalidDataException("原版本备份缺失，已停止更新。");
+            throw new InvalidDataException(UiText.S("原版本备份缺失，已停止更新。",
+                "The previous-version backup is missing; update stopped."));
         var id = old?.Id ?? Guid.NewGuid().ToString("N");
         var hadPrevious = old?.HadPrevious ?? Directory.Exists(Target);
         var stage = Path.Combine(pluginsRoot, ".voiceaec-stage-" + Guid.NewGuid().ToString("N"));
@@ -113,7 +120,7 @@ internal sealed class ObsPluginInstaller
             if (old == null && hadPrevious)
             {
                 var backup = BackupPath(id);
-                if (Directory.Exists(backup)) throw new IOException("备份目录已存在。");
+                if (Directory.Exists(backup)) throw new IOException(UiText.S("备份目录已存在。", "The backup directory already exists."));
                 CopyTree(Target, backup);
                 newBackup = true;
             }
@@ -123,7 +130,8 @@ internal sealed class ObsPluginInstaller
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                 File.Copy(ChildPath(appRoot, file.Source), destination, true);
                 if (!Hash(destination).Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
-                    throw new IOException("插件复制校验失败，原安装保持不变。");
+                    throw new IOException(UiText.S("插件复制校验失败，原安装保持不变。",
+                        "Plugin copy verification failed; the existing installation is unchanged."));
             }
             // Retain ownership of an older version's files as well, so a later
             // uninstall can remove retired files instead of leaving DLLs behind.
@@ -134,8 +142,11 @@ internal sealed class ObsPluginInstaller
                 new ObsPluginReceipt(1, id, payload.Version, hadPrevious, files), Json));
             EnsureStopped();
             Commit(stage);
-            return new(true, hadPrevious ? "已安装到 OBS，并保留安装前备份。请重启 OBS 后添加 VoiceAec 音频滤镜。"
-                : "已安装到 OBS。请重启 OBS 后，在麦克风滤镜中添加 VoiceAec。");
+            return new(true, hadPrevious
+                ? UiText.S("已安装到 OBS，并保留安装前备份。请重启 OBS 后添加 VoiceAec 音频滤镜。",
+                    "Installed into OBS with a backup of the previous state. Restart OBS, then add the VoiceAec audio filter.")
+                : UiText.S("已安装到 OBS。请重启 OBS 后，在麦克风滤镜中添加 VoiceAec。",
+                    "Installed into OBS. Restart OBS, then add VoiceAec to your microphone filters."));
         }
         catch
         {
@@ -149,7 +160,9 @@ internal sealed class ObsPluginInstaller
     {
         EnsureStopped();
         RejectLinks(Target);
-        var receipt = ReadReceipt() ?? throw new InvalidOperationException("此插件不是由本程序安装的，不会自动删除。");
+        var receipt = ReadReceipt() ?? throw new InvalidOperationException(UiText.S(
+            "此插件不是由本程序安装的，不会自动删除。",
+            "This plugin was not installed by VoiceAec and will not be removed automatically."));
         var stage = Path.Combine(pluginsRoot, ".voiceaec-stage-" + Guid.NewGuid().ToString("N"));
         var preserved = 0;
         try
@@ -157,7 +170,9 @@ internal sealed class ObsPluginInstaller
             if (receipt.HadPrevious)
             {
                 var backup = BackupPath(receipt.Id);
-                if (!Directory.Exists(backup)) throw new IOException("安装前备份缺失，已停止卸载。");
+                if (!Directory.Exists(backup))
+                    throw new IOException(UiText.S("安装前备份缺失，已停止卸载。",
+                        "The pre-install backup is missing; uninstall stopped."));
                 CopyTree(backup, stage);
             }
             else Directory.CreateDirectory(stage);
@@ -181,9 +196,13 @@ internal sealed class ObsPluginInstaller
             if (Directory.Exists(Target) && !Directory.EnumerateFileSystemEntries(Target).Any()) Directory.Delete(Target);
             // Keep the original backup for recovery, even after a successful
             // uninstall. It is outside OBS's module discovery directories.
-            var message = receipt.HadPrevious ? "已卸载本程序安装的版本，并恢复安装前的插件。请重新启动 OBS。"
-                : "已卸载 OBS 插件。请重新启动 OBS。";
-            if (preserved > 0) message += $" 已保留 {preserved} 个后来添加或修改的文件。";
+            var message = receipt.HadPrevious
+                ? UiText.S("已卸载本程序安装的版本，并恢复安装前的插件。请重新启动 OBS。",
+                    "Removed the version installed by VoiceAec and restored the previous plugin. Restart OBS.")
+                : UiText.S("已卸载 OBS 插件。请重新启动 OBS。", "Removed the OBS plugin. Restart OBS.");
+            if (preserved > 0)
+                message += UiText.F(" 已保留 {0} 个后来添加或修改的文件。",
+                    " {0} file(s) added or modified later were preserved.", preserved);
             return new(true, message, preserved);
         }
         finally { DeleteOwnedTree(stage, pluginsRoot); }
@@ -207,17 +226,20 @@ internal sealed class ObsPluginInstaller
 
     private void EnsureStopped()
     {
-        if (obsRunning()) throw new InvalidOperationException("请先退出 OBS，再安装或卸载插件；完成后重新启动 OBS。");
+        if (obsRunning())
+            throw new InvalidOperationException(UiText.S("请先退出 OBS，再安装或卸载插件；完成后重新启动 OBS。",
+                "Quit OBS before installing or uninstalling the plugin; restart OBS afterwards."));
     }
     private string BackupPath(string id)
     {
-        if (!Guid.TryParseExact(id, "N", out _)) throw new InvalidDataException("无效的备份编号。");
+        if (!Guid.TryParseExact(id, "N", out _))
+            throw new InvalidDataException(UiText.S("无效的备份编号。", "Invalid backup id."));
         return ChildPath(storeRoot, $"backups/{id}/previous");
     }
     private static void ValidateHash(string value)
     {
         if (value == null || value.Length != 64 || !value.All(Uri.IsHexDigit))
-            throw new InvalidDataException("无效的文件校验值。");
+            throw new InvalidDataException(UiText.S("无效的文件校验值。", "Invalid file checksum."));
     }
     private static string Hash(string file)
     {
@@ -228,10 +250,11 @@ internal sealed class ObsPluginInstaller
     {
         if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative) || relative.Contains(':') ||
             relative.Split('/', '\\').Any(part => part is "" or "." or ".." || part.EndsWith('.') || part.EndsWith(' ')))
-            throw new InvalidDataException("无效的插件文件路径。");
+            throw new InvalidDataException(UiText.S("无效的插件文件路径。", "Invalid plugin file path."));
         var prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var full = Path.GetFullPath(Path.Combine(root, relative));
-        if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("文件超出安装目录。");
+        if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(UiText.S("文件超出安装目录。", "File is outside the installation directory."));
         return full;
     }
     private static void RejectLinks(string path)
@@ -239,7 +262,8 @@ internal sealed class ObsPluginInstaller
         for (var current = Path.GetFullPath(path); current != null; current = Path.GetDirectoryName(current))
             if ((Directory.Exists(current) || File.Exists(current)) &&
                 (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("安装路径包含目录链接，请使用普通目录。");
+                throw new IOException(UiText.S("安装路径包含目录链接，请使用普通目录。",
+                    "The installation path contains a directory link; use a regular directory."));
     }
     private static IEnumerable<string> TreeFiles(string root)
     {

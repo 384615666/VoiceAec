@@ -29,7 +29,7 @@ and VoiceAec removes it from your microphone locally — teammates hear you, not
 </div>
 
 <p align="center">
-  <img src="docs/images/og-cover-site.png" width="100%" alt="VoiceAec cover: the tagline “clear voice chat without a headset” next to a screenshot of the control panel">
+  <img src="docs/images/og-cover-site-en.png" width="100%" alt="VoiceAec English cover: app icon and the tagline “Real-Time Echo Cancellation for Windows”, next to a screenshot of the control panel">
 </p>
 
 ## What it does
@@ -56,7 +56,9 @@ VoiceAec performs neural acoustic echo cancellation locally: the current playbac
 | Device-loss fallback | If a saved device disappears, VoiceAec falls back to system default without overwriting your choice |
 | Pause & mute | Stops capture, inference and output; restores cleanly on resume |
 | Tray-first desktop app | Closing the window keeps audio running; the tray menu handles modes, autostart and exit |
-| LAN panel | Open the LAN URL shown in About (default `http://192.168.x.x:8765/`; the port shifts when 8765 is busy) from a phone on the same Wi-Fi; disable with `--no-lan` |
+| LAN panel | Open the LAN URL shown in About (default `http://192.168.x.x:8765/`; the port shifts when 8765 is busy) from a phone on the same Wi-Fi — click the address to copy it; disable with `--no-lan` |
+| Bilingual UI | Switch the whole interface between Chinese and English from the About dialog (top-right, next to Close); the choice is remembered and applies to the panel, tray menu and messages. |
+| Frameless window | Custom minimize / maximize / close buttons inside the panel; drag the top strip, double-click to maximize, resize from any edge; maximizing stays on the current monitor and closing hides to the tray. |
 | One-click OBS plugin | Install / uninstall the OBS audio filter from the panel, with backup and rollback |
 | Local HTTP API | `http://localhost:8765`; loopback always allowed, private-LAN peers allowed only while the LAN panel is enabled; `X-VoiceAec-Token` required for `/api/*` |
 
