@@ -13,9 +13,9 @@ internal sealed class SingleInstanceGuard : IDisposable
     public EventWaitHandle Activation { get; }
     public bool IsPrimary { get; }
 
-    public SingleInstanceGuard()
+    public SingleInstanceGuard(string? instanceKey = null)
     {
-        var key = @"Local\VoiceAec-" + WindowsIdentity.GetCurrent().User!.Value;
+        var key = instanceKey ?? @"Local\VoiceAec-" + WindowsIdentity.GetCurrent().User!.Value;
         mutex = new Mutex(true, key, out var created);
         IsPrimary = created;
         Activation = new EventWaitHandle(false, EventResetMode.AutoReset, key + "-activate");

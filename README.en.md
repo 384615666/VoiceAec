@@ -56,6 +56,7 @@ VoiceAec performs neural acoustic echo cancellation locally: the current playbac
 | Device-loss fallback | If a saved device disappears, VoiceAec falls back to system default without overwriting your choice |
 | Pause & mute | Stops capture, inference and output; restores cleanly on resume |
 | Tray-first desktop app | Closing the window keeps audio running; the tray menu handles modes, autostart and exit |
+| Pin default mic | Enabled by default. At application startup, set all three Windows default capture roles to `CABLE Output` and stop checking once verified. Retry for up to 30 polls (about one minute), then only on device notifications; do not pin while paused. Enable **Start with Windows** for this to run after reboot. Toggling the pin off and on starts a new attempt. |
 | LAN panel | Open the LAN URL shown in About (default `http://192.168.x.x:8765/`; the port shifts when 8765 is busy) from a phone on the same Wi-Fi — click the address to copy it; disable with `--no-lan` |
 | Bilingual UI | Switch the whole interface between Chinese and English from the About dialog (top-right, next to Close); the choice is remembered and applies to the panel, tray menu and messages. |
 | Frameless window | Custom minimize / maximize / close buttons inside the panel; drag the top strip, double-click to maximize, resize from any edge; maximizing stays on the current monitor and closing hides to the tray. |

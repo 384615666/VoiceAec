@@ -144,10 +144,13 @@ finally
     try { Directory.Delete(langSandbox, true); } catch { }
 }
 
-using var primary = new SingleInstanceGuard();
+// Keep the test independent of a VoiceAec instance already serving live audio.
+var instanceKey = @"Local\VoiceAec-tests-" + Guid.NewGuid().ToString("N");
+using var primary = new SingleInstanceGuard(instanceKey);
 Check(primary.IsPrimary, "first launch acquires instance mutex");
-using var secondary = new SingleInstanceGuard();
+using var secondary = new SingleInstanceGuard(instanceKey);
 Check(!secondary.IsPrimary && primary.Activation.WaitOne(1000),
     "second launch requests activation without owning audio");
 
+StartupMicPinTests.Run();
 ObsInstallerTests.Run();

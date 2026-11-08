@@ -41,6 +41,7 @@ internal enum TrayGlyph
     Exit,
     Dot,
     Info,
+    PinDefault,
 }
 
 internal static class TrayFonts
@@ -76,6 +77,7 @@ internal sealed record TrayMenuState(
     string ModeLabel,
     bool Paused,
     bool Autostart,
+    bool PinDefault,
     IReadOnlyList<TrayModeEntry> Modes);
 
 internal static class TraySupport
@@ -271,6 +273,11 @@ internal static class TrayDrawing
                 g.DrawEllipse(pen, 3.2f, 3.2f, 11.6f, 11.6f);
                 g.FillEllipse(brush, 8.15f, 6.1f, 1.7f, 1.7f);
                 g.DrawLine(pen, 9.0f, 9.2f, 9.0f, 13.2f);
+                break;
+            case TrayGlyph.PinDefault:
+                // 图钉:圆头 + 斜针,表示"把默认麦克风钉住"
+                g.FillEllipse(brush, 8.6f, 3.4f, 6.4f, 6.4f);
+                g.DrawLine(pen, 9.2f, 9.2f, 4.8f, 13.6f);
                 break;
             case TrayGlyph.Dot:
                 using (var halo = new SolidBrush(Color.White))
@@ -609,6 +616,7 @@ internal sealed class TrayMenu : ContextMenuStrip
     private TrayMenuItem? openItem;
     private TrayMenuItem? pauseItem;
     private TrayMenuItem? autostartItem;
+    private TrayMenuItem? pinDefaultItem;
     private TrayMenuItem? modeHead;
     private TrayMenuItem? aboutItem;
     private TrayMenuItem? quitItem;
@@ -618,6 +626,7 @@ internal sealed class TrayMenu : ContextMenuStrip
     public event Action? PauseRequested;
     public event Action<string>? ModeRequested;
     public event Action<bool>? AutostartRequested;
+    public event Action<bool>? PinDefaultRequested;
     public event Action? QuitRequested;
     public event Action? AboutRequested;
 
@@ -661,6 +670,11 @@ internal sealed class TrayMenu : ContextMenuStrip
         autostartItem.ShowSwitch = true;
         autostartItem.Click += (_, _) => AutostartRequested?.Invoke(!autostartItem.SwitchOn);
         Items.Add(autostartItem);
+
+        pinDefaultItem = Row(UiText.S("固定默认麦克风", "Pin default mic"), TrayGlyph.PinDefault, TrayPalette.Blue);
+        pinDefaultItem.ShowSwitch = true;
+        pinDefaultItem.Click += (_, _) => PinDefaultRequested?.Invoke(!pinDefaultItem.SwitchOn);
+        Items.Add(pinDefaultItem);
 
         aboutItem = Row(UiText.S("关于 VoiceAec", "About VoiceAec"), TrayGlyph.Info, TrayPalette.Violet);
         aboutItem.Click += (_, _) => AboutRequested?.Invoke();
@@ -708,6 +722,7 @@ internal sealed class TrayMenu : ContextMenuStrip
         if (openItem != null) openItem.Text = UiText.S("打开控制面板", "Open control panel");
         if (modeHead != null) modeHead.Text = UiText.S("处理模式", "Mode");
         if (autostartItem != null) autostartItem.Text = UiText.S("开机自启", "Start with Windows");
+        if (pinDefaultItem != null) pinDefaultItem.Text = UiText.S("固定默认麦克风", "Pin default mic");
         if (aboutItem != null) aboutItem.Text = UiText.S("关于 VoiceAec", "About VoiceAec");
         if (quitItem != null) quitItem.Text = UiText.S("退出 VoiceAec", "Quit VoiceAec");
         if (pauseItem != null)
@@ -723,6 +738,11 @@ internal sealed class TrayMenu : ContextMenuStrip
         {
             autostartItem.SwitchOn = state.Autostart;
             autostartItem.Invalidate();
+        }
+        if (pinDefaultItem != null)
+        {
+            pinDefaultItem.SwitchOn = state.PinDefault;
+            pinDefaultItem.Invalidate();
         }
         if (modeHead != null)
         {

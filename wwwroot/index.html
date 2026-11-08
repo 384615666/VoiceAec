@@ -256,6 +256,8 @@
     min-height: 68px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
     gap: 16px;
     padding: 11px 16px;
     border-radius: var(--radius);
@@ -3171,6 +3173,13 @@
         </button>
       </div>
 
+      <div class="top-switch" id="pinDefaultField" data-enabled="false" title="开机时把系统默认麦克风钉回虚拟麦克风（CABLE Output），钉回后不再检测；暂停处理时不纠偏">
+        <span class="top-switch-label">固定默认麦克风</span>
+        <button class="toggle" id="pinDefaultToggle" type="button" role="switch" aria-checked="false" aria-label="固定默认麦克风，正在读取" disabled>
+          <span class="toggle-thumb" aria-hidden="true"></span>
+        </button>
+      </div>
+
       <div class="mode-badge" id="modeBadge" data-mode="v1.2" role="status" aria-live="polite" aria-atomic="true">
         <span class="mode-badge-caption">当前模式</span>
         <strong id="modeBadgeText">均衡模式</strong>
@@ -3866,6 +3875,8 @@
     modeBadgeText: $('modeBadgeText'),
     autostartField: $('autostartField'),
     autostartToggle: $('autostartToggle'),
+    pinDefaultField: $('pinDefaultField'),
+    pinDefaultToggle: $('pinDefaultToggle'),
     ref2TopSwitch: $('ref2TopSwitch'),
     ref2TopToggle: $('ref2TopToggle'),
     switchState: $('switchState'),
@@ -3948,6 +3959,8 @@
     'OBS 插件': 'OBS plugin',
     '开启第二参考': 'Enable second reference',
     '开机自启': 'Start with Windows',
+    '固定默认麦克风': 'Pin default mic',
+    '开机时把系统默认麦克风钉回虚拟麦克风（CABLE Output），钉回后不再检测；暂停处理时不纠偏': 'Pin the system default microphone back to the virtual one (CABLE Output) at boot; stops checking once pinned; not enforced while paused',
     '当前模式': 'Current mode',
     '均衡模式': 'Balanced mode',
     '暂停并静音': 'Pause & mute',
@@ -4131,6 +4144,8 @@
     '已关闭': 'Off',
     '正在读取': 'Reading',
     '开机自启已开启。': 'Start with Windows enabled.',
+    '固定默认麦克风已开启。': 'Default microphone pin enabled.',
+    '固定默认麦克风已关闭。': 'Default microphone pin disabled.',
     '开机自启已关闭。': 'Start with Windows disabled.',
     '后端未确认设置': 'The app did not confirm the setting',
     '设置请求超时，请重试': 'The settings request timed out. Please try again.',
@@ -4209,11 +4224,13 @@
     [/^第二参考正在使用 (.*)，点击更换$/, (m) => `Second reference is using ${m[1]}; click to change`],
     [/^开启第二参考，(已开启|已关闭)$/, (m) => `Second reference: ${m[1] === '已开启' ? 'on' : 'off'}`],
     [/^开机自启，(正在保存|已开启|已关闭|正在读取)$/, (m) => `Start with Windows: ${ARIA_STATE_EN[m[1]]}`],
+    [/^固定默认麦克风，(正在保存|已开启|已关闭|正在读取)$/, (m) => `Pin default mic: ${ARIA_STATE_EN[m[1]]}`],
     [/^第二参考已设为 (.*)。$/, (m) => `Second reference set to ${m[1]}.`],
     [/^服务返回异常（HTTP (\d+)）$/, (m) => `The app returned an error (HTTP ${m[1]})`],
     [/^第二参考设置失败：(.*)$/, (m) => `Failed to set the second reference: ${translateCore(m[1])}`],
     [/^设备切换失败：(.*)$/, (m) => `Failed to switch device: ${translateCore(m[1])}`],
     [/^开机自启设置失败：(.*)$/, (m) => `Failed to change the start-with-Windows setting: ${translateCore(m[1])}`],
+    [/^固定默认麦克风设置失败：(.*)$/, (m) => `Failed to change the default-microphone pin setting: ${translateCore(m[1])}`],
     [/^正在自动重连 · 第 (\d+) 次$/, (m) => `Reconnecting automatically · attempt ${m[1]}`],
     [/^(运行中|已暂停 · 静音) · (.+)$/, (m) => `${translateCore(m[1])} · ${m[2]}`],
     [/^峰值 (-?[\d.]+) dB$/, (m) => `Peak ${m[1]} dB`],
@@ -4539,6 +4556,9 @@
     autostart: false,
     autostartKnown: false,
     autostartPending: false,
+    pinDefault: false,
+    pinDefaultKnown: false,
+    pinDefaultPending: false,
     polling: false,
     paused: false,
     pausePending: false,
@@ -5473,6 +5493,7 @@
     refreshModes();
     refreshSwitchState();
     renderAutostart();
+    renderPinDefault();
     renderDevicePickers();
     els.app.classList.toggle('is-paused', state.paused);
     els.pauseOutput.disabled = !state.connected || state.pausePending || state.localPending || state.serverSwitching;
@@ -5568,6 +5589,90 @@
         showToast(`开机自启设置失败：${failureMessage}`, 'error');
       }
       state.autostartPending = false;
+      refreshControls();
+    }
+  }
+
+  function renderPinDefault() {
+    if (!els.pinDefaultToggle) return;
+
+    const pending = state.pinDefaultPending;
+    const known = state.pinDefaultKnown;
+    const enabled = state.pinDefault;
+    const ariaState = pending
+      ? '正在保存'
+      : (known ? (enabled ? '已开启' : '已关闭') : '正在读取');
+
+    els.pinDefaultToggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+    setAttr(els.pinDefaultToggle, 'aria-label', `固定默认麦克风，${ariaState}`);
+    els.pinDefaultToggle.disabled = !state.connected || !known || pending;
+
+    if (els.pinDefaultField) {
+      els.pinDefaultField.dataset.enabled = enabled ? 'true' : 'false';
+      els.pinDefaultField.classList.toggle('is-pending', pending);
+      els.pinDefaultField.setAttribute('aria-busy', pending ? 'true' : 'false');
+    }
+  }
+
+  function updatePinDefaultState(value) {
+    if (typeof value !== 'boolean') return;
+    state.pinDefaultKnown = true;
+    if (!state.pinDefaultPending) {
+      state.pinDefault = value;
+    }
+  }
+
+  async function changePinDefault() {
+    if (!state.connected || !state.pinDefaultKnown || state.pinDefaultPending) return;
+
+    const previous = state.pinDefault;
+    const next = !previous;
+    state.pinDefault = next;
+    state.pinDefaultPending = true;
+    refreshControls();
+
+    let failureMessage = '';
+
+    try {
+      const response = await fetchWithTimeout('/api/pin-default', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+          Accept: 'application/json'
+        },
+        body: next ? 'true' : 'false'
+      }, AUTOSTART_TIMEOUT_MS);
+
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        payload = null;
+      }
+
+      if (response.ok && payload && payload.ok === true) {
+        state.pinDefaultKnown = true;
+        if (typeof payload.pinDefaultMic === 'boolean') {
+          state.pinDefault = payload.pinDefaultMic;
+        }
+        setText(els.srStatus, state.pinDefault ? '固定默认麦克风已开启。' : '固定默认麦克风已关闭。');
+      } else if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+        failureMessage = payload.error.trim();
+      } else {
+        failureMessage = response.ok
+          ? '后端未确认设置'
+          : `服务返回异常（HTTP ${response.status}）`;
+      }
+    } catch (error) {
+      failureMessage = error && error.name === 'AbortError'
+        ? '设置请求超时，请重试'
+        : '网络连接异常，请重试';
+    } finally {
+      if (failureMessage) {
+        state.pinDefault = previous;
+        showToast(`固定默认麦克风设置失败：${failureMessage}`, 'error');
+      }
+      state.pinDefaultPending = false;
       refreshControls();
     }
   }
@@ -5700,6 +5805,7 @@
     updateStats(data);
     updateHint(data.hint);
     updateAutostartState(data.autostart);
+    updatePinDefaultState(data.pinDefaultMic);
     updateCableBanner(data.cableMissing);
     refreshControls();
     maybeRetryDevices();
@@ -6194,6 +6300,9 @@
 
   els.autostartToggle.addEventListener('click', () => {
     void changeAutostart();
+  });
+  els.pinDefaultToggle.addEventListener('click', () => {
+    void changePinDefault();
   });
   els.pauseOutput.addEventListener('click', () => { void changePaused(); });
   els.obsOpen.addEventListener('click', () => {

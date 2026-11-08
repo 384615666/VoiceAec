@@ -186,6 +186,8 @@ var noBrowser = argsList.Contains("--nobrowser");
 var trayMode = argsList.Contains("--tray");     // 后台托盘运行：隐藏控制台 + 不开浏览器
 var keepConsole = argsList.Contains("--console"); // 调试：保留控制台窗口
 var paused = argsList.Contains("--start-paused") || cfg.GetValueOrDefault("paused") == "1" ? 1 : 0;
+// 把系统默认输入固定为虚拟麦克风(CABLE Output),开机后自动纠偏;0=不固定
+var defaultMicPin = new StartupMicPin(cfg.GetValueOrDefault("pinDefaultMic", "1") != "0", TryPinDefaultMic);
 using var shutdown = new CancellationTokenSource();
 using var audioEnabled = new ManualResetEventSlim(paused == 0);
 if (trayMode) noBrowser = true;
@@ -213,8 +215,9 @@ MMDevice Find(DataFlow flow, string substring)
 // 智能默认:未配置时取系统默认通信麦克风 + 默认播放设备;输出必须是 CABLE Input
 if (micSub.Length == 0)
 {
-    try { micSub = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications).FriendlyName; }
-    catch { micSub = UiText.S("麦克风", "Microphone"); }
+    // 系统默认已经钉在虚拟麦时,自动选设备仍必须采集实体麦,避免回授。
+    using var physicalMic = TryPhysicalMic();
+    micSub = physicalMic?.FriendlyName ?? UiText.S("麦克风", "Microphone");
 }
 if (refSub.Length == 0)
 {
@@ -258,13 +261,33 @@ MMDevice? TryDefaultDevice(DataFlow flow, Role role)
     }
 }
 
+MMDevice? TryPhysicalMic()
+{
+    var preferred = TryDefaultDevice(DataFlow.Capture, Role.Communications);
+    if (preferred != null && !preferred.FriendlyName.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+        return preferred;
+    preferred?.Dispose();
+    MMDevice? physical = null;
+    try
+    {
+        foreach (var endpoint in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+        {
+            if (physical == null && !endpoint.FriendlyName.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                physical = endpoint;
+            else endpoint.Dispose();
+        }
+    }
+    catch { physical?.Dispose(); return null; }
+    return physical;
+}
+
 MMDevice? micDevice;
 var micFallback = false;
 try { micDevice = Find(DataFlow.Capture, micSub); }
 catch (Exception)
 {
     micFallback = true;
-    micDevice = TryDefaultDevice(DataFlow.Capture, Role.Communications);
+    micDevice = TryPhysicalMic();
     if (micDevice != null && micConfigured)
         micNoticeSource = micSub;   // 全名:区分信息常在括号里(如"麦克风 (Xmic Z3)")
 }
@@ -763,6 +786,15 @@ void RecoverAudio(bool eventDriven)
             return;
         }
 
+        // 启动期回退（如开机自启时 USB 麦克风还没就绪，临时用了系统默认设备）：
+        // 配置的设备一旦出现就自动切回。ReplaceCapture 先找新设备、找不到时
+        // 原通道原样保留，所以重试失败也不影响正在工作的回退通道。
+        if (micNoticeSource != null || refNoticeSource != null || outNoticeSource != null)
+        {
+            try { RecheckDevices(); }
+            catch (Exception ex) { Console.Error.WriteLine($"[audio] recheck fallback: {ex.Message}"); }
+        }
+
         // 兜底：就算 RecordingStopped 没触发（个别驱动会让采集线程卡住），
         // 未暂停时麦克风环形缓冲持续 5 秒颗粒无收也算死亡。回采通道不适用——
         // 系统静音时 loopback 本来就不出包。
@@ -789,6 +821,59 @@ void RecoverAudio(bool eventDriven)
     }
 }
 
+// 启动时纠偏一次:成功并核实全部角色后,本进程不再检测默认麦克风。
+// 前 30 轮兜底处理开机设备延迟就绪;之后只在设备通知时重试。暂停时不纠偏。
+bool TryPinDefaultMic()
+{
+    // 独立枚举器,不与 HTTP/托盘的设备操作共享 COM 对象。
+    using var pinEnumerator = new MMDeviceEnumerator();
+    string? cableId = null;
+    string? cableName = null;
+    foreach (var endpoint in pinEnumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+    {
+        using (endpoint)
+        {
+            if (cableId != null || !endpoint.FriendlyName.Contains("CABLE Output", StringComparison.OrdinalIgnoreCase)) continue;
+            cableId = endpoint.ID;
+            cableName = endpoint.FriendlyName;
+        }
+    }
+    if (cableId == null) return false;
+
+    bool AllRolesMatch()
+    {
+        try
+        {
+            foreach (var role in new[] { Role.Console, Role.Multimedia, Role.Communications })
+            {
+                using var current = pinEnumerator.GetDefaultAudioEndpoint(DataFlow.Capture, role);
+                if (!string.Equals(current.ID, cableId, StringComparison.OrdinalIgnoreCase)) return false;
+            }
+            return true;
+        }
+        catch { return false; }
+    }
+
+    if (AllRolesMatch()) return true;
+    if (DefaultMicPin.SetDefaultCapture(cableId) && AllRolesMatch())
+    {
+        Console.WriteLine($"[default-mic] pinned: {cableName}; default checks stopped");
+        return true;
+    }
+    Console.Error.WriteLine("[default-mic] pin not confirmed; will retry");
+    return false;
+}
+
+void SetPinDefaultMic(bool enabled)
+{
+    lock (devSwitchLock)
+    {
+        defaultMicPin.SetEnabled(enabled);
+        PersistKey("pinDefaultMic", enabled ? "1" : "0");
+    }
+    if (enabled) QueueRecovery();
+}
+
 var recoveryThread = new Thread(() =>
 {
     while (!shutdown.IsCancellationRequested)
@@ -802,6 +887,12 @@ var recoveryThread = new Thread(() =>
         }
         try { RecoverAudio(eventDriven); }
         catch (Exception ex) { Console.Error.WriteLine($"[audio] recover: {ex.Message}"); }
+        try
+        {
+            lock (devSwitchLock)
+                defaultMicPin.TryPin(eventDriven, Volatile.Read(ref paused) != 0);
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"[default-mic] enforce: {ex.Message}"); }
     }
 }) { IsBackground = true };
 recoveryThread.Start();
@@ -942,16 +1033,16 @@ object BuildStatus()
         // updates the hint without waiting for the device state to change.
         var notices = new List<string>();
         if (micNoticeSource != null)
-            notices.Add(UiText.F("麦克风「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
-                "Microphone \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
+            notices.Add(UiText.F("麦克风「{0}」不在了，已临时改用「{1}」；接回后会自动切回。",
+                "Microphone \"{0}\" is gone; temporarily using \"{1}\". Switches back automatically once reconnected.",
                 micNoticeSource, currentMic));
         if (refNoticeSource != null)
-            notices.Add(UiText.F("参考回采「{0}」不在了，已临时改用「{1}」；插回后重启即可恢复。",
-                "Reference loopback \"{0}\" is gone; temporarily using \"{1}\". Reconnect it and restart to restore.",
+            notices.Add(UiText.F("参考回采「{0}」不在了，已临时改用「{1}」；接回后会自动切回。",
+                "Reference loopback \"{0}\" is gone; temporarily using \"{1}\". Switches back automatically once reconnected.",
                 refNoticeSource, currentRef));
         if (outNoticeSource != null)
-            notices.Add(UiText.F("输出设备「{0}」不在了，已临时改用「{1}」。",
-                "Output device \"{0}\" is gone; temporarily using \"{1}\".",
+            notices.Add(UiText.F("输出设备「{0}」不在了，已临时改用「{1}」；接回后会自动切回。",
+                "Output device \"{0}\" is gone; temporarily using \"{1}\". Switches back automatically once reconnected.",
                 outNoticeSource, currentOut));
         if (devicesMissingNotice)
             notices.Add(UiText.S("没有找到可用的麦克风/扬声器设备，已暂停处理；接好设备后在面板选择并点「恢复处理与输出」。",
@@ -1008,6 +1099,7 @@ object BuildStatus()
         },
         models = modelKeys.ToDictionary(k => k, k => new { available = ModelExists(k), label = ModelLabel(k) }),
         autostart = GetAutostart(),
+        pinDefaultMic = defaultMicPin.Enabled,
         cableMissing,
         lanAvailable,
         lanUrl = lanAvailable && primaryLan != null ? $"http://{primaryLan}:{actualPort}/" : "",
@@ -1314,6 +1406,29 @@ var httpThread = new Thread(() =>
                                 ctx.Response.ContentType = "application/json; charset=utf-8";
                                 ctx.Response.OutputStream.Write(bytes);
                             }
+                        }
+                        else
+                        {
+                            var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                                new { ok = false, error = UiText.S("body 必须是 true 或 false", "body must be true or false") }, jsonOpts);
+                            ctx.Response.StatusCode = 400;
+                            ctx.Response.ContentType = "application/json; charset=utf-8";
+                            ctx.Response.OutputStream.Write(bytes);
+                        }
+                        break;
+                    }
+                    case "/api/pin-default":
+                    {
+                        string body;
+                        using (var sr = new StreamReader(ctx.Request.InputStream))
+                            body = (sr.ReadToEnd() ?? "").Trim().ToLowerInvariant();
+                        if (body is "true" or "1" or "on" or "false" or "0" or "off")
+                        {
+                            var on = body is "true" or "1" or "on";
+                            SetPinDefaultMic(on);
+                            var bytes = JsonSerializer.SerializeToUtf8Bytes(new { ok = true, pinDefaultMic = on }, jsonOpts);
+                            ctx.Response.ContentType = "application/json; charset=utf-8";
+                            ctx.Response.OutputStream.Write(bytes);
                         }
                         else
                         {
@@ -1724,7 +1839,7 @@ var trayThread = new Thread(() =>
             new("v1.4", ModelLabel("v1.4"), Color.FromArgb(0x4F, 0xA8, 0xE8), ModelExists("v1.4")),
         };
         return new TrayMenuState(current, ModelLabel(current), Volatile.Read(ref paused) != 0,
-            GetAutostart(), modeEntries);
+            GetAutostart(), defaultMicPin.Enabled, modeEntries);
     }
 
     using var menu = new TrayMenu(CurrentTrayState);
@@ -1748,6 +1863,16 @@ var trayThread = new Thread(() =>
         {
             icon.ShowBalloonTip(2000, "VoiceAec",
                 UiText.F("设置失败：{0}", "Failed to change the setting: {0}", ex.Message), ToolTipIcon.Warning);
+        }
+    };
+    menu.PinDefaultRequested += enabled =>
+    {
+        SetPinDefaultMic(enabled);
+        if (enabled)
+        {
+            icon.ShowBalloonTip(2000, "VoiceAec", UiText.S(
+                "开机时会把默认麦克风钉回虚拟麦克风。", "The default microphone will be pinned to the virtual one at boot."),
+                ToolTipIcon.Info);
         }
     };
     menu.QuitRequested += () => shutdown.Cancel();
