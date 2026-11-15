@@ -62,8 +62,10 @@ fi
 [ -x "$BIN" ] || { echo "error: build output not found: $BIN" >&2; exit 1; }
 lipo -info "$BIN"
 
-# Keep the macOS copy of the panel in sync with the shared one.
+# Keep the macOS copy of the panel in sync with the shared one, then apply the
+# macOS-only "Starting…" state (the shared Windows copy stays untouched).
 cp "$ROOT/wwwroot/index.html" "$MACOS/Resources/wwwroot/index.html"
+python3 "$MACOS/scripts/patch-panel.py" "$MACOS/Resources/wwwroot/index.html"
 
 echo "==> assembling $APP"
 rm -rf "$APP"
