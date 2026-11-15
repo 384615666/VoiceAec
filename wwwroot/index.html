@@ -3955,6 +3955,7 @@
     // 顶栏 / 品牌
     '本地实时音频控制台': 'Real-time local audio console',
     '正在连接…': 'Connecting…',
+    '启动中…': 'Starting…',
     'CPU 占用': 'CPU usage',
     'OBS 插件': 'OBS plugin',
     '开启第二参考': 'Enable second reference',
@@ -5680,7 +5681,8 @@
   function updateRun(data) {
     const uptime = toNumber(data.uptimeSec);
     state.paused = data.paused === true;
-    const label = state.paused ? '已暂停 · 静音' : '运行中';
+    const ready = data.running !== false;
+    const label = !ready ? '启动中…' : (state.paused ? '已暂停 · 静音' : '运行中');
     setText(els.runText, Number.isFinite(uptime) ? `${label} · ${formatDuration(uptime)}` : label);
 
     const cpu = toNumber(data.cpuPercent);

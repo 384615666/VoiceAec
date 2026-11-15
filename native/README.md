@@ -29,3 +29,16 @@ ctest --test-dir ggml/build --output-on-failure
 OBS 插件源码和回归测试也包含在补丁内；插件构建需要匹配的 OBS 64 位开发头文件及导入库。
 本次 DLL 使用 OBS 32.2.2 头文件。打包入口为 `tools/Package-Windows.ps1`，接收已构建的
 原生运行库和插件 DLL。数值变更的原因及验证边界见 `docs/V14-AEC-NUMERICS.md`。
+
+## macOS 原生构建
+
+`LocalVQE-macos.patch` 为 macOS/通用构建增加 `LOCALVQE_PORTABLE` 选项：把单个 CPU 后端静态
+链接进 `liblocalvqe.dylib`，关闭 Metal/BLAS/运行时后端动态加载，避免启动时初始化 Metal，并
+产出 x86_64 + arm64 通用二进制。应用方式见 `macos/scripts/build-localvqe.sh`：
+
+```bash
+./macos/scripts/build-localvqe.sh
+```
+
+脚本会克隆固定的上游提交、应用补丁、分别构建两个架构并 `lipo` 到
+`macos/Vendor/liblocalvqe.dylib`。

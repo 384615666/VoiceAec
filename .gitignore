@@ -2,3 +2,14 @@ bin/
 obj/
 dist/
 *.user
+
+# macOS build artifacts
+macos/.build*/
+macos/Vendor/models/
+macos/Vendor/liblocalvqe.dylib
+macos/*.zip
+.cache/
+.tmp/
+.tools/
+.build/
+.dotnet/

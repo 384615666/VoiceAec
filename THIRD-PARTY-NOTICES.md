@@ -18,4 +18,17 @@ VB-CABLE 是 VB-Audio 的捐赠软件（donationware），所有赞助都欢迎�
 
 其它需用户自行安装的外部依赖：OBS Studio（https://obsproject.com/）、WebView2 运行时（Windows 10/11 一般自带）。
 
+## macOS 版附加组件
+
+macOS 版不包含 Windows 版的 NAudio / WebView2 / Inno Setup / VB-CABLE，使用以下组件：
+
+| 组件 | 发行形式 | 许可证 | 来源 |
+|---|---|---|---|
+| LocalVQE 推理引擎（`liblocalvqe.dylib`、`localvqe-*.gguf`） | 二进制 + 模型 | Apache-2.0 | https://github.com/localai-org/LocalVQE；macOS 构建补丁见 [native/LocalVQE-macos.patch](native/LocalVQE-macos.patch) |
+| ggml（静态链接进 `liblocalvqe.dylib`） | 二进制 | MIT | https://github.com/ggml-org/ggml |
+| ScreenCaptureKit / CoreAudio / AppKit / WebKit | 系统框架 | Apple SDK 条款 | macOS 系统自带 |
+| BlackHole 2ch 虚拟声卡 | **不随包分发**，用户自行安装 | GPL-3.0 | https://existential.audio/blackhole/ |
+
+VoiceAec 只检测 BlackHole 并提供下载链接，不修改、不捆绑、不代为安装该驱动。
+
 各许可证全文见上游仓库；Apache-2.0 与 GPL-2.0 的相应义务（保留版权声明、提供对应源码）通过本文件与上表来源链接履行。

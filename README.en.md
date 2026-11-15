@@ -97,7 +97,7 @@ Open the **OBS plugin** dialog from the panel's top bar: it installs the audio f
 
 ## Requirements
 
-- Windows 10 / 11 (64-bit); 32-bit Windows, macOS and Linux are not supported
+- Windows 10 / 11 (64-bit); 32-bit Windows and Linux are not supported. For macOS 13+ see [macos/README.md](macos/README.md).
 - WebView2 runtime (usually preinstalled)
 - [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (VB-CABLE)
 - A microphone and a playback device (headphones or speakers)

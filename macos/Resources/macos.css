@@ -1,0 +1,30 @@
+/* macOS-specific panel adjustments. Loaded after the main stylesheet. */
+html.platform-mac #obsPluginOpen,
+html.platform-mac #ref2TopSwitch,
+html.platform-mac #pinDefaultField,
+html.platform-mac #ref2Card,
+html.platform-mac #obsPluginDialog {
+  display: none !important;
+}
+
+html.platform-mac .brand-copy p::after {
+  content: " · macOS";
+  font-weight: 600;
+  color: var(--accent, #f27ba9);
+}
+
+html.platform-mac .cable-copy p {
+  max-width: 64ch;
+}
+
+html.platform-mac .window-bar {
+  -webkit-app-region: no-drag;
+}
+
+html.platform-mac .about-uninstall {
+  display: none;
+}
+
+html.platform-mac .hint-action {
+  white-space: nowrap;
+}

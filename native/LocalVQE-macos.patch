@@ -1,0 +1,31 @@
+diff --git a/ggml/CMakeLists.txt b/ggml/CMakeLists.txt
+index be703e7..fa965d8 100644
+--- a/ggml/CMakeLists.txt
++++ b/ggml/CMakeLists.txt
+@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+ 
+ option(LOCALVQE_BUILD_SHARED "Build shared library with C API" OFF)
++option(LOCALVQE_PORTABLE "Build one self-contained CPU backend (no runtime backend loading, no Metal/BLAS)" OFF)
+ option(LOCALVQE_CUDA "Enable GGML CUDA backend" OFF)
+ option(LOCALVQE_VULKAN "Enable GGML Vulkan backend" OFF)
+ 
+@@ -25,7 +26,17 @@ endif()
+ set(GGML_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+ set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+-if(EMSCRIPTEN)
++if(LOCALVQE_PORTABLE)
++    # macOS/portable build: link a single generic CPU backend into the dylib so
++    # the app ships one file and does not initialize Metal at startup.
++    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
++    set(GGML_BACKEND_DL OFF CACHE BOOL "" FORCE)
++    set(GGML_CPU_ALL_VARIANTS OFF CACHE BOOL "" FORCE)
++    set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
++    set(GGML_STATIC ON CACHE BOOL "" FORCE)
++    set(GGML_METAL OFF CACHE BOOL "" FORCE)
++    set(GGML_BLAS OFF CACHE BOOL "" FORCE)
++elseif(EMSCRIPTEN)
+     # WebAssembly (in-browser demo). Single self-contained module: the CPU
+     # backend is statically registered (no runtime .so dlopen), SIMD128 is
+     # enabled by ggml's own EMSCRIPTEN block, and there are no per-ISA

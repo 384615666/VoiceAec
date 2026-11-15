@@ -14,6 +14,7 @@ VoiceAec 在本机把这些声音从麦克风里减掉，队友听到的主要�
   <a href="https://github.com/384615666/VoiceAec/releases"><img src="https://img.shields.io/github/downloads/384615666/VoiceAec/total?style=flat-square&amp;label=downloads&amp;color=f27ba9" alt="downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/384615666/VoiceAec?style=flat-square&amp;color=4fa8e8" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-4fa8e8?style=flat-square&amp;logo=windows&amp;logoColor=white" alt="Windows 10/11">
+  <img src="https://img.shields.io/badge/macOS%2013%2B%20%C2%B7%20universal-2ec489?style=flat-square&amp;logo=apple&amp;logoColor=white" alt="macOS 13+ universal">
   <img src="https://img.shields.io/badge/.NET-10-6d4fc4?style=flat-square&amp;logo=dotnet&amp;logoColor=white" alt=".NET 10">
   <a href="https://voiceaec.lsjx.xyz/"><img src="https://img.shields.io/badge/%E5%AE%98%E7%BD%91-voiceaec.lsjx.xyz-e8b84b?style=flat-square" alt="官网"></a>
 </p>
@@ -35,7 +36,7 @@ VoiceAec 在本机把这些声音从麦克风里减掉，队友听到的主要�
 
 ## 目录
 
-[它解决什么问题](#它解决什么问题) · [功能图解](#功能图解) · [界面一览](#界面一览) · [快速开始](#快速开始) · [处理模式](#处理模式) · [OBS 插件一键安装](#obs-插件一键安装) · [功能一览](#功能一览) · [进阶玩法](#进阶玩法) · [从源码构建](#从源码构建) · [项目结构](#项目结构) · [近期更新](#近期更新) · [常见问题](#常见问题) · [已知限制](#已知限制) · [许可与致谢](#许可与致谢)
+[它解决什么问题](#它解决什么问题) · [功能图解](#功能图解) · [界面一览](#界面一览) · [快速开始](#快速开始) · [macOS 版](#macos-版) · [处理模式](#处理模式) · [OBS 插件一键安装](#obs-插件一键安装) · [功能一览](#功能一览) · [进阶玩法](#进阶玩法) · [从源码构建](#从源码构建) · [项目结构](#项目结构) · [近期更新](#近期更新) · [常见问题](#常见问题) · [已知限制](#已知限制) · [许可与致谢](#许可与致谢)
 
 ## 它解决什么问题
 
@@ -47,6 +48,8 @@ VoiceAec 用 [LocalVQE](https://github.com/localai-org/LocalVQE) 神经网络做
 - 🔒 **纯本地**：模型推理全部在本机 CPU 上完成，不联网、音频不上传
 - 📦 **开箱即用**：发布包自包含（免 .NET 运行时、含全部模型），首次启动自动选设备
 - 🎛 **两种形态**：桌面控制面板，以及可一键安装的 OBS 音频滤镜
+
+> 🍎 **macOS 版**：原生 AppKit 菜单栏 + WKWebView 面板，CoreAudio 采集、ScreenCaptureKit 回采、BlackHole 虚拟麦，Intel / Apple Silicon 通用。见 [macos/README.md](macos/README.md)。
 
 ## 功能图解
 
@@ -93,7 +96,7 @@ VoiceAec 用 [LocalVQE](https://github.com/localai-org/LocalVQE) 神经网络做
 
 ## 快速开始
 
-**系统要求**：Windows 10/11 64 位（不支持 32 位、macOS、Linux）；WebView2 运行时（一般系统自带）；一只麦克风和一个耳机/音箱；[VB-CABLE](https://vb-audio.com/Cable/) 虚拟声卡（安装包自带，安装向导可代装）。最新版本号见上方 release 徽章或 [Releases](https://github.com/384615666/VoiceAec/releases) 页面。
+**系统要求**：Windows 10/11 64 位（不支持 32 位、Linux；macOS 13+ 请使用 [macOS 版](macos/README.md)）；WebView2 运行时（一般系统自带）；一只麦克风和一个耳机/音箱；[VB-CABLE](https://vb-audio.com/Cable/) 虚拟声卡（安装包自带，安装向导可代装）。最新版本号见上方 release 徽章或 [Releases](https://github.com/384615666/VoiceAec/releases) 页面。
 
 ### 1. 下载安装
 
@@ -272,6 +275,27 @@ OBS 里也能直接使用同一个模型：面板顶栏点「OBS 插件」打开
 - 一般不需要手动修改；配置损坏时退出程序后删除该文件即可恢复默认。
 
 </details>
+
+## macOS 版
+
+macOS 版把 Windows 专属的 WASAPI / VB-CABLE / WinForms 换成了 CoreAudio / ScreenCaptureKit / BlackHole / AppKit，面板与推理引擎保持一致：
+
+<p align="center">
+  <img src="docs/images/macos-panel.png" width="880" alt="VoiceAec macOS 面板">
+</p>
+
+- 系统要求 macOS 13+，Intel 与 Apple Silicon 通用；
+- 需要安装 [BlackHole 2ch](https://existential.audio/blackhole/) 作为虚拟麦克风；
+- 首次启动需允许「麦克风」和「屏幕录制」权限（后者用于系统声音回采）；
+- 构建、签名、已知限制与排障见 **[macos/README.md](macos/README.md)**。
+
+```bash
+./macos/scripts/build-localvqe.sh   # 首次：编译通用 liblocalvqe.dylib
+./macos/scripts/fetch-models.sh     # 首次：下载 GGUF 模型
+./macos/build.sh                    # 产出 dist/VoiceAec.app
+```
+
+> macOS 版暂未提供 OBS 插件；OBS 入口在面板中隐藏。
 
 ## 从源码构建
 
