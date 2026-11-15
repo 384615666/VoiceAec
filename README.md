@@ -285,6 +285,7 @@ macOS 版把 Windows 专属的 WASAPI / VB-CABLE / WinForms 换成了 CoreAudio 
 </p>
 
 - 系统要求 macOS 13+，Intel 与 Apple Silicon 通用；
+- 安装介质：DMG（拖进「应用程序」，推荐）或 PKG（双击安装到 `/Applications`）；
 - 需要安装 [BlackHole 2ch](https://existential.audio/blackhole/) 作为虚拟麦克风；
 - 首次启动需允许「麦克风」和「屏幕录制」权限（后者用于系统声音回采）；
 - 构建、签名、已知限制与排障见 **[macos/README.md](macos/README.md)**。
@@ -293,6 +294,7 @@ macOS 版把 Windows 专属的 WASAPI / VB-CABLE / WinForms 换成了 CoreAudio 
 ./macos/scripts/build-localvqe.sh   # 首次：编译通用 liblocalvqe.dylib
 ./macos/scripts/fetch-models.sh     # 首次：下载 GGUF 模型
 ./macos/build.sh                    # 产出 dist/VoiceAec.app
+ZIP=1 INSTALLER=1 ./macos/build.sh  # 同时产出 zip、DMG、PKG
 ```
 
 > macOS 版暂未提供 OBS 插件；OBS 入口在面板中隐藏。

@@ -48,9 +48,17 @@ macOS 没有 Windows 的 VB-CABLE，也没有系统级的 loopback 输出。Voic
 VoiceAec 不捆绑 BlackHole：它是 GPL-3.0 的独立驱动，安装需要管理员权限，且应该由用户
 自行决定是否安装。VoiceAec 只检测它，并在面板里给出下载入口。
 
-### 2. 打开 VoiceAec
+### 2. 安装并打开 VoiceAec
 
-把 `VoiceAec.app` 拖进「应用程序」，双击打开。第一次启动会依次请求两个权限：
+推荐用 **DMG 安装版**：双击 `VoiceAec-0.6.3-macOS-universal.dmg`，把 `VoiceAec.app` 拖进
+「应用程序」，然后双击打开。也可以双击 `VoiceAec-0.6.3-macOS-universal.pkg`，按提示安装
+到 `/Applications`。
+
+> 两个安装介质里的 App 都是 ad-hoc 签名的开发版，未做 Apple 公证。DMG 更推荐；PKG 是
+> 未签名包，Gatekeeper 可能要求到「系统设置 → 隐私与安全性」里点「仍要打开」。
+> 如果提示「已损坏」，见下文。
+
+第一次启动会依次请求两个权限：
 
 1. **麦克风**：必须允许，否则无法消除回声。对话框出现时引擎会先等待你选择，避免和
    CoreAudio 守护进程抢锁；点「允许」后开始处理。
@@ -144,14 +152,21 @@ open /Applications/VoiceAec.app
 # 构建通用 VoiceAec.app（Intel + Apple Silicon）
 ./macos/build.sh
 
-# 同时生成可分发 zip
-ZIP=1 ./macos/build.sh
+# 同时生成可分发 zip 和安装介质（DMG + PKG）
+ZIP=1 INSTALLER=1 ./macos/build.sh
+
+# 也可以单独打安装包（需要先有 dist/VoiceAec.app）
+./macos/scripts/build-installer.sh
 ```
 
 产物：
 
 - `dist/VoiceAec.app`
 - `dist/VoiceAec-macOS-universal.zip`（`ZIP=1`）
+- `dist/VoiceAec-0.6.3-macOS-universal.dmg`（`INSTALLER=1`，推荐分发）
+- `dist/VoiceAec-0.6.3-macOS-universal.pkg`（`INSTALLER=1`，未签名开发包）
+
+DMG 内含 App、`Applications` 快捷方式、安装说明、完整 README 和 BlackHole 下载链接。
 
 脚本会在仓库内使用 `.build-*`、`.cache`、`.tmp`，不会写系统缓存。
 

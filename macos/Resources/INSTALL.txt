@@ -1,0 +1,38 @@
+VoiceAec · macOS 安装说明
+==========================
+
+1. 安装
+   把 VoiceAec.app 拖进「应用程序」文件夹（DMG），
+   或双击 VoiceAec-*.pkg 按提示安装到 /Applications。
+
+2. 第一次打开
+   本版本是开发版，未做 Apple 公证。若提示「无法打开」：
+   - 右键 VoiceAec.app →「打开」→ 再点「打开」；或
+   - 终端执行：xattr -dr com.apple.quarantine /Applications/VoiceAec.app
+
+3. 授权
+   首次启动会请求：
+   - 麦克风：必须允许。
+   - 屏幕录制：macOS 用它采集系统声音作为回声参考；
+     在「系统设置 → 隐私与安全性 → 屏幕录制」中勾选 VoiceAec。
+   如果刚刚拒绝过，勾选后请退出并重新打开 VoiceAec。
+
+4. 安装虚拟声卡
+   macOS 没有内置 loopback，VoiceAec 使用 BlackHole 2ch：
+   - 打开 https://existential.audio/blackhole/
+   - 下载 BlackHole 2ch，运行安装器（需要管理员密码）
+   - 重启电脑
+   VoiceAec 检测到后会自动选中它。
+
+5. 对上设备
+   - macOS 声音输出：你的扬声器/耳机（游戏声音照常外放）
+   - VoiceAec · 输出：BlackHole 2ch
+   - Discord / QQ / 游戏语音的麦克风：BlackHole 2ch
+   - 模式：均衡模式（默认）
+
+6. 菜单栏
+   关闭窗口只会隐藏到菜单栏，音频不中断。
+   菜单栏可打开面板、暂停、切换模式/输出、开机自启、恢复默认设置、退出。
+
+日志：~/Library/Application Support/VoiceAec/VoiceAec.log
+完整文档：https://github.com/384615666/VoiceAec/blob/main/macos/README.md

@@ -101,6 +101,10 @@ echo "  1. Allow Microphone, then Screen Recording (System Settings → Privacy 
 echo "  2. Install BlackHole 2ch: https://existential.audio/blackhole/"
 echo "  3. Restart VoiceAec, pick BlackHole 2ch as Output, and BlackHole 2ch as the mic in Discord/QQ."
 
+if [ "${INSTALLER:-0}" = "1" ]; then
+  "$MACOS/scripts/build-installer.sh"
+fi
+
 if [ "$ZIP" = "1" ]; then
   RELEASE="$ROOT/dist/VoiceAec-macOS-universal"
   echo "==> creating $RELEASE.zip"
